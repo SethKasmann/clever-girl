@@ -15,19 +15,6 @@ namespace MoveGenerator
         { 5,  6,  7,  8,  9,  0,  4 }, 
     };
 
-    int check_count(State * s, U64 & checkers)
-    {
-        const Square k = s->p_king_sq();
-
-        checkers |= (pawn_attacks[s->us][k] & s->e_pawn())
-                  | (knight_moves[k] & s->e_knight())
-                  | (Bmagic(k, s->occ()) & (s->e_bishop() | s->e_queen()))
-                  | (Rmagic(k, s->occ()) & (s->e_rook() | s->e_queen()));
-
-        assert(pop_count(checkers) <= 2);
-        return pop_count(checkers);
-    }
-
     void push_moves(State * s, MoveList * mlist)
     {
         U64 e_diagonal_sliders, e_non_diagonal_sliders, ray,
@@ -40,7 +27,7 @@ namespace MoveGenerator
 
 
         checkers = 0;
-        checks   = check_count(s, checkers);
+        checks   = s->check_count(checkers);
 
         if (checks < 2)
         {

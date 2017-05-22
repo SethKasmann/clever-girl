@@ -26,8 +26,7 @@ namespace MoveGenerator
 	void push_queen_moves(State * s, MoveList *, U64 ray=DEFAULT, U64 checker=DEFAULT);
 	void push_king_moves(State *, MoveList *, int);
 	U64 valid_king_moves(State *);
-	int check_count(State *, U64 &);
-	bool is_attacked(State *, Square);
+	//bool is_attacked(State *, Square);
 	bool is_attacked_by_slider(State *, Square, U64);
 	void check_pins(State * s, MoveList * mlist);
 }

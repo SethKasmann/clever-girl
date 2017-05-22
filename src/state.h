@@ -83,7 +83,7 @@ struct State
     void make(Move m);
     bool is_attacked(const Square s) const;
     bool in_check();
-    int check_count() const;
+    int check_count(U64 & checkers) const;
 
     friend std::ostream & operator << (std::ostream & o, const State & state);
 
@@ -297,6 +297,16 @@ bool State::is_attacked(const Square s) const
         || (knight_moves[s] & e_knight())
         || (Bmagic(s, occ() ^ p_king()) & (e_bishop() | e_queen()))
         || (Rmagic(s, occ() ^ p_king()) & (e_rook()   | e_queen()));
+}
+
+inline
+int State::check_count(U64 & checkers) const
+{
+    checkers |= (pawn_attacks[us][p_king_sq()] &  e_pawn())
+              | (knight_moves[p_king_sq()]     &  e_knight())
+              | (Bmagic(p_king_sq(), occ())    & (e_bishop() | e_queen()))
+              | (Rmagic(p_king_sq(), occ())    & (e_rook()   | e_queen()));
+    return pop_count(checkers);
 }
 
 #endif
