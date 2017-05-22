@@ -192,7 +192,7 @@ namespace MoveGenerator
             attack = pawn_attacks[!C][dst] & s->p_pawn();
             while (attack)
             {
-                if (is_attacked_by_slider(s, get_lsb(s->p_king()), s->en_passant | get_lsb_bb(attack)))
+                if (s->is_attacked_by_slider(s->en_passant | get_lsb_bb(attack)))
                 {
                     return;
                 }
@@ -341,7 +341,6 @@ namespace MoveGenerator
             {
                 mlist->push(src, dst, KING_CAST, C);
             }
-            //std::cout << "kingside castle\n";
         }
         if ((QUEENSIDE_CASTLE_MASK[t] & s->occ()) == 0 &&
             s->q_castle())
@@ -353,15 +352,7 @@ namespace MoveGenerator
             {
                 mlist->push(src, dst, QUEEN_CAST, C);
             }
-            //std::cout << "queenside castle\n";
         }
-    }
-
-    inline
-    bool is_attacked_by_slider(State * s, Square sq, U64 occ)
-    {
-        return (Bmagic(sq, s->occ() ^ occ) & (s->e_bishop() | s->e_queen()))
-             | (Rmagic(sq, s->occ() ^ occ) & (s->e_rook()   | s->e_queen()));
     }
 
     void init()
