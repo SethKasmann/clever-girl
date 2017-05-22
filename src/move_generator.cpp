@@ -31,19 +31,12 @@ namespace MoveGenerator
 
         if (checks < 2)
         {
-            // Check for pins. If pins are found, add legal legal moves
-            // that either:
-            //     1. Attack the pinned piece.
-            //     2. Move along the pinned ray.
             if (checks)
             {
-                //std::cout << "pushing evasions...\n";
                 push_evasions(s, mlist, checkers);
             }
             else
             {
-                //std::cout << "pushing regular...\n";
-                //push_pawn_attacks(s, pinned);
                 push_pawn_moves(s, mlist);
                 push_knight_moves(s, mlist);
                 push_bishop_moves(s, mlist);
@@ -59,16 +52,13 @@ namespace MoveGenerator
             push_king_moves(s, mlist, checks);
             return;
         }
-        check_pins(s, mlist);
+        check_legal(s, mlist);
     }
 
-    void check_pins(State * s, MoveList * mlist)
+    void check_legal(State * s, MoveList * mlist)
     {
         U64 pin;
         const Square k = s->p_king_sq();
-        // get pins
-        //e_diagonal_sliders     = s->e_diagonal_sliders();
-        //e_non_diagonal_sliders = s->e_non_diagonal_sliders();
 
         pin = s->get_pins();
 
@@ -203,8 +193,8 @@ namespace MoveGenerator
 
     void push_knight_moves(State * s, MoveList * mlist, U64 ray, U64 checker)
     {
-        U64 m, a;//, n;
-        Square dst;//src, dst;
+        U64 m, a;
+        Square dst;
         int i, score;
 
         for (i = 0; i < s->piece_count[s->us][KNIGHT]; ++i)
@@ -228,8 +218,8 @@ namespace MoveGenerator
 
     void push_bishop_moves(State * s, MoveList * mlist, U64 ray, U64 checker)
     {
-        U64 m, a;//, n;
-        Square dst;//src, dst;
+        U64 m, a;
+        Square dst;
         int i, score;
 
         for (i = 0; i < s->piece_count[s->us][BISHOP]; ++i)
@@ -253,8 +243,8 @@ namespace MoveGenerator
 
     void push_rook_moves(State * s, MoveList * mlist, U64 ray, U64 checker)
     {
-        U64 m, a;//, n;
-        Square dst;//src, dst;
+        U64 m, a;
+        Square dst;
         int i, score;
 
         for (i = 0; i < s->piece_count[s->us][ROOK]; ++i)
@@ -278,8 +268,8 @@ namespace MoveGenerator
 
     void push_queen_moves(State * s, MoveList * mlist, U64 ray, U64 checker)
     {
-        U64 m, a;//, n;
-        Square dst;//src, dst;
+        U64 m, a;
+        Square dst;
         int i, score;
 
         for (i = 0; i < s->piece_count[s->us][QUEEN]; ++i)
