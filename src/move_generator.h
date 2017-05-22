@@ -25,7 +25,6 @@ namespace MoveGenerator
 	void push_rook_moves(State * s, MoveList *, U64 ray=DEFAULT, U64 checker=DEFAULT);
 	void push_queen_moves(State * s, MoveList *, U64 ray=DEFAULT, U64 checker=DEFAULT);
 	void push_king_moves(State *, MoveList *, int);
-	U64 valid_king_moves(State *);
 	void check_legal(State * s, MoveList * mlist);
 }
 

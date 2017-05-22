@@ -210,7 +210,6 @@ namespace MoveGenerator
             }
             while (m)
             {
-                //dst   = pop_lsb(m);
                 mlist -> push(s->piece_list[s->us][KNIGHT][i], pop_lsb(m), QUIET, Q);
             }
         }
@@ -235,7 +234,6 @@ namespace MoveGenerator
             }
             while (m)
             {
-                //dst   = pop_lsb(m);
                 mlist -> push(s->piece_list[s->us][BISHOP][i], pop_lsb(m), QUIET, Q);
             }
         }
@@ -260,7 +258,6 @@ namespace MoveGenerator
             }
             while (m)
             {
-                //dst   = pop_lsb(m);
                 mlist -> push(s->piece_list[s->us][ROOK][i], pop_lsb(m), QUIET, Q);
             }
         }
@@ -285,7 +282,6 @@ namespace MoveGenerator
             }
             while (m)
             {
-                //dst   = pop_lsb(m);
                 mlist -> push(s->piece_list[s->us][QUEEN][i], pop_lsb(m), QUIET, Q);
             }
         }
