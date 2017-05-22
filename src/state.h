@@ -84,7 +84,6 @@ struct State
     bool is_attacked(const Square s) const;
     bool in_check();
     int check_count() const;
-    bool is_legal(Move, U64) const;
 
     friend std::ostream & operator << (std::ostream & o, const State & state);
 
@@ -298,15 +297,6 @@ bool State::is_attacked(const Square s) const
         || (knight_moves[s] & e_knight())
         || (Bmagic(s, occ() ^ p_king()) & (e_bishop() | e_queen()))
         || (Rmagic(s, occ() ^ p_king()) & (e_rook()   | e_queen()));
-}
-
-inline
-bool State::is_legal(Move m, U64 pin) const
-{
-    return
-    get_src(m) == p_king_sq() ? !is_attacked(get_dst(m))
-  : get_src(m) & pin ? coplanar[get_src(m)][get_dst(m)] & p_king()
-  : true;
 }
 
 #endif
