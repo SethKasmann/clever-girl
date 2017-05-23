@@ -1,5 +1,5 @@
-#ifndef CONSTANTS_H
-#define CONSTANTS_H
+#ifndef TYPES_H
+#define TYPES_H
 
 #include <string>
 
@@ -58,14 +58,6 @@ enum PieceType
 	QUEEN,
 	KING,
 	NONE
-};
-
-enum Castle_Rights
-{
-    NO_RIGHTS,
-    KING_ONLY,
-    QUEEN_ONLY,
-    ALL_RIGHTS
 };
 
 enum CR
