@@ -86,6 +86,26 @@ struct State
     bool in_check();
     int check_count(U64 & checkers) const;
 
+    bool vkm(const Square sq)
+    {
+        int i;
+        U64 ret;
+        const U64 o = occ() ^ pieces[us][KING];
+
+        ret = (pawn_attacks[us][sq] & e_pawn())
+            | (knight_moves[sq]     & e_knight())
+            | (king_moves[sq]       & e_king());
+
+        for (i = 0; i < piece_count[them][BISHOP]; ++i)
+            ret |= between_dia[sq][piece_list[them][BISHOP][i]] & o;
+        for (i = 0; i < piece_count[them][ROOK]; ++i)
+            ret |= between_hor[sq][piece_list[them][ROOK][i]] & o;
+        for (i = 0; i < piece_count[them][QUEEN]; ++i)
+            ret |= (between_hor[sq][piece_list[them][QUEEN][i]] & o)
+                 | (between_dia[sq][piece_list[them][QUEEN][i]] & o);
+        return ret;
+    }
+
     friend std::ostream & operator << (std::ostream & o, const State & state);
 
     int fmr;
