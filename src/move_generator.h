@@ -16,12 +16,10 @@ namespace MoveGenerator
 	void push_moves(State *, MoveList *);
 	void push_evasions(State *, MoveList *, U64);
 	void push_pawn_moves(State * s, MoveList *, U64 checker=DEFAULT, U64 ray=DEFAULT);
-	void push_knight_moves(State * s, MoveList *, U64 ray=DEFAULT, U64 checker=DEFAULT);
-	void push_bishop_moves(State * s, MoveList *, U64 ray=DEFAULT, U64 checker=DEFAULT);
-	void push_rook_moves(State * s, MoveList *, U64 ray=DEFAULT, U64 checker=DEFAULT);
-	void push_queen_moves(State * s, MoveList *, U64 ray=DEFAULT, U64 checker=DEFAULT);
 	void push_king_moves(State *, MoveList *, int);
 	void check_legal(State * s, MoveList * mlist);
+	template <PieceType P>
+	void push_moves(State *, MoveList *, U64 ray=DEFAULT, U64 checker=DEFAULT);
 }
 
 #endif

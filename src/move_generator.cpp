@@ -38,10 +38,10 @@ namespace MoveGenerator
             else
             {
                 push_pawn_moves(s, mlist);
-                push_knight_moves(s, mlist);
-                push_bishop_moves(s, mlist);
-                push_rook_moves(s, mlist);
-                push_queen_moves(s, mlist);
+                push_moves<KNIGHT>(s, mlist);
+                push_moves<BISHOP>(s, mlist);
+                push_moves<ROOK  >(s, mlist);
+                push_moves<QUEEN >(s, mlist);
                 push_king_moves(s, mlist, checks);
             }
         }
@@ -85,10 +85,10 @@ namespace MoveGenerator
         ray = between_dia[s->p_king_sq()][get_lsb(checker)]
             | between_hor[s->p_king_sq()][get_lsb(checker)];
         push_pawn_moves(s, mlist, checker, ray);
-        push_knight_moves(s, mlist, ray, checker);        
-        push_bishop_moves(s, mlist, ray, checker);        
-        push_rook_moves(s, mlist, ray, checker);        
-        push_queen_moves(s, mlist, ray, checker);        
+        push_moves<KNIGHT>(s, mlist, checker, ray);
+        push_moves<BISHOP>(s, mlist, checker, ray);
+        push_moves<ROOK  >(s, mlist, checker, ray);
+        push_moves<QUEEN >(s, mlist, checker, ray);
         push_king_moves(s, mlist, 1);
     }
 
@@ -191,98 +191,30 @@ namespace MoveGenerator
         }
     }
 
-    void push_knight_moves(State * s, MoveList * mlist, U64 ray, U64 checker)
+    template <PieceType P>
+    void push_moves(State * s, MoveList * mlist, U64 ray, U64 checker)
     {
         U64 m, a;
         Square dst;
         int i, score;
-
-        for (i = 0; i < s->piece_count[s->us][KNIGHT]; ++i)
+        for (i = 0; i < s->piece_count[s->us][P]; ++i)
         {
-            m   = knight_moves[s->piece_list[s->us][KNIGHT][i]] & (ray | checker);
+            m   = P == KNIGHT ? knight_moves[s->piece_list[s->us][KNIGHT][i]] & (ray | checker)
+                : P == BISHOP ? Bmagic(s->piece_list[s->us][P][i], s->occ())  & (ray | checker)
+                : P == ROOK   ? Rmagic(s->piece_list[s->us][P][i], s->occ())  & (ray | checker)
+                              : Qmagic(s->piece_list[s->us][P][i], s->occ())  & (ray | checker);
+
             a   = m & s->e_occ();
             m  &= s->empty();
             while (a)
             {
                 dst   = pop_lsb(a);
-                score = SCORE[KNIGHT][s->on_square(dst, s->them)];
-                mlist -> push(s->piece_list[s->us][KNIGHT][i], dst, ATTACK, score);
+                score = SCORE[P][s->on_square(dst, s->them)];
+                mlist -> push(s->piece_list[s->us][P][i], dst, ATTACK, score);
             }
             while (m)
             {
-                mlist -> push(s->piece_list[s->us][KNIGHT][i], pop_lsb(m), QUIET, Q);
-            }
-        }
-    }
-
-    void push_bishop_moves(State * s, MoveList * mlist, U64 ray, U64 checker)
-    {
-        U64 m, a;
-        Square dst;
-        int i, score;
-
-        for (i = 0; i < s->piece_count[s->us][BISHOP]; ++i)
-        {
-            m   = Bmagic(s->piece_list[s->us][BISHOP][i], s->occ()) & (ray | checker);
-            a   = m & s->e_occ();
-            m  &= s->empty();
-            while (a)
-            {
-                dst   = pop_lsb(a);
-                score = SCORE[BISHOP][s->on_square(dst, s->them)];
-                mlist -> push(s->piece_list[s->us][BISHOP][i], dst, ATTACK, score);
-            }
-            while (m)
-            {
-                mlist -> push(s->piece_list[s->us][BISHOP][i], pop_lsb(m), QUIET, Q);
-            }
-        }
-    }
-
-    void push_rook_moves(State * s, MoveList * mlist, U64 ray, U64 checker)
-    {
-        U64 m, a;
-        Square dst;
-        int i, score;
-
-        for (i = 0; i < s->piece_count[s->us][ROOK]; ++i)
-        {
-            m   = Rmagic(s->piece_list[s->us][ROOK][i], s->occ()) & (ray | checker);
-            a   = m & s->e_occ();
-            m  &= s->empty();
-            while (a)
-            {
-                dst   = pop_lsb(a);
-                score = SCORE[ROOK][s->on_square(dst, s->them)];
-                mlist -> push(s->piece_list[s->us][ROOK][i], dst, ATTACK, score);
-            }
-            while (m)
-            {
-                mlist -> push(s->piece_list[s->us][ROOK][i], pop_lsb(m), QUIET, Q);
-            }
-        }
-    }
-
-    void push_queen_moves(State * s, MoveList * mlist, U64 ray, U64 checker)
-    {
-        U64 m, a;
-        Square dst;
-        int i, score;
-
-        for (i = 0; i < s->piece_count[s->us][QUEEN]; ++i)
-        {
-            m   = Qmagic(s->piece_list[s->us][QUEEN][i], s->occ()) & (ray | checker);
-            a   = m & s->e_occ();
-            m  &= s->empty();
-            while (a)
-            {
-                dst   = pop_lsb(a);
-                score = SCORE[QUEEN][s->on_square(dst, s->them)];
-                mlist -> push(s->piece_list[s->us][QUEEN][i], dst, ATTACK, score);
-            }
-            while (m)
-            {
-                mlist -> push(s->piece_list[s->us][QUEEN][i], pop_lsb(m), QUIET, Q);
+                mlist -> push(s->piece_list[s->us][P][i], pop_lsb(m), QUIET, Q);
             }
         }
     }
