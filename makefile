@@ -1,5 +1,5 @@
 exe:	main.cpp
-	g++ *.cpp src/*.cpp -std=c++14 -Isrc -O2
+	g++ *.cpp src/*.cpp -std=c++14 -Isrc -O3
 
 run:
 	./a.out
