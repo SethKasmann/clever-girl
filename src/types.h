@@ -148,18 +148,6 @@ enum NodeType
 	PV, CUT, ALL
 };
 
-const int EP_VICTIM[64] = 
-{
-	0,  0,  0,  0,  0,  0,  0,  0,
-	0,  0,  0,  0,  0,  0,  0,  0,
-	24, 25, 26, 27, 28, 29, 30, 31,
-	0,  0,  0,  0,  0,  0,  0,  0,
-	0,  0,  0,  0,  0,  0,  0,  0,
-    32, 33, 34, 35, 36, 37, 38, 39,	
-	0,  0,  0,  0,  0,  0,  0,  0,
-	0,  0,  0,  0,  0,  0,  0,  0
-};
-
 const int CASTLE_RIGHTS[64] = 
 {
 	14, 15, 15, 12, 15, 15, 15, 13,
@@ -202,6 +190,11 @@ inline PieceType & operator++(PieceType & p)
 inline File & operator++(File & f)
 {
 	return f = File(int(f) + 1);
+}
+
+inline U64 operator&(U64 u, Square s)
+{
+	return u & (1ULL << s);
 }
 
 #endif

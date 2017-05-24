@@ -1,37 +1,9 @@
 #include "state.h"
 #include "zobrist.h"
-/*
-State::State() 
-    : us(WHITE), them(BLACK),
-      key(0),    fmr(0),      castle(0),   
-      en_passant(0)
-{
-    for (PieceType p = PAWN; p < NONE; ++p)
-    {
-        pieces[WHITE][p]      = 0;
-        pieces[BLACK][p]      = 0;
-        piece_count[WHITE][p] = 0;
-        piece_count[BLACK][p] = 0;
-        for (int i = 0; i < MAX_PIECE_COUNT; ++i)
-        {
-            piece_list[WHITE][p][i] = NO_SQ;
-            piece_list[BLACK][p][i] = NO_SQ;
-        }
-    }
 
-    occupancy[WHITE] = 0;
-    occupancy[BLACK] = 0;
-
-    for (Square s = H1; s <= A8; ++s)
-    {
-        board[WHITE][s] = NONE;
-        board[BLACK][s] = NONE;
-        piece_index[s]  = 0;
-    }
-}
-*/
-
-State::State() {};
+// ----------------------------------------------------------------------------
+// Copy constructor.
+// ----------------------------------------------------------------------------
 
 State::State(const State & s)
     : fmr(s.fmr), castle(s.castle), en_passant(s.en_passant), 
@@ -47,12 +19,12 @@ State::State(const State & s)
 
 void State::operator=(const State & s)
 {
-    fmr        = s.fmr;
-    castle     = s.castle;
+    us =         s.us;
+    them =       s.them;
+    castle =     s.castle;
+    key =        s.key;
+    fmr =        s.fmr;
     en_passant = s.en_passant;
-    key        = s.key;
-    us         = s.us;
-    them       = s.them;
     std::memcpy(board,       s.board,       sizeof board);
     std::memcpy(piece_count, s.piece_count, sizeof piece_count);
     std::memcpy(piece_list,  s.piece_list,  sizeof piece_list);
@@ -60,6 +32,16 @@ void State::operator=(const State & s)
     std::memcpy(pieces,      s.pieces,      sizeof pieces);
     std::memcpy(occupancy,   s.occupancy,   sizeof occupancy);
 }
+
+// ----------------------------------------------------------------------------
+// Constructor to initialize a state based on the position's FEN string.
+//
+// Explination of FEN notation from wikipedia:
+//
+// "Forsyth–Edwards Notation (FEN) is a standard notation for describing a 
+// particular board position of a chess game. The purpose of FEN is to provide 
+// all the necessary information to restart a game from a particular position."
+// ----------------------------------------------------------------------------
 
 State::State(std::string & fen) : castle(0), en_passant(0), 
                                   us(WHITE), them(BLACK)
@@ -294,41 +276,28 @@ State::State(std::string & fen) : castle(0), en_passant(0),
         {
             const Color c = occupancy[WHITE] & bit ? WHITE : BLACK;
             if (pieces[c][PAWN] & bit)
-            {
                 board[c][s] = PAWN;
-            }
             else if (pieces[c][KNIGHT] & bit)
-            {
                 board[c][s] = KNIGHT;
-            }
             else if (pieces[c][BISHOP] & bit)
-            {
                 board[c][s] = BISHOP;
-            }
             else if (pieces[c][ROOK] & bit)
-            {
                 board[c][s] = ROOK;
-            }
             else if (pieces[c][QUEEN] & bit)
-            {
                 board[c][s] = QUEEN;
-            }
             else if (pieces[c][KING] & bit)
-            {
                 board[c][s] = KING;
-            }
             else
-            {
                 assert(false);
-            }
         }
     }
     Zobrist::init_pieces(this);
-    assert(is_ok());
 }
 
-// Function to return a bitboard of all pinned pieces
-// for the current player.
+// ----------------------------------------------------------------------------
+// Function to return a bitboard of all pinned pieces for the current player.
+// ----------------------------------------------------------------------------
+
 U64 State::get_pins() const
 {
     int i;
@@ -355,21 +324,27 @@ U64 State::get_pins() const
     return pin;
 }
 
-//
+// ----------------------------------------------------------------------------
+// Make move function responsible for updating the state based on the source, 
+// destination, and type of move.
+// ----------------------------------------------------------------------------
+
 void State::make(Move m)
 {
-    Square src  = get_src(m);
-    Square dst  = get_dst(m);
-    Prop   prop = get_prop(m);
+    const Square src  = get_src(m);
+    const Square dst  = get_dst(m);
 
+    // Update the 50 move rule.
     board[us][src] == PAWN || board[them][dst] != NONE ? 
         fmr = 0 : fmr++;
 
+    // Remove the ep file and castle rights from the zobrist key.
     if (en_passant) Zobrist::ep(key, en_passant);
     Zobrist::castle(key, castle);
 
-    switch (prop)
+    switch (get_prop(m))
     {
+        // Quiet moves.
         case QUIET:
         {
             Zobrist::move(this, src, dst);
@@ -377,6 +352,7 @@ void State::make(Move m)
             en_passant = 0;
             break;
         }
+        // Attacking moves.
         case ATTACK:
         {
             Zobrist::move(this, src, dst);
@@ -385,6 +361,7 @@ void State::make(Move m)
             en_passant = 0;
             break;
         }
+        // Double pawn push.
         case DBL_PUSH:
         {
             Zobrist::move(this, src, dst);
@@ -393,6 +370,7 @@ void State::make(Move m)
             Zobrist::ep(key, en_passant);
             break;
         }
+        // King castle.
         case KING_CAST:
         {
             const int rook_src = src-3;
@@ -404,6 +382,7 @@ void State::make(Move m)
             en_passant = 0;
             break;
         }
+        // Queen castle.
         case QUEEN_CAST:
         {
             const int rook_src = src+4;
@@ -415,6 +394,7 @@ void State::make(Move m)
             en_passant = 0;
             break;
         }
+        // Queen promotion.
         case QUEEN_PROMO:
         {
             Zobrist::promo(this, src, dst, QUEEN);
@@ -423,6 +403,7 @@ void State::make(Move m)
             en_passant = 0;
             break;
         }
+        // Knight underpromotion.
         case KNIGHT_PROMO:
         {
             Zobrist::promo(this, src, dst, KNIGHT);
@@ -431,6 +412,7 @@ void State::make(Move m)
             en_passant = 0;
             break;
         }
+        // Rook underpromotion.
         case ROOK_PROMO:
         {
             Zobrist::promo(this, src, dst, ROOK);
@@ -439,6 +421,7 @@ void State::make(Move m)
             en_passant = 0;
             break;
         }
+        // Bishop underpromotion.
         case BISHOP_PROMO:
         {
             Zobrist::promo(this, src, dst, BISHOP);
@@ -447,6 +430,7 @@ void State::make(Move m)
             en_passant = 0;
             break;
         }
+        // En-Passant.
         case EN_PASSANT:
         {
             Zobrist::en_passant(this, src, dst, get_lsb(en_passant));
@@ -456,16 +440,22 @@ void State::make(Move m)
             break;
         }
     }
+    // Update castle rights.
     castle &= CASTLE_RIGHTS[src];
     castle &= CASTLE_RIGHTS[dst];
+
+    // Add updated castle rights back into the zobrist key, and swap
+    // turns.
     Zobrist::castle(key, castle);
     Zobrist::turn(key);
     assert(!in_check());
     swap_turn();
 }
 
-// Function to return a bitboard of all valid king moves
-// for the current player
+// ----------------------------------------------------------------------------
+// Function to return a bitboard of all valid king moves for the current 
+// player
+// ----------------------------------------------------------------------------
 U64 State::valid_king_moves() const
 {
     U64 m;
@@ -473,8 +463,8 @@ U64 State::valid_king_moves() const
 
     const Dir L   = us == WHITE ? SW : NW;
     const Dir R   = us == WHITE ? SE : NE;
-    // Remove king from occupancy to check squares
-    // attacked behind the king.
+
+    // Remove king from occupancy to check squares attacked behind the king.
     const U64 o = (occupancy[us] | occupancy[them]) ^ pieces[us][KING];
 
     m = king_moves[piece_list[us][KING][0]];
@@ -499,8 +489,12 @@ U64 State::valid_king_moves() const
     return m;
 }
 
-// Function to check whether the current player's king is
-// in check.
+
+// ----------------------------------------------------------------------------
+// Function to check whether the current player's king is in check. Used 
+// mostly for debugging.
+// ----------------------------------------------------------------------------
+
 bool State::in_check()
 {
     const Square k = piece_list[us][KING][0];
@@ -509,6 +503,11 @@ bool State::in_check()
          | (Bmagic(k, occ()) & (e_bishop() | e_queen()))
          | (Rmagic(k, occ()) & (e_rook() | e_queen()));
 }
+
+// ----------------------------------------------------------------------------
+// Function to return the EPD string of the current position, used to query 
+// the opening database.
+// ----------------------------------------------------------------------------
 
 const char * State::get_EPD() const
 {
@@ -618,6 +617,10 @@ const char * State::get_EPD() const
     }
     return EPD.c_str();
 }
+
+// ----------------------------------------------------------------------------
+// Function to print the board on the screen. Used for debugging.
+// ----------------------------------------------------------------------------
 
 std::ostream & operator << (std::ostream & o, const State & s)
 {

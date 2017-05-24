@@ -15,15 +15,15 @@
 
 struct State
 {
-    State();
+    State() {};
     State(std::string &);
     State(const State & s);
     void operator=(const State &);
-    
-    const char * get_EPD() const;
-    int get_fifty() const { return fmr; }
 
-    // Access piece bitboards
+    // EDP string for database query.
+    const char * get_EPD() const;
+
+    // Access piece bitboards.
     U64 p_pawn() const;
     U64 e_pawn() const;
     U64 p_knight() const;
@@ -36,19 +36,10 @@ struct State
     U64 e_queen() const;
     U64 p_king() const;
     U64 e_king() const;
+
+    // Access king square.
     Square p_king_sq() const;
     Square e_king_sq() const;
-
-    // Access sliders
-    U64 e_diagonal_sliders() const
-    {
-        return e_bishop() | e_queen();
-    }
-
-    U64 e_non_diagonal_sliders() const
-    {
-        return e_rook() | e_queen();
-    }
 
     // Board occupancy
     U64 occ() const;
@@ -60,52 +51,36 @@ struct State
     PieceType on_square(const Square s, const Color c) const;
     PieceType on_square(const Square s) const;
 
-    U64 valid_king_moves() const;
 
-    // Functions to get castle rights
+    // Castle rights.
     bool k_castle() const;
     bool q_castle() const;
-    void swap_turn();
 
-    // Functions to get piece differentials
+    // Piece differentials.
     int pawn_diff() const;
     int knight_diff() const;
     int bishop_diff() const;
     int rook_diff() const;
     int queen_diff() const;
 
+    // Functions involved in making a move.
+    void make(Move m);
     void add_piece(int, PieceType);
     void move_piece(int, int);
     void del_piece(bool, int);
+    void swap_turn();
 
+    // Valid king moves and pins.
+    U64 valid_king_moves() const;
     U64 get_pins() const;
 
-    void make(Move m);
+    // Check and attack information.
     bool is_attacked(const Square s) const;
     bool is_attacked_by_slider(U64 change) const;
     bool in_check();
     int check_count(U64 & checkers) const;
 
-    bool vkm(const Square sq)
-    {
-        int i;
-        U64 ret;
-        const U64 o = occ() ^ pieces[us][KING];
-
-        ret = (pawn_attacks[us][sq] & e_pawn())
-            | (knight_moves[sq]     & e_knight())
-            | (king_moves[sq]       & e_king());
-
-        for (i = 0; i < piece_count[them][BISHOP]; ++i)
-            ret |= between_dia[sq][piece_list[them][BISHOP][i]] & o;
-        for (i = 0; i < piece_count[them][ROOK]; ++i)
-            ret |= between_hor[sq][piece_list[them][ROOK][i]] & o;
-        for (i = 0; i < piece_count[them][QUEEN]; ++i)
-            ret |= (between_hor[sq][piece_list[them][QUEEN][i]] & o)
-                 | (between_dia[sq][piece_list[them][QUEEN][i]] & o);
-        return ret;
-    }
-
+    // Print
     friend std::ostream & operator << (std::ostream & o, const State & state);
 
     int fmr;

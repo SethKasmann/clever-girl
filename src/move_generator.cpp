@@ -66,17 +66,11 @@ namespace MoveGenerator
         
         for (Move m = *mlist->c; mlist->c < mlist->e; m = *mlist->c)
         {
-            if (get_src(m) & pin
-             && !(coplanar[get_src(m)][get_dst(m)] & s->p_king())
-             || (get_src(m) == k && !s->vkm(get_dst(m))))
-            {
-                // illegal move
+            if (get_src(m) & pin 
+             && !(coplanar[get_src(m)][get_dst(m)] & s->p_king()))
                 *mlist->c = *(--mlist->e);
-            }
             else
-            {
                 mlist->c++;
-            }
         }
     }
 
@@ -228,8 +222,7 @@ namespace MoveGenerator
 
         src = s->p_king_sq();
 
-        //m = s->valid_king_moves();
-        m = king_moves[src] & ~s->p_occ();
+        m = s->valid_king_moves();
         a = m & s->e_occ();
         m ^= a;
 
