@@ -11,7 +11,6 @@
 #include <cstring>
 #include "bitboard.h"
 #include "types.h"
-#include "move.h"
 
 struct State
 {

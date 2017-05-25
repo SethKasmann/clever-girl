@@ -5,17 +5,32 @@
 #include "state.h"
 #include "bitboard.h"
 #include "MagicMoves.hpp"
-#include "move.h"
 #include "types.h"
 
 const U64 FULL = 0xFFFFFFFFFFFFFFFF;
+const int MAX_SIZE = 256;
+
+class MoveList
+{
+public:
+	MoveList() : e(_m), c(_m) 
+	{}
+	~MoveList() 
+	{}
+	int size() { return e - _m; }
+	void push(int src, int dst, int p, int s)
+	{
+		*(e++) = src | dst << 6 | p << 12 | s << 16;
+	}
+	Move pop() { return *(--e); }
+private:
+	Move _m[MAX_SIZE];
+public:
+	Move * c;
+	Move * e;
+};
 
 void mg_init();
 void push_moves(State &, MoveList *);
-void push_pawn_moves(State & s, MoveList *, U64 checker=FULL, U64 ray=FULL);
-void push_king_moves(State &, MoveList *, int checks=0);
-void check_legal(State & s, MoveList * mlist);
-template <PieceType P>
-void push_moves(State &, MoveList *, U64 checker=FULL, U64 ray=FULL);
 
 #endif

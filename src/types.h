@@ -169,6 +169,10 @@ enum Prop
 	EN_PASSANT
 };
 
+inline Square get_src(Move m) { return Square(m & 0x3F); }
+inline Square get_dst(Move m) { return Square((m & 0xFC0) >> 6); }
+inline Prop get_prop(Move m)  { return Prop((m & 0xF000) >> 12); }
+
 // ----------------------------------------------------------------------------
 // Search Types
 // ----------------------------------------------------------------------------

@@ -14,7 +14,7 @@ void mg_init()
 // double pawn pushes, and en-passant.
 // ----------------------------------------------------------------------------
 
-void push_pawn_moves(State & s, MoveList * mlist, U64 checker, U64 check_ray)
+void push_pawn_moves(State & s, MoveList * mlist, U64 checker=FULL, U64 ray=FULL)
 {
     const Color C = s.us == WHITE ? WHITE  : BLACK;
     const Dir   P     = C == WHITE ? N      : S;
@@ -69,7 +69,7 @@ void push_pawn_moves(State & s, MoveList * mlist, U64 checker, U64 check_ray)
     }
 
     // Pawn pushes and push promotions.
-    push     = shift(pawns, P) & s.empty() & check_ray;
+    push     = shift(pawns, P) & s.empty() & ray;
     promo    = push & PROMO;
     no_promo = push ^ promo;
 
@@ -88,7 +88,7 @@ void push_pawn_moves(State & s, MoveList * mlist, U64 checker, U64 check_ray)
         mlist->push(dst - P, dst, BISHOP_PROMO, BP);
     }
 
-    dbl = shift(shift(pawns & DBL, P) & s.empty(), P) & s.empty() & check_ray;
+    dbl = shift(shift(pawns & DBL, P) & s.empty(), P) & s.empty() & ray;
 
     while(dbl)
     {
@@ -119,7 +119,7 @@ void push_pawn_moves(State & s, MoveList * mlist, U64 checker, U64 check_ray)
 // ----------------------------------------------------------------------------
 
 template <PieceType P>
-void push_moves(State & s, MoveList * mlist, U64 ray, U64 checker)
+void push_moves(State & s, MoveList * mlist, U64 checker=FULL, U64 ray=FULL)
 {
     U64 m, a;
     Square dst;
@@ -150,7 +150,7 @@ void push_moves(State & s, MoveList * mlist, U64 ray, U64 checker)
 // Push all legal King moves and attacks. This also handles castling moves.
 // ----------------------------------------------------------------------------
 
-void push_king_moves(State & s, MoveList * mlist, int checks)
+void push_king_moves(State & s, MoveList * mlist, int checks=0)
 {
     U64 m, a;
     int score;

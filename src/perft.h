@@ -6,7 +6,6 @@
 #include "move_generator.h"
 #include "state.h"
 #include "types.h"
-#include "move.h"
 #include "Timer.h"
 
 extern int nodes;
