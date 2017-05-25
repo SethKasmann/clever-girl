@@ -12,14 +12,14 @@
 #include "types.h"
 #include "MagicMoves.hpp"
 
-extern U64 pawn_attacks[PLAYER_SZ][BOARD_SZ];
-extern U64 pawn_push[PLAYER_SZ][BOARD_SZ];
-extern U64 pawn_dbl_push[PLAYER_SZ][BOARD_SZ];
-extern U64 between_dia[BOARD_SZ][BOARD_SZ];
-extern U64 between_hor[BOARD_SZ][BOARD_SZ];
-extern U64 coplanar[BOARD_SZ][BOARD_SZ];
-extern const U64 knight_moves[BOARD_SZ];
-extern const U64 king_moves[BOARD_SZ];
+extern U64 pawn_attacks[PLAYER_SIZE][BOARD_SIZE];
+extern U64 pawn_push[PLAYER_SIZE][BOARD_SIZE];
+extern U64 pawn_dbl_push[PLAYER_SIZE][BOARD_SIZE];
+extern U64 between_dia[BOARD_SIZE][BOARD_SIZE];
+extern U64 between_hor[BOARD_SIZE][BOARD_SIZE];
+extern U64 coplanar[BOARD_SIZE][BOARD_SIZE];
+extern const U64 knight_moves[BOARD_SIZE];
+extern const U64 king_moves[BOARD_SIZE];
 
 static const U64 Rank_1 = 0x00000000000000FFULL;
 static const U64 Rank_2 = 0x000000000000FF00ULL;
@@ -133,14 +133,6 @@ U64 shift_ep(U64 bb, const Dir D)
 {
    return D == E ? (bb & NOT_H_FILE) >> 1 : (bb & NOT_A_FILE) << 1;
 }
-
-inline 
-U64 operator&(Square s, U64 bb)
-{
-   return (1ULL << s) & bb;
-}
-
-
 
 inline
 void clear_bit(U64 & bb, int dst)

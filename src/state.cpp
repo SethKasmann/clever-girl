@@ -57,7 +57,7 @@ State::State(std::string & fen) : castle(0), en_passant(0),
         pieces[BLACK][p]      = 0;
         piece_count[WHITE][p] = 0;
         piece_count[BLACK][p] = 0;
-        for (int i = 0; i < MAX_PIECE_COUNT; ++i)
+        for (int i = 0; i < PIECE_MAX; ++i)
         {
             piece_list[WHITE][p][i] = NO_SQ;
             piece_list[BLACK][p][i] = NO_SQ;

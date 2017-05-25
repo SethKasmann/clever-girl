@@ -13,7 +13,7 @@ namespace Zobrist
 		srand(6736199);
 		for (PieceType p = PAWN; p <= NONE; ++p)
 		{
-			for (Square s = H1; s <= H8; ++s)
+			for (Square s = FIRST_SQ; s <= LAST_SQ; ++s)
 			{
 				piece_rand[WHITE][p][s] = rand_64();
 				piece_rand[BLACK][p][s] = rand_64();
@@ -32,7 +32,7 @@ namespace Zobrist
 
 	void init_pieces(State * s)
 	{
-		for (Square sq = H1; sq <= H8; ++sq)
+		for (Square sq = FIRST_SQ; sq <= LAST_SQ; ++sq)
 		{
 			if (s->on_square(sq, s->us) != NONE)
 			{

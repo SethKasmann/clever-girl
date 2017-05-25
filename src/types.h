@@ -7,47 +7,41 @@
 #define NDEBUG
 #include <assert.h>
 
+// ----------------------------------------------------------------------------
+// Bitboard Typedef
+// ----------------------------------------------------------------------------
+
 typedef unsigned long long U64;
 #define C64(constantU64) constantU64##ULL;
 
-//=============================================================================
-// Encoded Move
-// Moves are stored in 23 bits:
-// bits 0-5		: source location
-// bits 6-11	: destination location
-// bits 12-15	: move property
-// bits 16-22	: move score
-//=============================================================================
-typedef unsigned int Move;
+// ----------------------------------------------------------------------------
+// Board Types
+// ----------------------------------------------------------------------------
 
-const int NEG_INF = -1001;
-const int POS_INF = 1001;
+static const int BOARD_SIZE  = 64;
+static const int TYPES_SIZE  = 6;
+static const int PLAYER_SIZE = 2;
+static const int PIECE_MAX   = 10;
 
-const int BOARD_SZ = 64;
-const int OCC_SZ = 2;
-const int PIECE_TYPES_SZ = 6;
-const int PLAYER_SZ = 2;
-const int MAX_PIECE_COUNT = 10;
-
-const int MAX_PLY = 50;
-const int KILLER_SZ = 2;
-
-enum Color
+static const int CASTLE_RIGHTS[BOARD_SIZE] = 
 {
-	WHITE,
-	BLACK
+    14, 15, 15, 12, 15, 15, 15, 13,
+    15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15,
+    11, 15, 15,  3, 15, 15, 15,  7
 };
 
-enum MoveScore
-{
-	BP = 1,
-	RP = 2,
-	NP = 3,
-	QP = 36,
-	Q  = 4,
-	C  = 10,
-	EP = 25
+enum Color 
+{ 
+	WHITE, 
+	BLACK 
 };
+
+//inline Color operator!(const Color c) { return Color(!bool(c)); }
 
 enum PieceType
 {
@@ -60,13 +54,15 @@ enum PieceType
 	NONE
 };
 
-enum CR
-{
-	W_KING_CASTLE = 1,
-	W_QUEEN_CASTLE = 2,
-	B_KING_CASTLE = 4,
-	B_QUEEN_CASTLE = 8
-};
+//inline PieceType operator+(Color c, PieceType p)
+//{
+	//return PieceType(int(c) + int(p));
+//}
+
+//inline PieceType & operator++(PieceType & p)
+//{
+	//return p = PieceType(int(p) + 1);
+//}
 
 enum Square
 {
@@ -79,7 +75,12 @@ enum Square
 	H7, G7, F7, E7, D7, C7, B7, A7,
 	H8, G8, F8, E8, D8, C8, B8, A8,
 	NO_SQ = -1,
+	FIRST_SQ = 0, LAST_SQ = 63
 };
+
+//inline Square & operator++(Square & s) { return s = Square(int(s) + 1); }
+//inline Square & operator--(Square & s) { return s = Square(int(s) - 1); }
+//inline U64  operator&(U64 u, Square s) { return u & (1ULL << s); }
 
 enum File
 {
@@ -93,6 +94,9 @@ enum File
 	H_FILE
 };
 
+//inline File & operator++(File & f) { return f = File(int(f) + 1); }
+
+
 enum Rank
 {
 	RANK_1,
@@ -103,6 +107,47 @@ enum Rank
 	RANK_6,
 	RANK_7,
 	RANK_8
+};
+
+enum CR
+{
+	W_KING_CASTLE = 1,
+	W_QUEEN_CASTLE = 2,
+	B_KING_CASTLE = 4,
+	B_QUEEN_CASTLE = 8
+};
+
+// ----------------------------------------------------------------------------
+// Move Types
+//
+// Moves are stored in 32 bits:
+// bits 0-5	  : source location
+// bits 6-11  : destination location
+// bits 12-15 : move property
+// bits 16-22 : move score
+// ----------------------------------------------------------------------------
+
+typedef unsigned int Move;
+
+static const int SCORE[TYPES_SIZE][TYPES_SIZE] = 
+{
+	{ 25, 29, 30, 32, 35, 0 },  
+    { 19, 24, 26, 28, 34, 0 },  
+    { 18, 20, 23, 27, 33, 0 },  
+    { 15, 16, 17, 22, 31, 0 },  
+	{ 11, 12, 13, 14, 21, 0 },  
+    { 5,  6,  7,  8,  9,  0 } 
+};
+
+enum MoveScore
+{
+	BP = 1,
+	RP = 2,
+	NP = 3,
+	QP = 36,
+	Q  = 4,
+	C  = 10,
+	EP = 25
 };
 
 enum Dir
@@ -143,58 +188,39 @@ enum Prop
 	EN_PASSANT
 };
 
+// ----------------------------------------------------------------------------
+// Search Types
+// ----------------------------------------------------------------------------
+
+const int NEG_INF   = -1001;
+const int POS_INF   = 1001;
+const int KILLER_SZ = 2;
+const int MAX_PLY   = 50;
+
 enum NodeType
 {
 	PV, CUT, ALL
 };
 
-const int CASTLE_RIGHTS[64] = 
-{
-	14, 15, 15, 12, 15, 15, 15, 13,
-	15, 15, 15, 15, 15, 15, 15, 15,
-	15, 15, 15, 15, 15, 15, 15, 15,
-	15, 15, 15, 15, 15, 15, 15, 15,
-	15, 15, 15, 15, 15, 15, 15, 15,
-	15, 15, 15, 15, 15, 15, 15, 15,
-	15, 15, 15, 15, 15, 15, 15, 15,
-	11, 15, 15,  3, 15, 15, 15,  7
-};
+// ----------------------------------------------------------------------------
+// Operators
+// ----------------------------------------------------------------------------
 
-inline Color operator!(const Color c)
-{
-	return Color(!bool(c));
-}
-
-inline Square & operator++(Square & s)
-{
-	s = Square(int(s) + 1);
-	return s;
-}
-
-inline Square & operator--(Square & s)
-{
-	s = Square(int(s) - 1);
-	return s;
-}
-
-inline PieceType operator+(Color c, PieceType p)
-{
-	return PieceType(int(c) + int(p));
-}
-
-inline PieceType & operator++(PieceType & p)
-{
-	return p = PieceType(int(p) + 1);
-}
-
-inline File & operator++(File & f)
-{
-	return f = File(int(f) + 1);
-}
-
-inline U64 operator&(U64 u, Square s)
-{
-	return u & (1ULL << s);
-}
+template<typename T>
+inline T & operator++(T & t) { return t = T(int(t) + 1); }
+template<typename T>
+inline T & operator--(T & t) { return t = T(int(t) - 1); }
+template<typename T>
+inline T & operator+(const T t0, const T t1) { return T(int(t0) + int(t1)); }
+template<typename T>
+inline T & operator-(const T t0, const T t1) { return T(int(t0) - int(t1)); }
+template<typename T>
+inline T & operator +=(T & t0, const T t1) { return t0 = t0 + t1; }
+template<typename T>
+inline T & operator -=(T & t0, const T t1) { return t0 = t0 - t1; }
+template<typename T>
+inline T operator!(const T t) { return T(!bool(t)); }
+template<typename T>
+inline U64 operator&(const T t, const U64 u) { return u & (1ULL << t); }
 
 #endif

@@ -51,7 +51,6 @@ struct State
     PieceType on_square(const Square s, const Color c) const;
     PieceType on_square(const Square s) const;
 
-
     // Castle rights.
     bool k_castle() const;
     bool q_castle() const;
@@ -85,12 +84,12 @@ struct State
 
     int fmr;
     int castle;
-    PieceType board[PLAYER_SZ][BOARD_SZ];
-    int piece_count[PLAYER_SZ][PIECE_TYPES_SZ];
-    Square piece_list[PLAYER_SZ][PIECE_TYPES_SZ][MAX_PIECE_COUNT];
-    int piece_index[BOARD_SZ];
-    U64 pieces[PLAYER_SZ][PIECE_TYPES_SZ];
-    U64 occupancy[OCC_SZ];
+    PieceType board[PLAYER_SIZE][BOARD_SIZE];
+    int piece_count[PLAYER_SIZE][TYPES_SIZE];
+    Square piece_list[PLAYER_SIZE][TYPES_SIZE][PIECE_MAX];
+    int piece_index[BOARD_SIZE];
+    U64 pieces[PLAYER_SIZE][TYPES_SIZE];
+    U64 occupancy[PLAYER_SIZE];
     U64 en_passant;
     U64 key;
     Color us;

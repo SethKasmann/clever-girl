@@ -5,15 +5,6 @@ namespace MoveGenerator
 
     const U64 KINGSIDE_CASTLE_MASK[2] = {0x6, 0x600000000000000};
     const U64 QUEENSIDE_CASTLE_MASK[2] = {0x70, 0x7000000000000000};
-    const int SCORE[6][7]
-    {
-        { 25, 29, 30, 32, 35, 0,  4 },  
-        { 19, 24, 26, 28, 34, 0,  4 },  
-        { 18, 20, 23, 27, 33, 0,  4 },  
-        { 15, 16, 17, 22, 31, 0,  4 },  
-        { 11, 12, 13, 14, 21, 0,  4 },  
-        { 5,  6,  7,  8,  9,  0,  4 }, 
-    };
 
     void push_moves(State * s, MoveList * mlist)
     {
