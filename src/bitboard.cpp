@@ -47,7 +47,7 @@ const U64 king_moves[BOARD_SIZE] =
     U64(0x2838000000000000), U64(0x5070000000000000), U64(0xA0E0000000000000), U64(0x40C0000000000000)
 };
 
-void bitboard_init()
+void bb_init()
 {
     for (Square sq_src = H1; sq_src <= A8; ++sq_src)
     {

@@ -77,7 +77,7 @@ struct State
     bool is_attacked(const Square s) const;
     bool is_attacked_by_slider(U64 change) const;
     bool in_check();
-    int check_count(U64 & checkers) const;
+    U64 checkers() const;
 
     // Print
     friend std::ostream & operator << (std::ostream & o, const State & state);
@@ -302,13 +302,12 @@ bool State::is_attacked_by_slider(U64 change) const
 }
 
 inline
-int State::check_count(U64 & checkers) const
+U64 State::checkers() const
 {
-    checkers |= (pawn_attacks[us][p_king_sq()] &  e_pawn())
-              | (knight_moves[p_king_sq()]     &  e_knight())
-              | (Bmagic(p_king_sq(), occ())    & (e_bishop() | e_queen()))
-              | (Rmagic(p_king_sq(), occ())    & (e_rook()   | e_queen()));
-    return pop_count(checkers);
+    return (pawn_attacks[us][p_king_sq()] &  e_pawn())
+         | (knight_moves[p_king_sq()]     &  e_knight())
+         | (Bmagic(p_king_sq(), occ())    & (e_bishop() | e_queen()))
+         | (Rmagic(p_king_sq(), occ())    & (e_rook()   | e_queen()));
 }
 
 #endif

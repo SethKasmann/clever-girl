@@ -12,7 +12,7 @@
 extern int nodes;
 extern int this_node;
 void perft_test();
-void perft_tree(State *, int depth);
+void perft_tree(State & s, int depth);
 void perft(std::string & fen, int depth);
 
 #endif

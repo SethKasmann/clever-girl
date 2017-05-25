@@ -42,7 +42,7 @@ static const U64 File_H = 0x0101010101010101ULL;
 static const U64 NOT_A_FILE = 0x7F7F7F7F7F7F7F7F;
 static const U64 NOT_H_FILE = 0xFEFEFEFEFEFEFEFE;
 
-void bitboard_init();
+void bb_init();
 //unsigned int pop_count(U64);
 
 // Returns the number of 1-bits.

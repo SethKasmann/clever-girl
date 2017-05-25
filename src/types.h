@@ -41,8 +41,6 @@ enum Color
 	BLACK 
 };
 
-//inline Color operator!(const Color c) { return Color(!bool(c)); }
-
 enum PieceType
 {
 	PAWN,
@@ -53,16 +51,6 @@ enum PieceType
 	KING,
 	NONE
 };
-
-//inline PieceType operator+(Color c, PieceType p)
-//{
-	//return PieceType(int(c) + int(p));
-//}
-
-//inline PieceType & operator++(PieceType & p)
-//{
-	//return p = PieceType(int(p) + 1);
-//}
 
 enum Square
 {
@@ -78,10 +66,6 @@ enum Square
 	FIRST_SQ = 0, LAST_SQ = 63
 };
 
-//inline Square & operator++(Square & s) { return s = Square(int(s) + 1); }
-//inline Square & operator--(Square & s) { return s = Square(int(s) - 1); }
-//inline U64  operator&(U64 u, Square s) { return u & (1ULL << s); }
-
 enum File
 {
 	A_FILE,
@@ -93,9 +77,6 @@ enum File
 	G_FILE,
 	H_FILE
 };
-
-//inline File & operator++(File & f) { return f = File(int(f) + 1); }
-
 
 enum Rank
 {
@@ -213,7 +194,11 @@ inline T & operator--(T & t) { return t = T(int(t) - 1); }
 template<typename T>
 inline T & operator+(const T t0, const T t1) { return T(int(t0) + int(t1)); }
 template<typename T>
+inline T operator+(const T t0, const int i) { return T(int(t0) + i); }
+template<typename T>
 inline T & operator-(const T t0, const T t1) { return T(int(t0) - int(t1)); }
+template<typename T>
+inline T operator-(const T t0, const int i) { return T(int(t0) - i); }
 template<typename T>
 inline T & operator +=(T & t0, const T t1) { return t0 = t0 + t1; }
 template<typename T>

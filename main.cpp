@@ -12,9 +12,9 @@
 
 void init()
 {
-    MoveGenerator::init();
+    mg_init();
     Zobrist::init();
-    bitboard_init();
+    bb_init();
 
     // initialize opening book database
 

@@ -55,7 +55,7 @@ void perft_test()
 	{
 		nodes = 0;
 		State s(fen[i]);
-		perft_tree(&s, depth[i]);
+		perft_tree(s, depth[i]);
 		std::cout << fen[i] << '\n'
 				  << (nodes == results[i] ? "Success\n" : "Fail\n")
 				  << nodes << " == " << results[i] << '\n'
@@ -69,19 +69,19 @@ void perft(std::string & fen, int depth)
 	State s(fen);
 	std::cout << s;
 	Timer::start_clock("perft");
-	perft_tree(&s, depth);
+	perft_tree(s, depth);
 	const float t = Timer::clock_time("perft")/1000.0;
 	std::cout << "Time:" << t << '\n'
 			  << "NPS :" << nodes/t << '\n';
 }
 
-void perft_tree(State * p, int depth)
+void perft_tree(State & s, int depth)
 {
-	if (p->fmr == 100)
+	if (s.fmr == 100)
 		return;
 
 	MoveList mlist;
-	MoveGenerator::push_moves(p, &mlist);
+	push_moves(s, &mlist);
 
 	if (mlist.size() == 0)
 		return;
@@ -95,9 +95,9 @@ void perft_tree(State * p, int depth)
 	State c;
 	while (mlist.size() > 0)
 	{
-		std::memmove(&c, p, sizeof *p);
+		std::memmove(&c, &s, sizeof s);
 		c.make(mlist.pop());
-		perft_tree(&c, depth-1);
+		perft_tree(c, depth-1);
 	}
 	return;
 }
