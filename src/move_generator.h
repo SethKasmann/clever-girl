@@ -10,6 +10,19 @@
 const U64 FULL = 0xFFFFFFFFFFFFFFFF;
 const int MAX_SIZE = 256;
 
+struct Check
+{
+	Check(State & s) : checker(s.checkers()), checks(pop_count(checker))
+	{
+        checks == 1 ? ray = between_dia[s.p_king_sq()][get_lsb(checker)] 
+            			  | between_hor[s.p_king_sq()][get_lsb(checker)]
+        			: ray = checker = 0xFFFFFFFFFFFFFFFF;
+	}
+	U64 checker;
+	U64 ray;
+	int checks;
+};
+
 class MoveList
 {
 public:
@@ -32,5 +45,9 @@ public:
 
 void mg_init();
 void push_moves(State &, MoveList *);
+/*
+template<Color C>
+void push(State & s, MoveList * mlist);
+*/
 
 #endif

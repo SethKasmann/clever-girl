@@ -459,7 +459,7 @@ void State::make(Move m)
 U64 State::valid_king_moves() const
 {
     U64 m;
-    int i;
+    const Square * s;
 
     const Dir L   = us == WHITE ? SW : NW;
     const Dir R   = us == WHITE ? SE : NE;
@@ -467,23 +467,22 @@ U64 State::valid_king_moves() const
     // Remove king from occupancy to check squares attacked behind the king.
     const U64 o = (occupancy[us] | occupancy[them]) ^ pieces[us][KING];
 
-    m = king_moves[piece_list[us][KING][0]];
-
+    m = king_moves[p_king_sq()];
     m &= ~(shift_e(pieces[them][PAWN], R) | shift_w(pieces[them][PAWN], L));
 
-    for (i = 0; i < piece_count[them][KNIGHT]; ++i)
-        m &= ~(knight_moves[piece_list[them][KNIGHT][i]]);
+    for (s = piece_list[them][KNIGHT]; *s != NO_SQ; ++s)
+        m &= ~(knight_moves[*s]);
 
-    for (i = 0; i < piece_count[them][BISHOP]; ++i)
-        m &= ~(Bmagic(piece_list[them][BISHOP][i], o));
+    for (s = piece_list[them][BISHOP]; *s != NO_SQ; ++s)
+        m &= ~(Bmagic(*s, o));
 
-    for (i = 0; i < piece_count[them][ROOK]; ++i)
-        m &= ~(Rmagic(piece_list[them][ROOK][i], o));
+    for (s = piece_list[them][ROOK]; *s != NO_SQ; ++s)
+        m &= ~(Rmagic(*s, o));
 
-    for (i = 0; i < piece_count[them][QUEEN]; ++i)
-        m &= ~(Qmagic(piece_list[them][QUEEN][i], o));
+    for (s = piece_list[them][QUEEN]; *s != NO_SQ; ++s)
+        m &= ~(Qmagic(*s, o));
 
-    m &= ~(king_moves[piece_list[them][KING][0]]);
+    m &= ~(king_moves[e_king_sq()]);
     m &= ~(occupancy[us]);
 
     return m;

@@ -131,6 +131,13 @@ enum MoveScore
 	EP = 25
 };
 
+enum CheckType
+{
+	NO_CHECK,
+	SINGLE_CHECK,
+	DOUBLE_CHECK
+};
+
 enum Dir
 {
 	N  =  8,

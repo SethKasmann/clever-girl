@@ -14,9 +14,9 @@ void mg_init()
 // double pawn pushes, and en-passant.
 // ----------------------------------------------------------------------------
 
-void push_pawn_moves(State & s, MoveList * mlist, U64 checker=FULL, U64 ray=FULL)
+template<Color C>
+void push_pawn_moves(State & s, MoveList * mlist, Check & ch)
 {
-    const Color C = s.us == WHITE ? WHITE  : BLACK;
     const Dir   P     = C == WHITE ? N      : S;
     const Dir   L     = C == WHITE ? NW     : SW;
     const Dir   R     = C == WHITE ? NE     : SE;
@@ -29,7 +29,7 @@ void push_pawn_moves(State & s, MoveList * mlist, U64 checker=FULL, U64 ray=FULL
     const U64 pawns = s.p_pawn();
 
     // Pawn attacks and promotion attacks to the east.
-    attack   = shift_e(pawns, R) & s.e_occ() & checker;
+    attack   = shift_e(pawns, R) & s.e_occ() & ch.checker;
     promo    = attack & PROMO;
     no_promo = attack ^ promo;
 
@@ -49,7 +49,7 @@ void push_pawn_moves(State & s, MoveList * mlist, U64 checker=FULL, U64 ray=FULL
     }
 
     // Pawn attacks and promotion attacks to the west.
-    attack   = shift_w(pawns, L) & s.e_occ() & checker;
+    attack   = shift_w(pawns, L) & s.e_occ() & ch.checker;
     promo    = attack & PROMO;
     no_promo = attack ^ promo;
 
@@ -69,7 +69,7 @@ void push_pawn_moves(State & s, MoveList * mlist, U64 checker=FULL, U64 ray=FULL
     }
 
     // Pawn pushes and push promotions.
-    push     = shift(pawns, P) & s.empty() & ray;
+    push     = shift(pawns, P) & s.empty() & ch.ray;
     promo    = push & PROMO;
     no_promo = push ^ promo;
 
@@ -88,7 +88,7 @@ void push_pawn_moves(State & s, MoveList * mlist, U64 checker=FULL, U64 ray=FULL
         mlist->push(dst - P, dst, BISHOP_PROMO, BP);
     }
 
-    dbl = shift(shift(pawns & DBL, P) & s.empty(), P) & s.empty() & ray;
+    dbl = shift(shift(pawns & DBL, P) & s.empty(), P) & s.empty() & ch.ray;
 
     while(dbl)
     {
@@ -97,7 +97,7 @@ void push_pawn_moves(State & s, MoveList * mlist, U64 checker=FULL, U64 ray=FULL
     }
 
     // En passant.
-    ep = shift(s.en_passant & checker, P) & s.empty();
+    ep = shift(s.en_passant & ch.checker, P) & s.empty();
     if (ep)
     {
         dst = get_lsb(ep);
@@ -119,30 +119,23 @@ void push_pawn_moves(State & s, MoveList * mlist, U64 checker=FULL, U64 ray=FULL
 // ----------------------------------------------------------------------------
 
 template <PieceType P>
-void push_moves(State & s, MoveList * mlist, U64 checker=FULL, U64 ray=FULL)
+void push_moves(State & s, MoveList * mlist, Check & ch)
 {
     U64 m, a;
-    Square dst;
-    int i, score;
-    for (i = 0; i < s.piece_count[s.us][P]; ++i)
+    Square * src;
+    int score;
+    for (src = s.piece_list[s.us][P]; *src != NO_SQ; ++src)
     {
-        m   = P == KNIGHT ? knight_moves[s.piece_list[s.us][KNIGHT][i]] & (ray | checker)
-            : P == BISHOP ? Bmagic(s.piece_list[s.us][P][i], s.occ())  & (ray | checker)
-            : P == ROOK   ? Rmagic(s.piece_list[s.us][P][i], s.occ())  & (ray | checker)
-                          : Qmagic(s.piece_list[s.us][P][i], s.occ())  & (ray | checker);
-
-        a   = m & s.e_occ();
-        m  &= s.empty();
+        m  = s.attack_bb<P>(*src) & (ch.ray | ch.checker);
+        a  = m & s.e_occ();
+        m &= s.empty();
         while (a)
         {
-            dst   = pop_lsb(a);
-            score = SCORE[P][s.on_square(dst, s.them)];
-            mlist -> push(s.piece_list[s.us][P][i], dst, ATTACK, score);
+            score = SCORE[P][s.on_square(get_lsb(a), s.them)];
+            mlist -> push(*src, pop_lsb(a), ATTACK, score);
         }
         while (m)
-        {
-            mlist -> push(s.piece_list[s.us][P][i], pop_lsb(m), QUIET, Q);
-        }
+            mlist -> push(*src, pop_lsb(m), QUIET, Q);
     }
 }
 
@@ -150,7 +143,7 @@ void push_moves(State & s, MoveList * mlist, U64 checker=FULL, U64 ray=FULL)
 // Push all legal King moves and attacks. This also handles castling moves.
 // ----------------------------------------------------------------------------
 
-void push_king_moves(State & s, MoveList * mlist, int checks=0)
+void push_king_moves(State & s, MoveList * mlist, Check & ch)
 {
     U64 m, a;
     int score;
@@ -165,7 +158,7 @@ void push_king_moves(State & s, MoveList * mlist, int checks=0)
     while (m) 
         mlist -> push(k, pop_lsb(m), QUIET, Q);
 
-    if (checks == 2) return;
+    if (ch.checks == 2) return;
 
     while (a)
     {
@@ -173,7 +166,7 @@ void push_king_moves(State & s, MoveList * mlist, int checks=0)
         mlist -> push(k, pop_lsb(a), ATTACK, score);
     }
 
-    if (checks) return;
+    if (ch.checks) return;
 
     if (s.k_castle() 
         && !(between_hor[k][k-3] & s.occ())
@@ -214,6 +207,17 @@ void check_legal(State & s, MoveList * mlist)
     }
 }
 
+template<Color C>
+void push(State & s, MoveList * mlist, Check & ch)
+{
+    push_pawn_moves<C>(s, mlist, ch);
+    push_moves<KNIGHT>(s, mlist, ch);
+    push_moves<BISHOP>(s, mlist, ch);
+    push_moves<ROOK  >(s, mlist, ch);
+    push_moves<QUEEN >(s, mlist, ch);
+    push_king_moves(s, mlist, ch);
+}
+
 // ----------------------------------------------------------------------------
 // Push legal moves onto the moves list. The generation technique is to first 
 // find the number of checks on our king.
@@ -226,40 +230,18 @@ void check_legal(State & s, MoveList * mlist)
 
 void push_moves(State & s, MoveList * mlist)
 {
-    U64 ray, checker;
-    int checks;
 
-    checker = s.checkers();       // Bitboard of check locations.
-    checks  = pop_count(checker); // Number of checkers.
+    Check ch(s);
 
-    // No checks, push all moves.
-    if (checks == 0)
+    if (ch.checks == 2)
     {
-        push_pawn_moves(s, mlist);
-        push_moves<KNIGHT>(s, mlist);
-        push_moves<BISHOP>(s, mlist);
-        push_moves<ROOK  >(s, mlist);
-        push_moves<QUEEN >(s, mlist);
-        push_king_moves(s, mlist);
+        push_king_moves(s, mlist, ch);
+        return;
     }
-    // Single check, generate attack ray from checker location and push
-    // evasions.
-    else if (checks == 1)
-    {
-        ray = between_dia[s.p_king_sq()][get_lsb(checker)] 
-            | between_hor[s.p_king_sq()][get_lsb(checker)];
-        push_pawn_moves(s, mlist, checker, ray);
-        push_moves<KNIGHT>(s, mlist, checker, ray);
-        push_moves<BISHOP>(s, mlist, checker, ray);
-        push_moves<ROOK  >(s, mlist, checker, ray);
-        push_moves<QUEEN >(s, mlist, checker, ray);
-        push_king_moves(s, mlist, checks);
-    }
-    // Double check, only king moves are legal.
     else
     {
-        push_king_moves(s, mlist, checks);
-        return;
+        s.us == WHITE ? push<WHITE>(s, mlist, ch)
+                      : push<BLACK>(s, mlist, ch);
     }
 
     check_legal(s, mlist);

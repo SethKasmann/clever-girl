@@ -73,6 +73,7 @@ struct State
     U64 get_pins() const;
 
     // Check and attack information.
+    template<PieceType> U64 attack_bb(const Square s) const;
     bool is_attacked(const Square s) const;
     bool is_attacked_by_slider(U64 change) const;
     bool in_check();
@@ -282,6 +283,30 @@ inline
 bool State::q_castle() const
 {
     return us ? castle & B_QUEEN_CASTLE : castle & W_QUEEN_CASTLE;
+}
+
+template<>
+inline U64 State::attack_bb<KNIGHT>(const Square s) const
+{
+    return knight_moves[s];
+}
+
+template<>
+inline U64 State::attack_bb<BISHOP>(const Square s) const
+{
+    return Bmagic(s, occ());
+}
+
+template<>
+inline U64 State::attack_bb<ROOK>(const Square s) const
+{
+    return Rmagic(s, occ());
+}
+
+template<>
+inline U64 State::attack_bb<QUEEN>(const Square s) const
+{
+    return Qmagic(s, occ());
 }
 
 inline

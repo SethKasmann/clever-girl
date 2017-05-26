@@ -94,11 +94,51 @@ inline Rank get_rank(U64 bb)
    return Rank(get_lsb(bb) / 8);
 }
 
+template<Prop P, Color C>
+U64 pawn_move_bb(U64 bb);
+
+template<>
+inline U64 pawn_move_bb<QUIET, WHITE>(U64 bb)
+{
+   return bb << 8;
+}
+
+template<>
+inline U64 pawn_move_bb<DBL_PUSH, WHITE>(U64 bb)
+{
+   return bb << 16;
+}
+
+template<>
+inline U64 pawn_move_bb<ATTACK, WHITE>(U64 bb)
+{
+   return ((bb & NOT_H_FILE) << 9) | ((bb & NOT_A_FILE) << 7);
+}
+
+template<>
+inline U64 pawn_move_bb<QUIET, BLACK>(U64 bb)
+{
+   return bb >> 8;
+}
+
+template<>
+inline U64 pawn_move_bb<DBL_PUSH, BLACK>(U64 bb)
+{
+   return bb >> 16;
+}
+
+template<>
+inline U64 pawn_move_bb<ATTACK, BLACK>(U64 bb)
+{
+   return ((bb & NOT_H_FILE) >> 9) | ((bb & NOT_A_FILE) >> 7);
+}
+
+
 // function to perform a pawn shift
 inline
 U64 shift_op(U64 bb, int shift)
 {
-    return bb << shift | bb >> (64 - shift);
+   return bb << shift | bb >> (64 - shift);
 }
 
 inline
