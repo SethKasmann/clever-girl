@@ -131,6 +131,13 @@ enum MoveScore
 	EP = 25
 };
 
+enum PawnShift
+{
+	PUSH,
+	LEFT,
+	RIGHT
+};
+
 enum CheckType
 {
 	NO_CHECK,

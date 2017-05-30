@@ -20,22 +20,22 @@ void push_pawn_moves(State & s, MoveList * mlist, Check & ch)
     const Dir   P     = C == WHITE ? N      : S;
     const Dir   L     = C == WHITE ? NW     : SW;
     const Dir   R     = C == WHITE ? NE     : SE;
-    const U64   DBL   = C == WHITE ? Rank_2 : Rank_7;
+    const U64   DBL   = C == WHITE ? Rank_3 : Rank_6;
     const U64   PROMO = C == WHITE ? Rank_8 : Rank_1;
 
-    U64 attack, push, dbl, promo, no_promo, ep;
+    U64 attack, push, dbl, promo, ep;
     Square dst;
 
     const U64 pawns = s.p_pawn();
 
-    // Pawn attacks and promotion attacks to the east.
-    attack   = shift_e(pawns, R) & s.e_occ() & ch.checker;
+    // Pawn attacks and promotion attacks to the right.
+    attack = pawn_move_bb<RIGHT, C>(s.p_pawn()) & s.e_occ() & ch.checker; 
     promo    = attack & PROMO;
-    no_promo = attack ^ promo;
+    attack ^= promo;
 
-    while (no_promo)
+    while (attack)
     {
-        dst = pop_lsb(no_promo);
+        dst = pop_lsb(attack);
         mlist->push(dst - R, dst, ATTACK, SCORE[PAWN][s.on_square(dst, !C)]);
     }
 
@@ -48,14 +48,14 @@ void push_pawn_moves(State & s, MoveList * mlist, Check & ch)
         mlist->push(dst - R, dst, BISHOP_PROMO, BP);
     }
 
-    // Pawn attacks and promotion attacks to the west.
-    attack   = shift_w(pawns, L) & s.e_occ() & ch.checker;
+    // Pawn attacks and promotion attacks to the left.
+    attack = pawn_move_bb<LEFT, C>(s.p_pawn()) & s.e_occ() & ch.checker;
     promo    = attack & PROMO;
-    no_promo = attack ^ promo;
+    attack ^= promo;
 
-    while (no_promo)
+    while (attack)
     {
-        dst = pop_lsb(no_promo);
+        dst = pop_lsb(attack);
         mlist->push(dst - L, dst, ATTACK, SCORE[PAWN][s.on_square(dst, !C)]);
     }
 
@@ -68,14 +68,16 @@ void push_pawn_moves(State & s, MoveList * mlist, Check & ch)
         mlist->push(dst - L, dst, BISHOP_PROMO, BP);
     }
 
-    // Pawn pushes and push promotions.
-    push     = shift(pawns, P) & s.empty() & ch.ray;
-    promo    = push & PROMO;
-    no_promo = push ^ promo;
+    // Pawn pushes, double pushes, and promotions.
+    push  = pawn_move_bb<PUSH, C>(s.p_pawn()) & s.empty();
+    dbl   = pawn_move_bb<PUSH, C>(push & DBL) & s.empty() & ch.ray;
+    push &= ch.ray;
+    promo = push & PROMO;
+    push ^= promo;
 
-    while (no_promo)
+    while (push)
     {
-        dst = pop_lsb(no_promo);
+        dst = pop_lsb(push);
         mlist->push(dst - P, dst, QUIET, Q);
     }
 
@@ -88,8 +90,6 @@ void push_pawn_moves(State & s, MoveList * mlist, Check & ch)
         mlist->push(dst - P, dst, BISHOP_PROMO, BP);
     }
 
-    dbl = shift(shift(pawns & DBL, P) & s.empty(), P) & s.empty() & ch.ray;
-
     while(dbl)
     {
         dst = pop_lsb(dbl);
@@ -97,7 +97,7 @@ void push_pawn_moves(State & s, MoveList * mlist, Check & ch)
     }
 
     // En passant.
-    ep = shift(s.en_passant & ch.checker, P) & s.empty();
+    ep = pawn_move_bb<PUSH, C>(s.en_passant & ch.checker) & s.empty(); 
     if (ep)
     {
         dst = get_lsb(ep);

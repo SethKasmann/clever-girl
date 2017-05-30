@@ -45,9 +45,5 @@ public:
 
 void mg_init();
 void push_moves(State &, MoveList *);
-/*
-template<Color C>
-void push(State & s, MoveList * mlist);
-*/
 
 #endif
