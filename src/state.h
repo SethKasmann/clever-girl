@@ -55,11 +55,8 @@ struct State
     bool q_castle() const;
 
     // Piece differentials.
-    int pawn_diff() const;
-    int knight_diff() const;
-    int bishop_diff() const;
-    int rook_diff() const;
-    int queen_diff() const;
+    template<PieceType P>
+    int piece_diff() const;
 
     // Functions involved in making a move.
     void make(Move m);

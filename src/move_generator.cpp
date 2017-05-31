@@ -14,87 +14,90 @@ void mg_init()
 // double pawn pushes, and en-passant.
 // ----------------------------------------------------------------------------
 
+const bool promotion[] =
+{
+    0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 1, 1, 1, 1,
+    0, 0, 0, 0, 0, 0, 0, 0
+};
+
 template<Color C>
 void push_pawn_moves(State & s, MoveList * mlist, Check & ch)
 {
-    const Dir   P     = C == WHITE ? N      : S;
-    const Dir   L     = C == WHITE ? NW     : SW;
-    const Dir   R     = C == WHITE ? NE     : SE;
     const U64   DBL   = C == WHITE ? Rank_3 : Rank_6;
     const U64   PROMO = C == WHITE ? Rank_8 : Rank_1;
+    const int dir = C == WHITE ? 8 : -8;
+    const Square * test;
+    Square test_dst;
+    bool promo_flag;
+    for (test = s.piece_list[C][PAWN]; *test != NO_SQ; ++test)
+    {
+        test_dst = *test + dir;
+        U64 test_dst_bit = 1ULL << test_dst;
+        if (test_dst & PROMO)
+        {
+            if (test_dst_bit<<1 & s.e_occ() & PROMO)
+            {
+                mlist->push(*test, test_dst+1, QUEEN_PROMO,  QP);
+                mlist->push(*test, test_dst+1, KNIGHT_PROMO, NP);
+                mlist->push(*test, test_dst+1, ROOK_PROMO,   RP);
+                mlist->push(*test, test_dst+1, BISHOP_PROMO, BP);
+            }
+            if (test_dst_bit>>1 & s.e_occ() & PROMO)
+            {
+                mlist->push(*test, test_dst-1, QUEEN_PROMO,  QP);
+                mlist->push(*test, test_dst-1, KNIGHT_PROMO, NP);
+                mlist->push(*test, test_dst-1, ROOK_PROMO,   RP);
+                mlist->push(*test, test_dst-1, BISHOP_PROMO, BP);
+            }
+            if (test_dst_bit&s.empty())
+            {
+                mlist->push(*test, test_dst, QUEEN_PROMO,  QP);
+                mlist->push(*test, test_dst, KNIGHT_PROMO, NP);
+                mlist->push(*test, test_dst, ROOK_PROMO,   RP);
+                mlist->push(*test, test_dst, BISHOP_PROMO, BP);
+            }
+        }
+        else
+        {
+            if (s.board[s.them][test_dst+1] != NONE && test_dst_bit & NOT_A_FILE)
+            {
+                mlist->push(*test, test_dst+1, ATTACK, SCORE[PAWN][s.board[s.them][test_dst+1]]);
+            }
+            if (s.board[s.them][test_dst-1] != NONE && test_dst_bit & NOT_H_FILE)
+            {
+                mlist->push(*test, test_dst-1, ATTACK, SCORE[PAWN][s.board[s.them][test_dst-1]]);
+            }
+            if (test_dst_bit&s.empty())
+            {
+                mlist->push(*test, test_dst, QUIET, Q);
+                if (test_dst&DBL && (test_dst+dir)&s.empty())
+                {
+                    mlist->push(*test, test_dst+dir, DBL_PUSH, Q);
+                }
+            }
+        }
+    }
+
+    if (ch.checks)
+    {
+        for (Move m = *mlist->c; mlist->c < mlist->e; m = *mlist->c)
+        {
+            if (!(get_dst(m)&ch.ray||get_dst(m)&ch.checker))
+                *mlist->c = *(--mlist->e);
+            else
+                mlist->c++;
+        }
+        mlist->c = mlist->_m;
+    }
 
     U64 attack, push, dbl, promo, ep;
-    Square dst;
-
-    const U64 pawns = s.p_pawn();
-
-    // Pawn attacks and promotion attacks to the right.
-    attack = pawn_move_bb<RIGHT, C>(s.p_pawn()) & s.e_occ() & ch.checker; 
-    promo    = attack & PROMO;
-    attack ^= promo;
-
-    while (attack)
-    {
-        dst = pop_lsb(attack);
-        mlist->push(dst - R, dst, ATTACK, SCORE[PAWN][s.on_square(dst, !C)]);
-    }
-
-    while (promo)
-    {
-        dst = pop_lsb(promo);
-        mlist->push(dst - R, dst, QUEEN_PROMO,  QP);
-        mlist->push(dst - R, dst, KNIGHT_PROMO, NP);
-        mlist->push(dst - R, dst, ROOK_PROMO,   RP);
-        mlist->push(dst - R, dst, BISHOP_PROMO, BP);
-    }
-
-    // Pawn attacks and promotion attacks to the left.
-    attack = pawn_move_bb<LEFT, C>(s.p_pawn()) & s.e_occ() & ch.checker;
-    promo    = attack & PROMO;
-    attack ^= promo;
-
-    while (attack)
-    {
-        dst = pop_lsb(attack);
-        mlist->push(dst - L, dst, ATTACK, SCORE[PAWN][s.on_square(dst, !C)]);
-    }
-
-    while (promo)
-    {
-        dst = pop_lsb(promo);
-        mlist->push(dst - L, dst, QUEEN_PROMO,  QP);
-        mlist->push(dst - L, dst, KNIGHT_PROMO, NP);
-        mlist->push(dst - L, dst, ROOK_PROMO,   RP);
-        mlist->push(dst - L, dst, BISHOP_PROMO, BP);
-    }
-
-    // Pawn pushes, double pushes, and promotions.
-    push  = pawn_move_bb<PUSH, C>(s.p_pawn()) & s.empty();
-    dbl   = pawn_move_bb<PUSH, C>(push & DBL) & s.empty() & ch.ray;
-    push &= ch.ray;
-    promo = push & PROMO;
-    push ^= promo;
-
-    while (push)
-    {
-        dst = pop_lsb(push);
-        mlist->push(dst - P, dst, QUIET, Q);
-    }
-
-    while (promo)
-    {
-        dst = pop_lsb(promo);
-        mlist->push(dst - P, dst, QUEEN_PROMO,  QP);
-        mlist->push(dst - P, dst, KNIGHT_PROMO, NP);
-        mlist->push(dst - P, dst, ROOK_PROMO,   RP);
-        mlist->push(dst - P, dst, BISHOP_PROMO, BP);
-    }
-
-    while(dbl)
-    {
-        dst = pop_lsb(dbl);
-        mlist->push(dst - P - P, dst, DBL_PUSH, Q);
-    }
+    Square src, dst;
 
     // En passant.
     ep = pawn_move_bb<PUSH, C>(s.en_passant & ch.checker) & s.empty(); 

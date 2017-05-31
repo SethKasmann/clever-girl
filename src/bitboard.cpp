@@ -52,19 +52,21 @@ void bb_init()
     for (Square sq_src = H1; sq_src <= A8; ++sq_src)
     {
         U64 bit = 1ULL << sq_src;
-        pawn_attacks[WHITE][sq_src] = shift_e(bit, NE) | shift_w(bit, NW);
-        pawn_attacks[BLACK][sq_src] = shift_e(bit, SE) | shift_w(bit, SW);
-        pawn_push[WHITE][sq_src]    = shift(bit, N);
-        pawn_push[BLACK][sq_src]    = shift(bit, S);
+        pawn_attacks[WHITE][sq_src] = pawn_move_bb<RIGHT, WHITE>(bit) 
+                                    | pawn_move_bb<LEFT , WHITE>(bit);
+        pawn_attacks[BLACK][sq_src] = pawn_move_bb<RIGHT, BLACK>(bit) 
+                                    | pawn_move_bb<LEFT , BLACK>(bit);
+        pawn_push[WHITE][sq_src]    = pawn_move_bb<PUSH , WHITE>(bit);
+        pawn_push[BLACK][sq_src]    = pawn_move_bb<PUSH , BLACK>(bit);
         if (bit & Rank_2)
         {
-            pawn_dbl_push[WHITE][sq_src] = shift(shift(bit, N), N);
+            pawn_dbl_push[WHITE][sq_src] = pawn_move_bb<PUSH, WHITE>(pawn_move_bb<PUSH, WHITE>(bit));
             pawn_dbl_push[BLACK][sq_src] = 0;
         }
         else if (bit & Rank_7)
         {
             pawn_dbl_push[WHITE][sq_src] = 0;
-            pawn_dbl_push[BLACK][sq_src] = shift(shift(bit, S), S);
+            pawn_dbl_push[BLACK][sq_src] = pawn_move_bb<PUSH, BLACK>(pawn_move_bb<PUSH, BLACK>(bit));
         }
         else
         {

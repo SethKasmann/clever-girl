@@ -100,37 +100,37 @@ U64 pawn_move_bb(U64 bb);
 template<>
 inline U64 pawn_move_bb<PUSH, WHITE>(U64 bb)
 {
-   return bb << 8;
+   return bb << PUSH;
 }
 
 template<>
 inline U64 pawn_move_bb<LEFT, WHITE>(U64 bb)
 {
-   return (bb & NOT_A_FILE) << 9;
+   return (bb & NOT_A_FILE) << LEFT;
 }
 
 template<>
 inline U64 pawn_move_bb<RIGHT, WHITE>(U64 bb)
 {
-   return (bb & NOT_H_FILE) << 7;
+   return (bb & NOT_H_FILE) << RIGHT;
 }
 
 template<>
 inline U64 pawn_move_bb<PUSH, BLACK>(U64 bb)
 {
-   return bb >> 8;
+   return bb >> PUSH;
 }
 
 template<>
 inline U64 pawn_move_bb<LEFT, BLACK>(U64 bb)
 {
-   return (bb & NOT_A_FILE) >> 7;
+   return (bb & NOT_H_FILE) >> LEFT;
 }
 
 template<>
 inline U64 pawn_move_bb<RIGHT, BLACK>(U64 bb)
 {
-   return (bb & NOT_H_FILE) >> 9;
+   return (bb & NOT_A_FILE) >> RIGHT;
 }
 
 inline

@@ -133,9 +133,9 @@ enum MoveScore
 
 enum PawnShift
 {
-	PUSH,
-	LEFT,
-	RIGHT
+	PUSH  = 8,
+	LEFT  = 9,
+	RIGHT = 7
 };
 
 enum CheckType
@@ -210,11 +210,11 @@ inline T & operator++(T & t) { return t = T(int(t) + 1); }
 template<typename T>
 inline T & operator--(T & t) { return t = T(int(t) - 1); }
 template<typename T>
-inline T & operator+(const T t0, const T t1) { return T(int(t0) + int(t1)); }
+inline T operator+(const T t0, const T t1) { return T(int(t0) + int(t1)); }
 template<typename T>
 inline T operator+(const T t0, const int i) { return T(int(t0) + i); }
 template<typename T>
-inline T & operator-(const T t0, const T t1) { return T(int(t0) - int(t1)); }
+inline T operator-(const T t0, const T t1) { return T(int(t0) - int(t1)); }
 template<typename T>
 inline T operator-(const T t0, const int i) { return T(int(t0) - i); }
 template<typename T>
