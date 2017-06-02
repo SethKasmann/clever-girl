@@ -6,6 +6,7 @@ U64 pawn_dbl_push[PLAYER_SIZE][BOARD_SIZE];
 U64 between_dia[BOARD_SIZE][BOARD_SIZE];
 U64 between_hor[BOARD_SIZE][BOARD_SIZE];
 U64 coplanar[BOARD_SIZE][BOARD_SIZE];
+U64 adj_files[BOARD_SIZE];
 
 const U64 knight_moves[BOARD_SIZE] =
 {
@@ -75,6 +76,14 @@ void bb_init()
         }
         for (Square sq_dst = H1; sq_dst <= A8; ++sq_dst)
         {
+            adj_files[sq_dst] = sq_dst & File_A ? File_B
+                              : sq_dst & File_B ? File_A | File_C
+                              : sq_dst & File_C ? File_B | File_D
+                              : sq_dst & File_D ? File_C | File_E
+                              : sq_dst & File_E ? File_D | File_F
+                              : sq_dst & File_F ? File_E | File_G
+                              : sq_dst & File_G ? File_F | File_H
+                              : File_G;
             U64 r_attacks, b_attacks, occ;
             occ = 1ULL << sq_src | 1ULL << sq_dst;
             

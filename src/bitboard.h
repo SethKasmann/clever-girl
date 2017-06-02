@@ -18,6 +18,7 @@ extern U64 pawn_dbl_push[PLAYER_SIZE][BOARD_SIZE];
 extern U64 between_dia[BOARD_SIZE][BOARD_SIZE];
 extern U64 between_hor[BOARD_SIZE][BOARD_SIZE];
 extern U64 coplanar[BOARD_SIZE][BOARD_SIZE];
+extern U64 adj_files[BOARD_SIZE];
 extern const U64 knight_moves[BOARD_SIZE];
 extern const U64 king_moves[BOARD_SIZE];
 

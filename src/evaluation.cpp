@@ -8,9 +8,11 @@ int eval(const State & s, const Color c)
     bool eg = false; // determine middle or endgame.
 
     // Pawn evaluation.
+    bool isolated;
     for (p = s.piece_list[c][PAWN]; *p != NO_SQ; ++p)
     {
     	score += pst_pawn[c][*p];
+    	//isolated = adj_files[*p]
     }
     score += s.piece_count[c][PAWN] * PAWN_WT;
 
