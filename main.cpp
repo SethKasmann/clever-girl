@@ -9,6 +9,7 @@
 #include "src/book.c"
 #include "perft.h"
 #include "zobrist.h"
+#include "evaluation.h"
 
 void init()
 {
@@ -52,10 +53,16 @@ void choose(State & s)
 int main()
 {
     init();
+    /*
     perft_test();
     std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq";
     int depth = 6;
     perft(fen, depth);
+    */
+    std::string fen = "rnbqkbnr/pppppppp/8/8/8/3P4/PPP1PPPP/RNBQKBNR w KQkq";
+    State test(fen);
+    std::cout << test
+              << evaluate(test) << std::endl;
 
     return 0;
 }
