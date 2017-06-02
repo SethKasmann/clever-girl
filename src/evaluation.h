@@ -5,17 +5,19 @@
 #include "state.h"
 #include "pst.h"
 
-static const int PAWN_WT   = 100;
-static const int KNIGHT_WT = 320;
-static const int BISHOP_WT = 325;
-static const int ROOK_WT   = 500;
-static const int QUEEN_WT  = 975;
+static const int PawnWt   = 100;
+static const int KnightWt = 320;
+static const int BishopWt = 325;
+static const int RookWt   = 500;
+static const int QueenWt  = 975;
 
-static const int CHECKMATE = 32767;
-static const int STALEMATE = 0;
-static const int DRAW = 0;
+static const int Checkmate = 32767;
+static const int Stalemate = 0;
+static const int Draw = 0;
 
-static const int SAFETY_TABLE[100] = 
+static const int Isolated = -15;
+
+static const int SafetyTable[100] = 
 {
    0,   0,   0,   1,   1,   2,   3,   4,   5,   6,
    8,  10,  13,  16,  20,  25,  30,  36,  42,  48,
