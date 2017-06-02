@@ -46,19 +46,4 @@ public:
 void mg_init();
 void push_moves(State &, MoveList *);
 
-template<Color C>
-Square pawn_from(const Square s, const PawnShift ps);
-
-template<>
-inline Square pawn_from<WHITE>(const Square s, const PawnShift ps)
-{
-    return s - ps;
-}
-
-template<>
-inline Square pawn_from<BLACK>(const Square s, const PawnShift ps)
-{
-    return s + ps;
-}
-
 #endif
