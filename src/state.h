@@ -23,6 +23,7 @@ struct State
     const char * get_EPD() const;
 
     // Access piece bitboards.
+    U64 piece_bb(const Color c, const PieceType p) const;
     U64 p_pawn() const;
     U64 e_pawn() const;
     U64 p_knight() const;
@@ -136,6 +137,12 @@ void State::swap_turn()
 {
     them =  us;
     us   = !us;
+}
+
+inline
+U64 State::piece_bb(const Color c, const PieceType p) const
+{
+    return pieces[c][p];
 }
 
 inline
