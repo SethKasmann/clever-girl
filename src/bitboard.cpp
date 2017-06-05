@@ -7,6 +7,7 @@ U64 between_dia[BOARD_SIZE][BOARD_SIZE];
 U64 between_hor[BOARD_SIZE][BOARD_SIZE];
 U64 coplanar[BOARD_SIZE][BOARD_SIZE];
 U64 adj_files[BOARD_SIZE];
+U64 in_front[PLAYER_SIZE][BOARD_SIZE];
 
 const U64 knight_moves[BOARD_SIZE] =
 {
@@ -59,6 +60,11 @@ void bb_init()
                                     | pawn_move_bb<LEFT , BLACK>(bit);
         pawn_push[WHITE][sq_src]    = pawn_move_bb<PUSH , WHITE>(bit);
         pawn_push[BLACK][sq_src]    = pawn_move_bb<PUSH , BLACK>(bit);
+
+        U64 front = east_fill(bit) | west_fill(bit);
+        in_front[WHITE][sq_src] = north_fill(front << 8);
+        in_front[BLACK][sq_src] = south_fill(front >> 8);
+
         if (bit & Rank_2)
         {
             pawn_dbl_push[WHITE][sq_src] = pawn_move_bb<PUSH, WHITE>(pawn_move_bb<PUSH, WHITE>(bit));
@@ -84,6 +90,7 @@ void bb_init()
                               : sq_dst & File_F ? File_E | File_G
                               : sq_dst & File_G ? File_F | File_H
                               : File_G;
+
             U64 r_attacks, b_attacks, occ;
             occ = 1ULL << sq_src | 1ULL << sq_dst;
             

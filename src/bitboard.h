@@ -19,6 +19,7 @@ extern U64 between_dia[BOARD_SIZE][BOARD_SIZE];
 extern U64 between_hor[BOARD_SIZE][BOARD_SIZE];
 extern U64 coplanar[BOARD_SIZE][BOARD_SIZE];
 extern U64 adj_files[BOARD_SIZE];
+extern U64 in_front[PLAYER_SIZE][BOARD_SIZE];
 extern const U64 knight_moves[BOARD_SIZE];
 extern const U64 king_moves[BOARD_SIZE];
 
@@ -210,7 +211,7 @@ U64 south_fill(U64 gen)
 inline
 U64 east_fill(U64 gen) 
 {
-   const U64 pr0 = NOT_A_FILE;
+   const U64 pr0 = NOT_H_FILE;
    const U64 pr1 = pr0 & (pr0 << 1);
    const U64 pr2 = pr1 & (pr1 << 2);
    gen |= pr0 & (gen  << 1);
@@ -222,7 +223,7 @@ U64 east_fill(U64 gen)
 inline
 U64 north_east_fill(U64 gen) 
 {
-   const U64 pr0 = NOT_A_FILE;
+   const U64 pr0 = NOT_H_FILE;
    const U64 pr1 = pr0 & (pr0 <<  9);
    const U64 pr2 = pr1 & (pr1 << 18);
    gen |= pr0 & (gen <<  9);
@@ -234,7 +235,7 @@ U64 north_east_fill(U64 gen)
 inline
 U64 south_east_fill(U64 gen) 
 {
-   const U64 pr0 = NOT_A_FILE;
+   const U64 pr0 = NOT_H_FILE;
    const U64 pr1 = pr0 & (pr0 >>  7);
    const U64 pr2 = pr1 & (pr1 >> 14);
    gen |= pr0 & (gen >>  7);
@@ -246,7 +247,7 @@ U64 south_east_fill(U64 gen)
 inline
 U64 west_fill(U64 gen) 
 {
-   const U64 pr0 = NOT_H_FILE;
+   const U64 pr0 = NOT_A_FILE;
    const U64 pr1 = pr0 & (pr0 >> 1);
    const U64 pr2 = pr1 & (pr1 >> 2);
    gen |= pr0 & (gen >> 1);
@@ -258,7 +259,7 @@ U64 west_fill(U64 gen)
 inline
 U64 south_west_fill(U64 gen) 
 {
-   const U64 pr0 = NOT_H_FILE;
+   const U64 pr0 = NOT_A_FILE;
    const U64 pr1 = pr0 & (pr0 >>  9);
    const U64 pr2 = pr1 & (pr1 >> 18);
    gen |= pr0 & (gen >>  9);
@@ -270,7 +271,7 @@ U64 south_west_fill(U64 gen)
 inline
 U64 north_west_fill(U64 gen) 
 {
-   const U64 pr0 = NOT_H_FILE;
+   const U64 pr0 = NOT_A_FILE;
    const U64 pr1 = pr0 & (pr0 <<  7);
    const U64 pr2 = pr1 & (pr1 << 14);
    gen |= pr0 & (gen <<  7);
