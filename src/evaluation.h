@@ -17,6 +17,7 @@ static const int Draw = 0;
 
 static const int Isolated = -15;
 static const int Passed   = 15;
+static const int Doubled  = -10;
 
 static const int SafetyTable[100] = 
 {

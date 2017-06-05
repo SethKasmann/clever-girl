@@ -1,5 +1,7 @@
 #include "bitboard.h"
 
+U64 file_bb[BOARD_SIZE];
+U64 rank_bb[BOARD_SIZE];
 U64 pawn_attacks[PLAYER_SIZE][BOARD_SIZE];
 U64 pawn_push[PLAYER_SIZE][BOARD_SIZE];
 U64 pawn_dbl_push[PLAYER_SIZE][BOARD_SIZE];
@@ -64,6 +66,9 @@ void bb_init()
         U64 front = east_fill(bit) | west_fill(bit);
         in_front[WHITE][sq_src] = north_fill(front << 8);
         in_front[BLACK][sq_src] = south_fill(front >> 8);
+
+        file_bb[sq_src] = north_fill(bit) | south_fill(bit);
+        rank_bb[sq_src] = east_fill(bit) | west_fill(bit);
 
         if (bit & Rank_2)
         {

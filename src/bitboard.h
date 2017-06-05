@@ -12,6 +12,8 @@
 #include "types.h"
 #include "MagicMoves.hpp"
 
+extern U64 file_bb[BOARD_SIZE];
+extern U64 rank_bb[BOARD_SIZE];
 extern U64 pawn_attacks[PLAYER_SIZE][BOARD_SIZE];
 extern U64 pawn_push[PLAYER_SIZE][BOARD_SIZE];
 extern U64 pawn_dbl_push[PLAYER_SIZE][BOARD_SIZE];
