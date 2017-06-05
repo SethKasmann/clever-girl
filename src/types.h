@@ -171,16 +171,16 @@ const std::string SQ[64] =
 
 enum Prop
 {
-	QUIET,
-	ATTACK,
-	DBL_PUSH,
-	KING_CAST,
-	QUEEN_CAST,
-	QUEEN_PROMO,
-	KNIGHT_PROMO,
-	ROOK_PROMO,
-	BISHOP_PROMO,
-	EN_PASSANT
+	quiet,
+	attack,
+	dbl_push,
+	king_cast,
+	queen_cast,
+	queen_promo,
+	knight_promo,
+	rook_promo,
+	bishop_promo,
+	en_passant
 };
 
 inline Square get_src(Move m) { return Square(m & 0x3F); }

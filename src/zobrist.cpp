@@ -50,9 +50,9 @@ namespace Zobrist
 
 		if (s->us == WHITE) s->key ^= side_to_move_rand;
 
-		if (s->en_passant) 
+		if (s->ep) 
 		{
-			s->key ^= ep_file_rand[get_file(s->en_passant)]; 
+			s->key ^= ep_file_rand[get_file(s->ep)]; 
 		}
 
 		s->key ^= castle_rand[s->castle];

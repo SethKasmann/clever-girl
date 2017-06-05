@@ -6,7 +6,7 @@
 // ----------------------------------------------------------------------------
 
 State::State(const State & s)
-    : fmr(s.fmr), castle(s.castle), en_passant(s.en_passant), 
+    : fmr(s.fmr), castle(s.castle), ep(s.ep), 
       key(s.key), us(s.us),         them(s.them)
 {
     std::memcpy(board,       s.board,       sizeof board);
@@ -24,7 +24,7 @@ void State::operator=(const State & s)
     castle =     s.castle;
     key =        s.key;
     fmr =        s.fmr;
-    en_passant = s.en_passant;
+    ep = s.ep;
     std::memcpy(board,       s.board,       sizeof board);
     std::memcpy(piece_count, s.piece_count, sizeof piece_count);
     std::memcpy(piece_list,  s.piece_list,  sizeof piece_list);
@@ -43,7 +43,7 @@ void State::operator=(const State & s)
 // all the necessary information to restart a game from a particular position."
 // ----------------------------------------------------------------------------
 
-State::State(std::string & fen) : castle(0), en_passant(0), 
+State::State(std::string & fen) : castle(0), ep(0), 
                                   us(WHITE), them(BLACK)
 {
     fmr = 0; // NEED TO CHANGE THIS
@@ -211,7 +211,7 @@ State::State(std::string & fen) : castle(0), en_passant(0),
 
     int fen_table[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
 
-    int ep = -1;
+    int en_pass = -1;
     for (i; i < fen.size(); ++i)
     {
         switch (fen[i])
@@ -229,42 +229,42 @@ State::State(std::string & fen) : castle(0), en_passant(0),
                 castle += 8;
                 break;
             case 'a':
-                ep = fen_table[int(fen[i + 1]) - 49] * 8 + 7;
+                en_pass = fen_table[int(fen[i + 1]) - 49] * 8 + 7;
                 break;
             case 'b':
-                ep = fen_table[int(fen[i + 1]) - 49] * 8 + 6;
+                en_pass = fen_table[int(fen[i + 1]) - 49] * 8 + 6;
                 break;
             case 'c':
-                ep = fen_table[int(fen[i + 1]) - 49] * 8 + 5;
+                en_pass = fen_table[int(fen[i + 1]) - 49] * 8 + 5;
                 break;
             case 'd':
-                ep = fen_table[int(fen[i + 1]) - 49] * 8 + 4;
+                en_pass = fen_table[int(fen[i + 1]) - 49] * 8 + 4;
                 break;
             case 'e':
-                ep = fen_table[int(fen[i + 1]) - 49] * 8 + 3;
+                en_pass = fen_table[int(fen[i + 1]) - 49] * 8 + 3;
                 break;
             case 'f':
-                ep = fen_table[int(fen[i + 1]) - 49] * 8 + 2;
+                en_pass = fen_table[int(fen[i + 1]) - 49] * 8 + 2;
                 break;
             case 'g':
-                ep = fen_table[int(fen[i + 1]) - 49] * 8 + 1;
+                en_pass = fen_table[int(fen[i + 1]) - 49] * 8 + 1;
                 break;
             case 'h':
-                ep = fen_table[int(fen[i + 1]) - 49] * 8 + 0;
+                en_pass = fen_table[int(fen[i + 1]) - 49] * 8 + 0;
                 break;
         }
-        if (ep > -1)
+        if (en_pass > -1)
         {
             i++;
-            if (ep / 8 == 2)
+            if (en_pass / 8 == 2)
             {
-                ep += 8;
+                en_pass += 8;
             }
             else
             {
-                ep -= 8;
+                en_pass -= 8;
             }
-            en_passant = 1ULL << ep;
+            ep = 1ULL << en_pass;
         }
     }
 
@@ -339,39 +339,39 @@ void State::make(Move m)
         fmr = 0 : fmr++;
 
     // Remove the ep file and castle rights from the zobrist key.
-    if (en_passant) Zobrist::ep(key, en_passant);
+    if (ep) Zobrist::ep(key, ep);
     Zobrist::castle(key, castle);
 
     switch (get_prop(m))
     {
         // Quiet moves.
-        case QUIET:
+        case quiet:
         {
             Zobrist::move(this, src, dst);
             move_piece(src, dst);
-            en_passant = 0;
+            ep = 0;
             break;
         }
         // Attacking moves.
-        case ATTACK:
+        case attack:
         {
             Zobrist::move(this, src, dst);
             del_piece(them, dst);
             move_piece(src, dst);
-            en_passant = 0;
+            ep = 0;
             break;
         }
         // Double pawn push.
-        case DBL_PUSH:
+        case dbl_push:
         {
             Zobrist::move(this, src, dst);
             move_piece(src, dst);
-            en_passant = 1ULL << dst;
-            Zobrist::ep(key, en_passant);
+            ep = 1ULL << dst;
+            Zobrist::ep(key, ep);
             break;
         }
         // King castle.
-        case KING_CAST:
+        case king_cast:
         {
             const int rook_src = src-3;
             const int rook_dst = dst+1;
@@ -379,11 +379,11 @@ void State::make(Move m)
             Zobrist::move(this, src, dst);
             move_piece(rook_src, rook_dst);
             move_piece(src, dst);
-            en_passant = 0;
+            ep = 0;
             break;
         }
         // Queen castle.
-        case QUEEN_CAST:
+        case queen_cast:
         {
             const int rook_src = src+4;
             const int rook_dst = dst-1;
@@ -391,52 +391,52 @@ void State::make(Move m)
             Zobrist::move(this, src, dst);
             move_piece(rook_src, rook_dst);
             move_piece(src, dst);
-            en_passant = 0;
+            ep = 0;
             break;
         }
         // Queen promotion.
-        case QUEEN_PROMO:
+        case queen_promo:
         {
             Zobrist::promo(this, src, dst, QUEEN);
             del_piece(us, src);
             add_piece(dst, QUEEN);
-            en_passant = 0;
+            ep = 0;
             break;
         }
         // Knight underpromotion.
-        case KNIGHT_PROMO:
+        case knight_promo:
         {
             Zobrist::promo(this, src, dst, KNIGHT);
             del_piece(us, src);
             add_piece(dst, KNIGHT);
-            en_passant = 0;
+            ep = 0;
             break;
         }
         // Rook underpromotion.
-        case ROOK_PROMO:
+        case rook_promo:
         {
             Zobrist::promo(this, src, dst, ROOK);
             del_piece(us, src);
             add_piece(dst, ROOK);
-            en_passant = 0;
+            ep = 0;
             break;
         }
         // Bishop underpromotion.
-        case BISHOP_PROMO:
+        case bishop_promo:
         {
             Zobrist::promo(this, src, dst, BISHOP);
             del_piece(us, src);
             add_piece(dst, BISHOP);
-            en_passant = 0;
+            ep = 0;
             break;
         }
         // En-Passant.
-        case EN_PASSANT:
+        case en_passant:
         {
-            Zobrist::en_passant(this, src, dst, get_lsb(en_passant));
+            Zobrist::en_passant(this, src, dst, get_lsb(ep));
             move_piece(src, dst);
-            del_piece(them, get_lsb(en_passant));
-            en_passant = 0;
+            del_piece(them, get_lsb(ep));
+            ep = 0;
             break;
         }
     }
@@ -604,9 +604,9 @@ const char * State::get_EPD() const
     if (castle & B_KING_CASTLE)  EPD.append("k");
     if (castle & B_QUEEN_CASTLE) EPD.append("q");
     EPD.append(" ");
-    if (en_passant != 0)
+    if (ep != 0)
     {
-        int ep_sq = get_lsb(en_passant);
+        int ep_sq = get_lsb(ep);
         ep_sq / 8 == 3 ? ep_sq -= 8 : ep_sq += 8;
         EPD.append(SQ[ep_sq]);
     }

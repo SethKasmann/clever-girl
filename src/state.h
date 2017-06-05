@@ -88,7 +88,7 @@ struct State
     int piece_index[BOARD_SIZE];
     U64 pieces[PLAYER_SIZE][TYPES_SIZE];
     U64 occupancy[PLAYER_SIZE];
-    U64 en_passant;
+    U64 ep;
     U64 key;
     Color us;
     Color them;

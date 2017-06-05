@@ -32,42 +32,42 @@ void push_pawn_moves(State & s, MoveList * mlist, Check & ch)
         {
             if (s.board[s.them][dst+1] != NONE && dst & PROMO)
             {
-                mlist->push(src, dst+1, QUEEN_PROMO,  QP);
-                mlist->push(src, dst+1, KNIGHT_PROMO, NP);
-                mlist->push(src, dst+1, ROOK_PROMO,   RP);
-                mlist->push(src, dst+1, BISHOP_PROMO, BP);
+                mlist->push(src, dst+1, queen_promo,  QP);
+                mlist->push(src, dst+1, knight_promo, NP);
+                mlist->push(src, dst+1, rook_promo,   RP);
+                mlist->push(src, dst+1, bishop_promo, BP);
             }
             if (s.board[s.them][dst-1] != NONE && dst & PROMO)
             {
-                mlist->push(src, dst-1, QUEEN_PROMO,  QP);
-                mlist->push(src, dst-1, KNIGHT_PROMO, NP);
-                mlist->push(src, dst-1, ROOK_PROMO,   RP);
-                mlist->push(src, dst-1, BISHOP_PROMO, BP);
+                mlist->push(src, dst-1, queen_promo,  QP);
+                mlist->push(src, dst-1, knight_promo, NP);
+                mlist->push(src, dst-1, rook_promo,   RP);
+                mlist->push(src, dst-1, bishop_promo, BP);
             }
             if (dst & s.empty())
             {
-                mlist->push(src, dst, QUEEN_PROMO,  QP);
-                mlist->push(src, dst, KNIGHT_PROMO, NP);
-                mlist->push(src, dst, ROOK_PROMO,   RP);
-                mlist->push(src, dst, BISHOP_PROMO, BP);
+                mlist->push(src, dst, queen_promo,  QP);
+                mlist->push(src, dst, knight_promo, NP);
+                mlist->push(src, dst, rook_promo,   RP);
+                mlist->push(src, dst, bishop_promo, BP);
             }
         }
         else
         {
             if (s.board[s.them][dst+1] != NONE && dst & NOT_A_FILE)
             {
-                mlist->push(src, dst+1, ATTACK, SCORE[PAWN][s.board[s.them][dst+1]]);
+                mlist->push(src, dst+1, attack, SCORE[PAWN][s.board[s.them][dst+1]]);
             }
             if (s.board[s.them][dst-1] != NONE && dst & NOT_H_FILE)
             {
-                mlist->push(src, dst-1, ATTACK, SCORE[PAWN][s.board[s.them][dst-1]]);
+                mlist->push(src, dst-1, attack, SCORE[PAWN][s.board[s.them][dst-1]]);
             }
             if (dst & s.empty())
             {
-                mlist->push(src, dst, QUIET, Q);
+                mlist->push(src, dst, quiet, Q);
                 if (pawn_dbl_push[C][src] && (dst+dir) & s.empty())
                 {
-                    mlist->push(src, dst+dir, DBL_PUSH, Q);
+                    mlist->push(src, dst+dir, dbl_push, Q);
                 }
             }
         }
@@ -85,21 +85,21 @@ void push_pawn_moves(State & s, MoveList * mlist, Check & ch)
         mlist->c = mlist->_m;
     }
 
-    U64 attack, push, dbl, promo, ep;
+    U64 a, push, dbl, promo, en_pass;
 
     // En passant.
-    ep = pawn_move_bb<PUSH, C>(s.en_passant & ch.checker) & s.empty(); 
-    if (ep)
+    en_pass = pawn_move_bb<PUSH, C>(s.ep & ch.checker) & s.empty(); 
+    if (en_pass)
     {
-        dst = get_lsb(ep);
-        attack = pawn_attacks[!C][dst] & s.p_pawn();
-        while (attack)
+        dst = get_lsb(en_pass);
+        a = pawn_attacks[!C][dst] & s.p_pawn();
+        while (a)
         {
-            if (s.is_attacked_by_slider(s.en_passant | get_lsb_bb(attack)))
+            if (s.is_attacked_by_slider(s.ep | get_lsb_bb(a)))
             {
                 return;
             }
-            mlist->push(pop_lsb(attack), dst, EN_PASSANT, EP);
+            mlist->push(pop_lsb(a), dst, en_passant, EP);
         }
     }
 }
@@ -123,10 +123,10 @@ void push_moves(State & s, MoveList * mlist, Check & ch)
         while (a)
         {
             score = SCORE[P][s.on_square(get_lsb(a), s.them)];
-            mlist -> push(*src, pop_lsb(a), ATTACK, score);
+            mlist -> push(*src, pop_lsb(a), attack, score);
         }
         while (m)
-            mlist -> push(*src, pop_lsb(m), QUIET, Q);
+            mlist -> push(*src, pop_lsb(m), quiet, Q);
     }
 }
 
@@ -147,14 +147,14 @@ void push_king_moves(State & s, MoveList * mlist, Check & ch)
     m ^= a;
 
     while (m) 
-        mlist -> push(k, pop_lsb(m), QUIET, Q);
+        mlist -> push(k, pop_lsb(m), quiet, Q);
 
     if (ch.checks == 2) return;
 
     while (a)
     {
         score = SCORE[KING][s.on_square(dst, s.them)];
-        mlist -> push(k, pop_lsb(a), ATTACK, score);
+        mlist -> push(k, pop_lsb(a), attack, score);
     }
 
     if (ch.checks) return;
@@ -163,13 +163,13 @@ void push_king_moves(State & s, MoveList * mlist, Check & ch)
         && !(between_hor[k][k-3] & s.occ())
         && !s.is_attacked(k-1) 
         && !s.is_attacked(k-2))
-        mlist->push(k, k-2, KING_CAST, C);
+        mlist->push(k, k-2, king_cast, C);
 
     if (s.q_castle()
         && !(between_hor[k][k+4] & s.occ())
         && !s.is_attacked(k+1)
         && !s.is_attacked(k+2))
-        mlist->push(k, k+2, QUEEN_CAST, C);
+        mlist->push(k, k+2, queen_cast, C);
 }
 
 // ----------------------------------------------------------------------------
