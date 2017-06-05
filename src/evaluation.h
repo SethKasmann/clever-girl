@@ -15,9 +15,10 @@ static const int Checkmate = 32767;
 static const int Stalemate = 0;
 static const int Draw = 0;
 
-static const int Isolated = -15;
-static const int Passed   = 15;
-static const int Doubled  = -10;
+static const int Passed    = 15;
+static const int Connected = 15;
+static const int Isolated  = -15;
+static const int Doubled   = -10;
 
 static const int SafetyTable[100] = 
 {

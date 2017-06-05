@@ -3,21 +3,24 @@
 int eval(const State & s, const Color c)
 {
     const Square * p;
+    const int dir = c == WHITE ? 8 : -8;
     int score = Draw;
 
     bool eg = false; // determine middle or endgame.
 
     // Pawn evaluation.
-    bool isolated, passed, doubled;
+    bool isolated, passed, doubled, connected;
     for (p = s.piece_list[c][PAWN]; *p != NO_SQ; ++p)
     {
     	score += PstPawn[c][*p];
     	isolated = adj_files[*p] & s.piece_bb(c, PAWN);
         passed   = adj_files[*p] & in_front[c][*p] & s.piece_bb(!c, PAWN);
         doubled  = pop_count(file_bb[*p] & s.piece_bb(c, PAWN)) > 1;
-    	if (isolated) score += Isolated;
-        if (passed)   score += Passed;
-        if (doubled)  score += Doubled;
+        connected = file_bb[*p - dir] & s.piece_bb(c, PAWN);
+    	if (isolated)  score += Isolated;
+        if (passed)    score += Passed;
+        if (doubled)   score += Doubled;
+        if (connected) score += Connected;
     }
     score += s.piece_count[c][PAWN] * PawnWt;
 
