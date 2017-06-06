@@ -59,7 +59,7 @@ int main()
     int depth = 6;
     perft(fen, depth);
     */
-    std::string fen = "rnbqkbnr/pppppppp/8/8/8/3P4/PPP1PPPP/RNBQKBNR w KQkq";
+    std::string fen = "rnbqkbnr/pppppppp/8/8/8/2P5/PPP1PPPP/RNBQKBNR w KQkq";
     State test(fen);
     std::cout << test
               << evaluate(test) << std::endl;

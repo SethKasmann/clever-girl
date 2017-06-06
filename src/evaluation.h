@@ -6,10 +6,10 @@
 #include "pst.h"
 
 static const int Pawn_wt   = 100;
-static const int Knight_wt = 320;
-static const int Bishop_wt = 325;
+static const int Knight_wt = 300;
+static const int Bishop_wt = 300;
 static const int Rook_wt   = 500;
-static const int Queen_wt  = 975;
+static const int Queen_wt  = 950;
 
 static const int Checkmate = 32767;
 static const int Stalemate = 0;

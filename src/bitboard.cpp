@@ -1,5 +1,6 @@
 #include "bitboard.h"
 
+U64 square_bb[Board_size];
 U64 file_bb[Board_size];
 U64 rank_bb[Board_size];
 U64 pawn_attacks[Player_size][Board_size];
@@ -56,6 +57,7 @@ void bb_init()
     for (Square sq_src = first_sq; sq_src <= last_sq; ++sq_src)
     {
         U64 bit = 1ULL << sq_src;
+        square_bb[sq_src] = bit;
         pawn_attacks[white][sq_src] = pawn_move_bb<RIGHT, white>(bit) 
                                     | pawn_move_bb<LEFT , white>(bit);
         pawn_attacks[black][sq_src] = pawn_move_bb<RIGHT, black>(bit) 
