@@ -5,7 +5,7 @@
 
 #include "types.h"
 
-const int PstPawn[PLAYER_SIZE][BOARD_SIZE]
+const int Pst_pawn[Player_size][Board_size]
 {
 	// White.
 	{
@@ -31,7 +31,7 @@ const int PstPawn[PLAYER_SIZE][BOARD_SIZE]
 	}
 };
 
-const int PstKnight[PLAYER_SIZE][BOARD_SIZE]
+const int Pst_knight[Player_size][Board_size]
 {
 	// White.
 	{
@@ -57,7 +57,7 @@ const int PstKnight[PLAYER_SIZE][BOARD_SIZE]
 	}
 };
 
-const int PstBishop[PLAYER_SIZE][BOARD_SIZE]
+const int Pst_bishop[Player_size][Board_size]
 {
 	// White.
 	{
@@ -83,7 +83,7 @@ const int PstBishop[PLAYER_SIZE][BOARD_SIZE]
 	}
 };
 
-const int PstRook[PLAYER_SIZE][BOARD_SIZE]
+const int Pst_rook[Player_size][Board_size]
 {
 	// White.
 	{
@@ -109,7 +109,7 @@ const int PstRook[PLAYER_SIZE][BOARD_SIZE]
 	}
 };
 
-const int PstQueen[PLAYER_SIZE][BOARD_SIZE]
+const int Pst_queen[Player_size][Board_size]
 {
 	// White.
 	{
@@ -135,7 +135,7 @@ const int PstQueen[PLAYER_SIZE][BOARD_SIZE]
 	}
 };
 
-const int PstKing[][PLAYER_SIZE][BOARD_SIZE]
+const int Pst_king[][Player_size][Board_size]
 {
 	// Middle game.
 	{

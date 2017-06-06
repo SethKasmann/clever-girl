@@ -1,10 +1,10 @@
 #include "perft.h"
 
-const int TOTAL_TESTS = 19;
+const int Total_tests = 19;
 int nodes = 0;
 
 // Fen positions for perft testing
-std::string fen[TOTAL_TESTS] =
+std::string fen[Total_tests] =
 {
 	"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq",
 	"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq",
@@ -28,7 +28,7 @@ std::string fen[TOTAL_TESTS] =
 };
 
 // Depth for each fen position for perft testing
-const int depth[TOTAL_TESTS] = 
+const int depth[Total_tests] = 
 { 
 	3, 4, 5, 6, 
 	5, 6, 6, 6, 
@@ -38,7 +38,7 @@ const int depth[TOTAL_TESTS] =
 };
 
 // Nodes generated for each fen position for perft testing
-const int results[TOTAL_TESTS] = 
+const int results[Total_tests] = 
 {
 	8902, 		197281, 	4865609, 	119060324, 
 	1063513, 	1134888, 	1015133, 	1440467, 
@@ -51,7 +51,7 @@ void perft_test()
 {
 	std::cout << "Perft Results:\n"
 			  << "----------------------------------------------\n";
-	for (int i = 0; i < TOTAL_TESTS; ++i)
+	for (int i = 0; i < Total_tests; ++i)
 	{
 		nodes = 0;
 		State s(fen[i]);
@@ -70,9 +70,9 @@ void perft(std::string & fen, int depth)
 	std::cout << s;
 	Timer::start_clock("perft");
 	perft_tree(s, depth);
-	const float t = Timer::clock_time("perft")/1000.0;
-	std::cout << "Time:" << t << '\n'
-			  << "NPS :" << nodes/t << '\n';
+	const float T = Timer::clock_time("perft")/1000.0;
+	std::cout << "Time:" << T << '\n'
+			  << "NPS :" << nodes/T << '\n';
 }
 
 void perft_tree(State & s, int depth)

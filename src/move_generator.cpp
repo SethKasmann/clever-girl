@@ -17,27 +17,27 @@ void mg_init()
 template<Color C>
 void push_pawn_moves(State & s, MoveList * mlist, Check & ch)
 {
-    const U64 DBL   = C == WHITE ? Rank_3 : Rank_6;
-    const U64 PROMO = C == WHITE ? Rank_8 : Rank_1;
-    const int dir   = C == WHITE ? 8      : -8;
+    const U64 Dbl   = C == white ? Rank_3 : Rank_6;
+    const U64 Promo = C == white ? Rank_8 : Rank_1;
+    const int dir   = C == white ? 8      : -8;
 
     const Square * sq;
     Square src, dst;
 
-    for (sq = s.piece_list[C][PAWN]; *sq != NO_SQ; ++sq)
+    for (sq = s.piece_list[C][pawn]; *sq != no_sq; ++sq)
     {
         src = *sq;
         dst = src + dir;
-        if (dst & PROMO)
+        if (dst & Promo)
         {
-            if (s.board[s.them][dst+1] != NONE && dst & PROMO)
+            if (s.board[s.them][dst+1] != none && dst & Promo)
             {
                 mlist->push(src, dst+1, queen_promo,  QP);
                 mlist->push(src, dst+1, knight_promo, NP);
                 mlist->push(src, dst+1, rook_promo,   RP);
                 mlist->push(src, dst+1, bishop_promo, BP);
             }
-            if (s.board[s.them][dst-1] != NONE && dst & PROMO)
+            if (s.board[s.them][dst-1] != none && dst & Promo)
             {
                 mlist->push(src, dst-1, queen_promo,  QP);
                 mlist->push(src, dst-1, knight_promo, NP);
@@ -54,13 +54,13 @@ void push_pawn_moves(State & s, MoveList * mlist, Check & ch)
         }
         else
         {
-            if (s.board[s.them][dst+1] != NONE && dst & NOT_A_FILE)
+            if (s.board[s.them][dst+1] != none && dst & Not_a_file)
             {
-                mlist->push(src, dst+1, attack, SCORE[PAWN][s.board[s.them][dst+1]]);
+                mlist->push(src, dst+1, attack, Score[pawn][s.board[s.them][dst+1]]);
             }
-            if (s.board[s.them][dst-1] != NONE && dst & NOT_H_FILE)
+            if (s.board[s.them][dst-1] != none && dst & Not_h_file)
             {
-                mlist->push(src, dst-1, attack, SCORE[PAWN][s.board[s.them][dst-1]]);
+                mlist->push(src, dst-1, attack, Score[pawn][s.board[s.them][dst-1]]);
             }
             if (dst & s.empty())
             {
@@ -115,14 +115,14 @@ void push_moves(State & s, MoveList * mlist, Check & ch)
     U64 m, a;
     Square * src;
     int score;
-    for (src = s.piece_list[s.us][P]; *src != NO_SQ; ++src)
+    for (src = s.piece_list[s.us][P]; *src != no_sq; ++src)
     {
         m  = s.attack_bb<P>(*src) & (ch.ray | ch.checker);
         a  = m & s.e_occ();
         m &= s.empty();
         while (a)
         {
-            score = SCORE[P][s.on_square(get_lsb(a), s.them)];
+            score = Score[P][s.on_square(get_lsb(a), s.them)];
             mlist -> push(*src, pop_lsb(a), attack, score);
         }
         while (m)
@@ -153,7 +153,7 @@ void push_king_moves(State & s, MoveList * mlist, Check & ch)
 
     while (a)
     {
-        score = SCORE[KING][s.on_square(dst, s.them)];
+        score = Score[king][s.on_square(dst, s.them)];
         mlist -> push(k, pop_lsb(a), attack, score);
     }
 
@@ -202,10 +202,10 @@ template<Color C>
 void push(State & s, MoveList * mlist, Check & ch)
 {
     push_pawn_moves<C>(s, mlist, ch);
-    push_moves<KNIGHT>(s, mlist, ch);
-    push_moves<BISHOP>(s, mlist, ch);
-    push_moves<ROOK  >(s, mlist, ch);
-    push_moves<QUEEN >(s, mlist, ch);
+    push_moves<knight>(s, mlist, ch);
+    push_moves<bishop>(s, mlist, ch);
+    push_moves<rook  >(s, mlist, ch);
+    push_moves<queen >(s, mlist, ch);
     push_king_moves(s, mlist, ch);
 }
 
@@ -231,8 +231,8 @@ void push_moves(State & s, MoveList * mlist)
     }
     else
     {
-        s.us == WHITE ? push<WHITE>(s, mlist, ch)
-                      : push<BLACK>(s, mlist, ch);
+        s.us == white ? push<white>(s, mlist, ch)
+                      : push<black>(s, mlist, ch);
     }
 
     check_legal(s, mlist);

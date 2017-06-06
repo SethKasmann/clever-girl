@@ -12,18 +12,18 @@
 #include "types.h"
 #include "MagicMoves.hpp"
 
-extern U64 file_bb[BOARD_SIZE];
-extern U64 rank_bb[BOARD_SIZE];
-extern U64 pawn_attacks[PLAYER_SIZE][BOARD_SIZE];
-extern U64 pawn_push[PLAYER_SIZE][BOARD_SIZE];
-extern U64 pawn_dbl_push[PLAYER_SIZE][BOARD_SIZE];
-extern U64 between_dia[BOARD_SIZE][BOARD_SIZE];
-extern U64 between_hor[BOARD_SIZE][BOARD_SIZE];
-extern U64 coplanar[BOARD_SIZE][BOARD_SIZE];
-extern U64 adj_files[BOARD_SIZE];
-extern U64 in_front[PLAYER_SIZE][BOARD_SIZE];
-extern const U64 knight_moves[BOARD_SIZE];
-extern const U64 king_moves[BOARD_SIZE];
+extern U64 file_bb[Board_size];
+extern U64 rank_bb[Board_size];
+extern U64 pawn_attacks[Player_size][Board_size];
+extern U64 pawn_push[Player_size][Board_size];
+extern U64 pawn_dbl_push[Player_size][Board_size];
+extern U64 between_dia[Board_size][Board_size];
+extern U64 between_hor[Board_size][Board_size];
+extern U64 coplanar[Board_size][Board_size];
+extern U64 adj_files[Board_size];
+extern U64 in_front[Player_size][Board_size];
+extern const U64 Knight_moves[Board_size];
+extern const U64 King_moves[Board_size];
 
 static const U64 Rank_1 = 0x00000000000000FFULL;
 static const U64 Rank_2 = 0x000000000000FF00ULL;
@@ -34,17 +34,17 @@ static const U64 Rank_6 = 0x0000FF0000000000ULL;
 static const U64 Rank_7 = 0x00FF000000000000ULL;
 static const U64 Rank_8 = 0xFF00000000000000ULL;
 
-static const U64 File_A = 0x8080808080808080ULL;
-static const U64 File_B = 0x4040404040404040ULL;
-static const U64 File_C = 0x2020202020202020ULL;
-static const U64 File_D = 0x1010101010101010ULL;
-static const U64 File_E = 0x0808080808080808ULL;
-static const U64 File_F = 0x0404040404040404ULL;
-static const U64 File_G = 0x0202020202020202ULL;
-static const U64 File_H = 0x0101010101010101ULL;
+static const U64 File_a = 0x8080808080808080ULL;
+static const U64 File_b = 0x4040404040404040ULL;
+static const U64 File_c = 0x2020202020202020ULL;
+static const U64 File_d = 0x1010101010101010ULL;
+static const U64 File_e = 0x0808080808080808ULL;
+static const U64 File_f = 0x0404040404040404ULL;
+static const U64 File_g = 0x0202020202020202ULL;
+static const U64 File_h = 0x0101010101010101ULL;
 
-static const U64 NOT_A_FILE = 0x7F7F7F7F7F7F7F7F;
-static const U64 NOT_H_FILE = 0xFEFEFEFEFEFEFEFE;
+static const U64 Not_a_file = 0x7F7F7F7F7F7F7F7F;
+static const U64 Not_h_file = 0xFEFEFEFEFEFEFEFE;
 
 void bb_init();
 //unsigned int pop_count(U64);
@@ -102,47 +102,47 @@ template<PawnShift P, Color C>
 U64 pawn_move_bb(U64 bb);
 
 template<>
-inline U64 pawn_move_bb<PUSH, WHITE>(U64 bb)
+inline U64 pawn_move_bb<PUSH, white>(U64 bb)
 {
    return bb << PUSH;
 }
 
 template<>
-inline U64 pawn_move_bb<LEFT, WHITE>(U64 bb)
+inline U64 pawn_move_bb<LEFT, white>(U64 bb)
 {
-   return (bb & NOT_A_FILE) << LEFT;
+   return (bb & Not_a_file) << LEFT;
 }
 
 template<>
-inline U64 pawn_move_bb<RIGHT, WHITE>(U64 bb)
+inline U64 pawn_move_bb<RIGHT, white>(U64 bb)
 {
-   return (bb & NOT_H_FILE) << RIGHT;
+   return (bb & Not_h_file) << RIGHT;
 }
 
 template<>
-inline U64 pawn_move_bb<PUSH, BLACK>(U64 bb)
+inline U64 pawn_move_bb<PUSH, black>(U64 bb)
 {
    return bb >> PUSH;
 }
 
 template<>
-inline U64 pawn_move_bb<LEFT, BLACK>(U64 bb)
+inline U64 pawn_move_bb<LEFT, black>(U64 bb)
 {
-   return (bb & NOT_H_FILE) >> LEFT;
+   return (bb & Not_h_file) >> LEFT;
 }
 
 template<>
-inline U64 pawn_move_bb<RIGHT, BLACK>(U64 bb)
+inline U64 pawn_move_bb<RIGHT, black>(U64 bb)
 {
-   return (bb & NOT_A_FILE) >> RIGHT;
+   return (bb & Not_a_file) >> RIGHT;
 }
 
 inline
 U64 shift_up(U64 bb, const Dir D)
 {
    return D == N  ? bb                << 8 
-        : D == NE ? (bb & NOT_H_FILE) << 9
-        : D == NW ? (bb & NOT_A_FILE) << 7
+        : D == NE ? (bb & Not_h_file) << 9
+        : D == NW ? (bb & Not_a_file) << 7
         : 0;
 }
 
@@ -155,19 +155,19 @@ U64 shift(U64 bb, const Dir D)
 inline
 U64 shift_e(U64 bb, const Dir D)
 {
-   return D == NE ? (bb & NOT_H_FILE) << 7 : (bb & NOT_H_FILE) >> 9;
+   return D == NE ? (bb & Not_h_file) << 7 : (bb & Not_h_file) >> 9;
 }
 
 inline
 U64 shift_w(U64 bb, const Dir D)
 {
-   return D == NW ? (bb & NOT_A_FILE) << 9 : (bb & NOT_A_FILE) >> 7;
+   return D == NW ? (bb & Not_a_file) << 9 : (bb & Not_a_file) >> 7;
 }
 
 inline
 U64 shift_ep(U64 bb, const Dir D)
 {
-   return D == E ? (bb & NOT_H_FILE) >> 1 : (bb & NOT_A_FILE) << 1;
+   return D == E ? (bb & Not_h_file) >> 1 : (bb & Not_a_file) << 1;
 }
 
 inline
@@ -213,7 +213,7 @@ U64 south_fill(U64 gen)
 inline
 U64 east_fill(U64 gen) 
 {
-   const U64 pr0 = NOT_H_FILE;
+   const U64 pr0 = Not_h_file;
    const U64 pr1 = pr0 & (pr0 << 1);
    const U64 pr2 = pr1 & (pr1 << 2);
    gen |= pr0 & (gen  << 1);
@@ -225,7 +225,7 @@ U64 east_fill(U64 gen)
 inline
 U64 north_east_fill(U64 gen) 
 {
-   const U64 pr0 = NOT_H_FILE;
+   const U64 pr0 = Not_h_file;
    const U64 pr1 = pr0 & (pr0 <<  9);
    const U64 pr2 = pr1 & (pr1 << 18);
    gen |= pr0 & (gen <<  9);
@@ -237,7 +237,7 @@ U64 north_east_fill(U64 gen)
 inline
 U64 south_east_fill(U64 gen) 
 {
-   const U64 pr0 = NOT_H_FILE;
+   const U64 pr0 = Not_h_file;
    const U64 pr1 = pr0 & (pr0 >>  7);
    const U64 pr2 = pr1 & (pr1 >> 14);
    gen |= pr0 & (gen >>  7);
@@ -249,7 +249,7 @@ U64 south_east_fill(U64 gen)
 inline
 U64 west_fill(U64 gen) 
 {
-   const U64 pr0 = NOT_A_FILE;
+   const U64 pr0 = Not_a_file;
    const U64 pr1 = pr0 & (pr0 >> 1);
    const U64 pr2 = pr1 & (pr1 >> 2);
    gen |= pr0 & (gen >> 1);
@@ -261,7 +261,7 @@ U64 west_fill(U64 gen)
 inline
 U64 south_west_fill(U64 gen) 
 {
-   const U64 pr0 = NOT_A_FILE;
+   const U64 pr0 = Not_a_file;
    const U64 pr1 = pr0 & (pr0 >>  9);
    const U64 pr2 = pr1 & (pr1 >> 18);
    gen |= pr0 & (gen >>  9);
@@ -273,7 +273,7 @@ U64 south_west_fill(U64 gen)
 inline
 U64 north_west_fill(U64 gen) 
 {
-   const U64 pr0 = NOT_A_FILE;
+   const U64 pr0 = Not_a_file;
    const U64 pr1 = pr0 & (pr0 <<  7);
    const U64 pr2 = pr1 & (pr1 << 14);
    gen |= pr0 & (gen <<  7);

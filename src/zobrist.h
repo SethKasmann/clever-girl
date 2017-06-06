@@ -10,7 +10,7 @@ class State;
 
 namespace Zobrist
 {
-	static U64 piece_rand[PLAYER_SIZE][TYPES_SIZE+1][BOARD_SIZE];
+	static U64 piece_rand[Player_size][Types_size+1][Board_size];
 	static U64 ep_file_rand[8];
 	static U64 castle_rand[16];
 	static U64 side_to_move_rand;

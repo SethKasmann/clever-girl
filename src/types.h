@@ -18,12 +18,12 @@ typedef unsigned long long U64;
 // Board Types
 // ----------------------------------------------------------------------------
 
-static const int BOARD_SIZE  = 64;
-static const int TYPES_SIZE  = 6;
-static const int PLAYER_SIZE = 2;
-static const int PIECE_MAX   = 10;
+static const int Board_size  = 64;
+static const int Types_size  = 6;
+static const int Player_size = 2;
+static const int Piece_max   = 10;
 
-static const int CASTLE_RIGHTS[BOARD_SIZE] = 
+static const int Castle_rights[Board_size] = 
 {
     14, 15, 15, 12, 15, 15, 15, 13,
     15, 15, 15, 15, 15, 15, 15, 15,
@@ -37,19 +37,19 @@ static const int CASTLE_RIGHTS[BOARD_SIZE] =
 
 enum Color 
 { 
-	WHITE, 
-	BLACK 
+	white, 
+	black 
 };
 
 enum PieceType
 {
-	PAWN,
-	KNIGHT,
-	BISHOP,
-	ROOK,
-	QUEEN,
-	KING,
-	NONE
+	pawn,
+	knight,
+	bishop,
+	rook,
+	queen,
+	king,
+	none
 };
 
 enum Square
@@ -62,40 +62,40 @@ enum Square
 	H6, G6, F6, E6, D6, C6, B6, A6,
 	H7, G7, F7, E7, D7, C7, B7, A7,
 	H8, G8, F8, E8, D8, C8, B8, A8,
-	NO_SQ = -1,
-	FIRST_SQ = 0, LAST_SQ = 63
+	no_sq = -1,
+	first_sq = 0, last_sq = 63
 };
 
 enum File
 {
-	A_FILE,
-	B_FILE,
-	C_FILE,
-	D_FILE,
-	E_FILE,
-	F_FILE,
-	G_FILE,
-	H_FILE
+	a_file,
+	b_file,
+	c_file,
+	d_file,
+	e_file,
+	f_file,
+	g_file,
+	h_file
 };
 
 enum Rank
 {
-	RANK_1,
-	RANK_2,
-	RANK_3,
-	RANK_4,
-	RANK_5,
-	RANK_6,
-	RANK_7,
-	RANK_8
+	rank_1,
+	rank_2,
+	rank_3,
+	rank_4,
+	rank_5,
+	rank_6,
+	rank_7,
+	rank_8
 };
 
 enum CR
 {
-	W_KING_CASTLE = 1,
-	W_QUEEN_CASTLE = 2,
-	B_KING_CASTLE = 4,
-	B_QUEEN_CASTLE = 8
+	w_king_castle = 1,
+	w_queen_castle = 2,
+	b_king_castle = 4,
+	b_queen_castle = 8
 };
 
 // ----------------------------------------------------------------------------
@@ -110,7 +110,7 @@ enum CR
 
 typedef unsigned int Move;
 
-static const int SCORE[TYPES_SIZE][TYPES_SIZE] = 
+static const int Score[Types_size][Types_size] = 
 {
 	{ 25, 29, 30, 32, 35, 0 },  
     { 19, 24, 26, 28, 34, 0 },  
@@ -191,14 +191,14 @@ inline Prop get_prop(Move m)  { return Prop((m & 0xF000) >> 12); }
 // Search Types
 // ----------------------------------------------------------------------------
 
-const int NEG_INF   = -1001;
-const int POS_INF   = 1001;
-const int KILLER_SZ = 2;
-const int MAX_PLY   = 50;
+const int Neg_inf   = -1001;
+const int Pos_inf   = 1001;
+const int Killer_size = 2;
+const int Max_ply   = 50;
 
 enum NodeType
 {
-	PV, CUT, ALL
+	pv, cut, all
 };
 
 // ----------------------------------------------------------------------------

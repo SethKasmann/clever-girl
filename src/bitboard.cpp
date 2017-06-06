@@ -1,17 +1,17 @@
 #include "bitboard.h"
 
-U64 file_bb[BOARD_SIZE];
-U64 rank_bb[BOARD_SIZE];
-U64 pawn_attacks[PLAYER_SIZE][BOARD_SIZE];
-U64 pawn_push[PLAYER_SIZE][BOARD_SIZE];
-U64 pawn_dbl_push[PLAYER_SIZE][BOARD_SIZE];
-U64 between_dia[BOARD_SIZE][BOARD_SIZE];
-U64 between_hor[BOARD_SIZE][BOARD_SIZE];
-U64 coplanar[BOARD_SIZE][BOARD_SIZE];
-U64 adj_files[BOARD_SIZE];
-U64 in_front[PLAYER_SIZE][BOARD_SIZE];
+U64 file_bb[Board_size];
+U64 rank_bb[Board_size];
+U64 pawn_attacks[Player_size][Board_size];
+U64 pawn_push[Player_size][Board_size];
+U64 pawn_dbl_push[Player_size][Board_size];
+U64 between_dia[Board_size][Board_size];
+U64 between_hor[Board_size][Board_size];
+U64 coplanar[Board_size][Board_size];
+U64 adj_files[Board_size];
+U64 in_front[Player_size][Board_size];
 
-const U64 knight_moves[BOARD_SIZE] =
+const U64 Knight_moves[Board_size] =
 {
     U64(0x0000000000020400), U64(0x0000000000050800), U64(0x00000000000A1100), U64(0x0000000000142200),
     U64(0x0000000000284400), U64(0x0000000000508800), U64(0x0000000000A01000), U64(0x0000000000402000),
@@ -31,7 +31,7 @@ const U64 knight_moves[BOARD_SIZE] =
     U64(0x0044280000000000), U64(0x0088500000000000), U64(0x0010A00000000000), U64(0x0020400000000000)
 };
 
-const U64 king_moves[BOARD_SIZE] =
+const U64 King_moves[Board_size] =
 {
     U64(0x0000000000000302), U64(0x0000000000000705), U64(0x0000000000000E0A), U64(0x0000000000001C14),
     U64(0x0000000000003828), U64(0x0000000000007050), U64(0x000000000000E0A0), U64(0x000000000000C040),
@@ -53,48 +53,48 @@ const U64 king_moves[BOARD_SIZE] =
 
 void bb_init()
 {
-    for (Square sq_src = H1; sq_src <= A8; ++sq_src)
+    for (Square sq_src = first_sq; sq_src <= last_sq; ++sq_src)
     {
         U64 bit = 1ULL << sq_src;
-        pawn_attacks[WHITE][sq_src] = pawn_move_bb<RIGHT, WHITE>(bit) 
-                                    | pawn_move_bb<LEFT , WHITE>(bit);
-        pawn_attacks[BLACK][sq_src] = pawn_move_bb<RIGHT, BLACK>(bit) 
-                                    | pawn_move_bb<LEFT , BLACK>(bit);
-        pawn_push[WHITE][sq_src]    = pawn_move_bb<PUSH , WHITE>(bit);
-        pawn_push[BLACK][sq_src]    = pawn_move_bb<PUSH , BLACK>(bit);
+        pawn_attacks[white][sq_src] = pawn_move_bb<RIGHT, white>(bit) 
+                                    | pawn_move_bb<LEFT , white>(bit);
+        pawn_attacks[black][sq_src] = pawn_move_bb<RIGHT, black>(bit) 
+                                    | pawn_move_bb<LEFT , black>(bit);
+        pawn_push[white][sq_src]    = pawn_move_bb<PUSH , white>(bit);
+        pawn_push[black][sq_src]    = pawn_move_bb<PUSH , black>(bit);
 
         U64 front = east_fill(bit) | west_fill(bit);
-        in_front[WHITE][sq_src] = north_fill(front << 8);
-        in_front[BLACK][sq_src] = south_fill(front >> 8);
+        in_front[white][sq_src] = north_fill(front << 8);
+        in_front[black][sq_src] = south_fill(front >> 8);
 
         file_bb[sq_src] = north_fill(bit) | south_fill(bit);
         rank_bb[sq_src] = east_fill(bit) | west_fill(bit);
 
         if (bit & Rank_2)
         {
-            pawn_dbl_push[WHITE][sq_src] = pawn_move_bb<PUSH, WHITE>(pawn_move_bb<PUSH, WHITE>(bit));
-            pawn_dbl_push[BLACK][sq_src] = 0;
+            pawn_dbl_push[white][sq_src] = pawn_move_bb<PUSH, white>(pawn_move_bb<PUSH, white>(bit));
+            pawn_dbl_push[black][sq_src] = 0;
         }
         else if (bit & Rank_7)
         {
-            pawn_dbl_push[WHITE][sq_src] = 0;
-            pawn_dbl_push[BLACK][sq_src] = pawn_move_bb<PUSH, BLACK>(pawn_move_bb<PUSH, BLACK>(bit));
+            pawn_dbl_push[white][sq_src] = 0;
+            pawn_dbl_push[black][sq_src] = pawn_move_bb<PUSH, black>(pawn_move_bb<PUSH, black>(bit));
         }
         else
         {
-            pawn_dbl_push[WHITE][sq_src] = 0;
-            pawn_dbl_push[BLACK][sq_src] = 0;
+            pawn_dbl_push[white][sq_src] = 0;
+            pawn_dbl_push[black][sq_src] = 0;
         }
         for (Square sq_dst = H1; sq_dst <= A8; ++sq_dst)
         {
-            adj_files[sq_dst] = sq_dst & File_A ? File_B
-                              : sq_dst & File_B ? File_A | File_C
-                              : sq_dst & File_C ? File_B | File_D
-                              : sq_dst & File_D ? File_C | File_E
-                              : sq_dst & File_E ? File_D | File_F
-                              : sq_dst & File_F ? File_E | File_G
-                              : sq_dst & File_G ? File_F | File_H
-                              : File_G;
+            adj_files[sq_dst] = sq_dst & File_a ? File_b
+                              : sq_dst & File_b ? File_a | File_c
+                              : sq_dst & File_c ? File_b | File_d
+                              : sq_dst & File_d ? File_c | File_e
+                              : sq_dst & File_e ? File_d | File_f
+                              : sq_dst & File_f ? File_e | File_g
+                              : sq_dst & File_g ? File_f | File_h
+                              : File_g;
 
             U64 r_attacks, b_attacks, occ;
             occ = 1ULL << sq_src | 1ULL << sq_dst;

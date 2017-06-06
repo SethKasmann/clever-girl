@@ -7,8 +7,8 @@
 #include "MagicMoves.hpp"
 #include "types.h"
 
-const U64 FULL = 0xFFFFFFFFFFFFFFFF;
-const int MAX_SIZE = 256;
+const U64 Full = 0xFFFFFFFFFFFFFFFF;
+const int Max_size = 256;
 
 struct Check
 {
@@ -16,7 +16,7 @@ struct Check
     {
         checks == 1 ? ray = between_dia[s.p_king_sq()][get_lsb(checker)] 
                           | between_hor[s.p_king_sq()][get_lsb(checker)]
-                    : ray = checker = 0xFFFFFFFFFFFFFFFF;
+                    : ray = checker = Full;
     }
     U64 checker;
     U64 ray;
@@ -38,7 +38,7 @@ public:
     Move pop() { return *(--e); }
 private:
 public:
-    Move _m[MAX_SIZE];
+    Move _m[Max_size];
     Move * c;
     Move * e;
 };

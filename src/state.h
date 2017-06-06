@@ -82,12 +82,12 @@ struct State
 
     int fmr;
     int castle;
-    PieceType board[PLAYER_SIZE][BOARD_SIZE];
-    int piece_count[PLAYER_SIZE][TYPES_SIZE];
-    Square piece_list[PLAYER_SIZE][TYPES_SIZE][PIECE_MAX];
-    int piece_index[BOARD_SIZE];
-    U64 pieces[PLAYER_SIZE][TYPES_SIZE];
-    U64 occupancy[PLAYER_SIZE];
+    PieceType board[Player_size][Board_size];
+    int piece_count[Player_size][Types_size];
+    Square piece_list[Player_size][Types_size][Piece_max];
+    int piece_index[Board_size];
+    U64 pieces[Player_size][Types_size];
+    U64 occupancy[Player_size];
     U64 ep;
     U64 key;
     Color us;
@@ -96,7 +96,7 @@ struct State
 
 inline void State::add_piece(int dst, PieceType p)
 {
-    if (board[them][dst] != NONE)
+    if (board[them][dst] != none)
     {
         del_piece(them, dst);
     }
@@ -114,7 +114,7 @@ inline void State::move_piece(int src, int dst)
     move_bit(pieces[us][p], src, dst);
     move_bit(occupancy[us], src, dst);
     board[us][dst] = p;
-    board[us][src] = NONE;
+    board[us][src] = none;
     piece_index[dst] = piece_index[src];
     piece_list[us][p][piece_index[dst]] = Square(dst);
 }
@@ -125,11 +125,11 @@ inline void State::del_piece(bool c, int dst)
     piece_count[c][p] -= 1;
     clear_bit(pieces[c][p], dst);
     clear_bit(occupancy[c], dst);
-    board[c][dst] = NONE;
+    board[c][dst] = none;
     Square swap = piece_list[c][p][piece_count[c][p]];
     piece_index[swap] = piece_index[dst];
     piece_list[c][p][piece_index[swap]] = swap;
-    piece_list[c][p][piece_count[c][p]] = NO_SQ;
+    piece_list[c][p][piece_count[c][p]] = no_sq;
 }
 
 inline
@@ -148,91 +148,91 @@ U64 State::piece_bb(const Color c, const PieceType p) const
 inline
 U64 State::p_pawn() const
 {
-    return pieces[us][PAWN];
+    return pieces[us][pawn];
 }
 
 inline
 U64 State::e_pawn() const
 {
-    return pieces[them][PAWN];
+    return pieces[them][pawn];
 }
 
 inline
 U64 State::p_knight() const
 {
-    return pieces[us][KNIGHT];
+    return pieces[us][knight];
 }
 
 inline
 U64 State::e_knight() const
 {
-    return pieces[them][KNIGHT];
+    return pieces[them][knight];
 }
 
 inline
 U64 State::p_bishop() const
 {
-    return pieces[us][BISHOP];
+    return pieces[us][bishop];
 }
 
 inline
 U64 State::e_bishop() const
 {
-    return pieces[them][BISHOP];
+    return pieces[them][bishop];
 }
 
 inline
 U64 State::p_rook() const
 {
-    return pieces[us][ROOK];
+    return pieces[us][rook];
 }
 
 inline
 U64 State::e_rook() const
 {
-    return pieces[them][ROOK];
+    return pieces[them][rook];
 }
 
 inline
 U64 State::p_queen() const
 {
-    return pieces[us][QUEEN];
+    return pieces[us][queen];
 }
 
 inline
 U64 State::e_queen() const
 {
-    return pieces[them][QUEEN];
+    return pieces[them][queen];
 }
 
 inline
 U64 State::p_king() const
 {
-    return pieces[us][KING];
+    return pieces[us][king];
 }
 
 inline
 U64 State::e_king() const
 {
-    return pieces[them][KING];
+    return pieces[them][king];
 }
 
 inline
 Square State::p_king_sq() const
 {
-    return piece_list[us][KING][0];
+    return piece_list[us][king][0];
 }
 
 inline
 Square State::e_king_sq() const
 {
-    return piece_list[them][KING][0];
+    return piece_list[them][king][0];
 }
 
 inline
 PieceType State::on_square(const Square s) const
 {
-    return board[us][s] != NONE ? board[us][s] : board[them][s];
+    return board[us][s] != none ? board[us][s] : board[them][s];
 }
 
 inline
@@ -268,47 +268,47 @@ U64 & State::e_occ()
 inline
 U64 State::occ() const
 {
-    return occupancy[WHITE] | occupancy[BLACK];
+    return occupancy[white] | occupancy[black];
 }
 
 inline
 U64 State::empty() const
 {
-    return ~(occupancy[WHITE] | occupancy[BLACK]);
+    return ~(occupancy[white] | occupancy[black]);
 }
 
 inline 
 bool State::k_castle() const
 {
-    return us ? castle & B_KING_CASTLE : castle & W_KING_CASTLE;
+    return us ? castle & b_king_castle : castle & w_king_castle;
 }
 
 inline
 bool State::q_castle() const
 {
-    return us ? castle & B_QUEEN_CASTLE : castle & W_QUEEN_CASTLE;
+    return us ? castle & b_queen_castle : castle & w_queen_castle;
 }
 
 template<>
-inline U64 State::attack_bb<KNIGHT>(const Square s) const
+inline U64 State::attack_bb<knight>(const Square s) const
 {
-    return knight_moves[s];
+    return Knight_moves[s];
 }
 
 template<>
-inline U64 State::attack_bb<BISHOP>(const Square s) const
+inline U64 State::attack_bb<bishop>(const Square s) const
 {
     return Bmagic(s, occ());
 }
 
 template<>
-inline U64 State::attack_bb<ROOK>(const Square s) const
+inline U64 State::attack_bb<rook>(const Square s) const
 {
     return Rmagic(s, occ());
 }
 
 template<>
-inline U64 State::attack_bb<QUEEN>(const Square s) const
+inline U64 State::attack_bb<queen>(const Square s) const
 {
     return Qmagic(s, occ());
 }
@@ -317,7 +317,7 @@ inline
 bool State::is_attacked(const Square s) const
 {
     return (pawn_attacks[us][s] & e_pawn())
-        || (knight_moves[s] & e_knight())
+        || (Knight_moves[s] & e_knight())
         || (Bmagic(s, occ() ^ p_king()) & (e_bishop() | e_queen()))
         || (Rmagic(s, occ() ^ p_king()) & (e_rook()   | e_queen()));
 }
@@ -333,7 +333,7 @@ inline
 U64 State::checkers() const
 {
     return (pawn_attacks[us][p_king_sq()] &  e_pawn())
-         | (knight_moves[p_king_sq()]     &  e_knight())
+         | (Knight_moves[p_king_sq()]     &  e_knight())
          | (Bmagic(p_king_sq(), occ())    & (e_bishop() | e_queen()))
          | (Rmagic(p_king_sq(), occ())    & (e_rook()   | e_queen()));
 }

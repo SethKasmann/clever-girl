@@ -3,59 +3,59 @@
 int eval(const State & s, const Color c)
 {
     const Square * p;
-    const int dir = c == WHITE ? 8 : -8;
+    const int dir = c == white ? 8 : -8;
     int score = Draw;
 
     bool eg = false; // determine middle or endgame.
 
     // Pawn evaluation.
     bool isolated, passed, doubled, connected;
-    for (p = s.piece_list[c][PAWN]; *p != NO_SQ; ++p)
+    for (p = s.piece_list[c][pawn]; *p != no_sq; ++p)
     {
-    	score += PstPawn[c][*p];
-    	isolated = adj_files[*p] & s.piece_bb(c, PAWN);
-        passed   = adj_files[*p] & in_front[c][*p] & s.piece_bb(!c, PAWN);
-        doubled  = pop_count(file_bb[*p] & s.piece_bb(c, PAWN)) > 1;
-        connected = file_bb[*p - dir] & s.piece_bb(c, PAWN);
+    	score += Pst_pawn[c][*p];
+    	isolated = adj_files[*p] & s.piece_bb(c, pawn);
+        passed   = adj_files[*p] & in_front[c][*p] & s.piece_bb(!c, pawn);
+        doubled  = pop_count(file_bb[*p] & s.piece_bb(c, pawn)) > 1;
+        connected = file_bb[*p - dir] & s.piece_bb(c, pawn);
     	if (isolated)  score += Isolated;
         if (passed)    score += Passed;
         if (doubled)   score += Doubled;
         if (connected) score += Connected;
     }
-    score += s.piece_count[c][PAWN] * PawnWt;
+    score += s.piece_count[c][pawn] * Pawn_wt;
 
     // Knight evaluation.
-    for (p = s.piece_list[c][KNIGHT]; *p != NO_SQ; ++p)
+    for (p = s.piece_list[c][knight]; *p != no_sq; ++p)
     {
-    	score += PstKnight[c][*p];
+    	score += Pst_knight[c][*p];
     }
-    score += s.piece_count[c][KNIGHT] * KnightWt;
+    score += s.piece_count[c][knight] * Knight_wt;
 
 
     // Bishop evaluation.
-    for (p = s.piece_list[c][BISHOP]; *p != NO_SQ; ++p)
+    for (p = s.piece_list[c][bishop]; *p != no_sq; ++p)
     {
-    	score += PstBishop[c][*p];
+    	score += Pst_bishop[c][*p];
     }
-    score += s.piece_count[c][BISHOP] * BishopWt;
+    score += s.piece_count[c][bishop] * Bishop_wt;
 
     // Rook evaluation.
-    for (p = s.piece_list[c][ROOK]; *p != NO_SQ; ++p)
+    for (p = s.piece_list[c][rook]; *p != no_sq; ++p)
     {
-    	score += PstRook[c][*p];
+    	score += Pst_rook[c][*p];
     }
-    score += s.piece_count[c][ROOK] * RookWt;
+    score += s.piece_count[c][rook] * Rook_wt;
 
     // Queen evaluation.
-    for (p = s.piece_list[c][QUEEN]; *p != NO_SQ; ++p)
+    for (p = s.piece_list[c][queen]; *p != no_sq; ++p)
     {
-    	score += PstQueen[c][*p];
+    	score += Pst_queen[c][*p];
     }
-    score += s.piece_count[c][QUEEN] * QueenWt;
+    score += s.piece_count[c][queen] * Queen_wt;
 
     // King evaluation.
-    p = s.piece_list[c][KING];
-    score += PstKing[eg][c][*p];
+    p = s.piece_list[c][king];
+    score += Pst_king[eg][c][*p];
 
     return score;
 }

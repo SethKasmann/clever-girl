@@ -44,29 +44,29 @@ void State::operator=(const State & s)
 // ----------------------------------------------------------------------------
 
 State::State(std::string & fen) : castle(0), ep(0), 
-                                  us(WHITE), them(BLACK)
+                                  us(white), them(black)
 {
     fmr = 0; // NEED TO CHANGE THIS
     U64 bit = 0x8000000000000000ULL;
     int i = 0;
     int position = 0;
     bool set_pieces = true;
-    for (PieceType p = PAWN; p < NONE; ++p)
+    for (PieceType p = pawn; p < none; ++p)
     {
-        pieces[WHITE][p]      = 0;
-        pieces[BLACK][p]      = 0;
-        piece_count[WHITE][p] = 0;
-        piece_count[BLACK][p] = 0;
-        for (int i = 0; i < PIECE_MAX; ++i)
+        pieces[white][p]      = 0;
+        pieces[black][p]      = 0;
+        piece_count[white][p] = 0;
+        piece_count[black][p] = 0;
+        for (int i = 0; i < Piece_max; ++i)
         {
-            piece_list[WHITE][p][i] = NO_SQ;
-            piece_list[BLACK][p][i] = NO_SQ;
+            piece_list[white][p][i] = no_sq;
+            piece_list[black][p][i] = no_sq;
         }
     }
-    for (Square s = H1; s <= A8; ++s)
+    for (Square s = first_sq; s <= last_sq; ++s)
     {
-        board[WHITE][s] = NONE;
-        board[BLACK][s] = NONE;
+        board[white][s] = none;
+        board[black][s] = none;
         piece_index[s]  = 0;
     }
 
@@ -77,87 +77,87 @@ State::State(std::string & fen) : castle(0), ep(0),
         switch (fen[i])
         {
             case 'P':
-                pieces[WHITE][PAWN] |= bit >> position;
-                piece_list[WHITE][PAWN][piece_count[WHITE][PAWN]] = s;
-                piece_index[s] = piece_count[WHITE][PAWN];
-                piece_count[WHITE][PAWN]++;
+                pieces[white][pawn] |= bit >> position;
+                piece_list[white][pawn][piece_count[white][pawn]] = s;
+                piece_index[s] = piece_count[white][pawn];
+                piece_count[white][pawn]++;
                 position++;
                 break;
             case 'N':
-                pieces[WHITE][KNIGHT] |= bit >> position;
-                piece_list[WHITE][KNIGHT][piece_count[WHITE][KNIGHT]] = s;
-                piece_index[s] = piece_count[WHITE][KNIGHT];
-                piece_count[WHITE][KNIGHT]++;
+                pieces[white][knight] |= bit >> position;
+                piece_list[white][knight][piece_count[white][knight]] = s;
+                piece_index[s] = piece_count[white][knight];
+                piece_count[white][knight]++;
                 position++;
                 break;
             case 'B':
-                pieces[WHITE][BISHOP] |= bit >> position;
-                piece_list[WHITE][BISHOP][piece_count[WHITE][BISHOP]] = s;
-                piece_index[s] = piece_count[WHITE][BISHOP];
-                piece_count[WHITE][BISHOP]++;
+                pieces[white][bishop] |= bit >> position;
+                piece_list[white][bishop][piece_count[white][bishop]] = s;
+                piece_index[s] = piece_count[white][bishop];
+                piece_count[white][bishop]++;
                 position++;
                 break;
             case 'R':
-                pieces[WHITE][ROOK] |= bit >> position;
-                piece_list[WHITE][ROOK][piece_count[WHITE][ROOK]] = s;
-                piece_index[s] = piece_count[WHITE][ROOK];
-                piece_count[WHITE][ROOK]++;
+                pieces[white][rook] |= bit >> position;
+                piece_list[white][rook][piece_count[white][rook]] = s;
+                piece_index[s] = piece_count[white][rook];
+                piece_count[white][rook]++;
                 position++;
                 break;
             case 'Q':
-                pieces[WHITE][QUEEN] |= bit >> position;
-                piece_list[WHITE][QUEEN][piece_count[WHITE][QUEEN]] = s;
-                piece_index[s] = piece_count[WHITE][QUEEN];
-                piece_count[WHITE][QUEEN]++;
+                pieces[white][queen] |= bit >> position;
+                piece_list[white][queen][piece_count[white][queen]] = s;
+                piece_index[s] = piece_count[white][queen];
+                piece_count[white][queen]++;
                 position++;
                 break;
             case 'K':
-                pieces[WHITE][KING] |= bit >> position;
-                piece_list[WHITE][KING][piece_count[WHITE][KING]] = s;
-                piece_index[s] = piece_count[WHITE][KING];
-                piece_count[WHITE][KING]++;
+                pieces[white][king] |= bit >> position;
+                piece_list[white][king][piece_count[white][king]] = s;
+                piece_index[s] = piece_count[white][king];
+                piece_count[white][king]++;
                 position++;
                 break;
             case 'p':
-                pieces[BLACK][PAWN] |= bit >> position;
-                piece_list[BLACK][PAWN][piece_count[BLACK][PAWN]] = s;
-                piece_index[s] = piece_count[BLACK][PAWN];
-                piece_count[BLACK][PAWN]++;
+                pieces[black][pawn] |= bit >> position;
+                piece_list[black][pawn][piece_count[black][pawn]] = s;
+                piece_index[s] = piece_count[black][pawn];
+                piece_count[black][pawn]++;
                 position++;
                 break;
             case 'n':
-                pieces[BLACK][KNIGHT] |= bit >> position;
-                piece_list[BLACK][KNIGHT][piece_count[BLACK][KNIGHT]] = s;
-                piece_index[s] = piece_count[BLACK][KNIGHT];
-                piece_count[BLACK][KNIGHT]++;
+                pieces[black][knight] |= bit >> position;
+                piece_list[black][knight][piece_count[black][knight]] = s;
+                piece_index[s] = piece_count[black][knight];
+                piece_count[black][knight]++;
                 position++;
                 break;
             case 'b':
-                pieces[BLACK][BISHOP] |= bit >> position;
-                piece_list[BLACK][BISHOP][piece_count[BLACK][BISHOP]] = s;
-                piece_index[s] = piece_count[BLACK][BISHOP];
-                piece_count[BLACK][BISHOP]++;
+                pieces[black][bishop] |= bit >> position;
+                piece_list[black][bishop][piece_count[black][bishop]] = s;
+                piece_index[s] = piece_count[black][bishop];
+                piece_count[black][bishop]++;
                 position++;
                 break;
             case 'r':
-                pieces[BLACK][ROOK] |= bit >> position;
-                piece_list[BLACK][ROOK][piece_count[BLACK][ROOK]] = s;
-                piece_index[s] = piece_count[BLACK][ROOK];
-                piece_count[BLACK][ROOK]++;
+                pieces[black][rook] |= bit >> position;
+                piece_list[black][rook][piece_count[black][rook]] = s;
+                piece_index[s] = piece_count[black][rook];
+                piece_count[black][rook]++;
                 position++;
                 break;
             case 'q':
-                pieces[BLACK][QUEEN] |= bit >> position;
-                piece_list[BLACK][QUEEN][piece_count[BLACK][QUEEN]] = s;
-                piece_index[s] = piece_count[BLACK][QUEEN];
-                piece_count[BLACK][QUEEN]++;
+                pieces[black][queen] |= bit >> position;
+                piece_list[black][queen][piece_count[black][queen]] = s;
+                piece_index[s] = piece_count[black][queen];
+                piece_count[black][queen]++;
                 position++;
                 break;
             case 'k':
-                pieces[BLACK][KING] |= bit >> position;
-                piece_list[BLACK][KING][piece_count[BLACK][KING]] = s;
-                piece_index[s] = piece_count[BLACK][KING];
-                piece_count[BLACK][KING]++;
+                pieces[black][king] |= bit >> position;
+                piece_list[black][king][piece_count[black][king]] = s;
+                piece_index[s] = piece_count[black][king];
+                piece_count[black][king]++;
                 position++;
                 break;
             case '1':
@@ -192,22 +192,22 @@ State::State(std::string & fen) : castle(0), ep(0),
 
     if (fen[i] == 'w') 
     {
-        us   = WHITE;
-        them = BLACK;
+        us   = white;
+        them = black;
     }
     else if (fen[i] == 'b') 
     {
-        us   = BLACK;
-        them = WHITE;
+        us   = black;
+        them = white;
     }
     i += 2;
 
-    occupancy[WHITE] = pieces[WHITE][PAWN]   | pieces[WHITE][KNIGHT]
-                     | pieces[WHITE][BISHOP] | pieces[WHITE][ROOK]
-                     | pieces[WHITE][QUEEN]  | pieces[WHITE][KING];
-    occupancy[BLACK] = pieces[BLACK][PAWN]   | pieces[BLACK][KNIGHT]
-                     | pieces[BLACK][BISHOP] | pieces[BLACK][ROOK]
-                     | pieces[BLACK][QUEEN]  | pieces[BLACK][KING];
+    occupancy[white] = pieces[white][pawn]   | pieces[white][knight]
+                     | pieces[white][bishop] | pieces[white][rook]
+                     | pieces[white][queen]  | pieces[white][king];
+    occupancy[black] = pieces[black][pawn]   | pieces[black][knight]
+                     | pieces[black][bishop] | pieces[black][rook]
+                     | pieces[black][queen]  | pieces[black][king];
 
     int fen_table[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
 
@@ -274,19 +274,19 @@ State::State(std::string & fen) : castle(0), ep(0),
 
         if (occ() & bit)
         {
-            const Color c = occupancy[WHITE] & bit ? WHITE : BLACK;
-            if (pieces[c][PAWN] & bit)
-                board[c][s] = PAWN;
-            else if (pieces[c][KNIGHT] & bit)
-                board[c][s] = KNIGHT;
-            else if (pieces[c][BISHOP] & bit)
-                board[c][s] = BISHOP;
-            else if (pieces[c][ROOK] & bit)
-                board[c][s] = ROOK;
-            else if (pieces[c][QUEEN] & bit)
-                board[c][s] = QUEEN;
-            else if (pieces[c][KING] & bit)
-                board[c][s] = KING;
+            const Color c = occupancy[white] & bit ? white : black;
+            if (pieces[c][pawn] & bit)
+                board[c][s] = pawn;
+            else if (pieces[c][knight] & bit)
+                board[c][s] = knight;
+            else if (pieces[c][bishop] & bit)
+                board[c][s] = bishop;
+            else if (pieces[c][rook] & bit)
+                board[c][s] = rook;
+            else if (pieces[c][queen] & bit)
+                board[c][s] = queen;
+            else if (pieces[c][king] & bit)
+                board[c][s] = king;
             else
                 assert(false);
         }
@@ -302,22 +302,22 @@ U64 State::get_pins() const
 {
     int i;
     U64 ray, pin = 0;
-    for (i = 0; i < piece_count[them][BISHOP]; ++i)
+    for (i = 0; i < piece_count[them][bishop]; ++i)
     {
-        ray = between_dia[piece_list[them][BISHOP][i]][p_king_sq()];
+        ray = between_dia[piece_list[them][bishop][i]][p_king_sq()];
         if (pop_count(ray & occ()) == 1 && ray & p_occ())
             pin |= ray & p_occ();
     }
-    for (i = 0; i < piece_count[them][ROOK]; ++i)
+    for (i = 0; i < piece_count[them][rook]; ++i)
     {
-        ray = between_hor[piece_list[them][ROOK][i]][p_king_sq()];
+        ray = between_hor[piece_list[them][rook][i]][p_king_sq()];
         if (pop_count(ray & occ()) == 1 && ray & p_occ())
             pin |= ray & p_occ();
     }
-    for (i = 0; i < piece_count[them][QUEEN]; ++i)
+    for (i = 0; i < piece_count[them][queen]; ++i)
     {
-        ray = between_dia[piece_list[them][QUEEN][i]][p_king_sq()]
-            | between_hor[piece_list[them][QUEEN][i]][p_king_sq()];
+        ray = between_dia[piece_list[them][queen][i]][p_king_sq()]
+            | between_hor[piece_list[them][queen][i]][p_king_sq()];
         if (pop_count(ray & occ()) == 1 && ray & p_occ())
             pin |= ray & p_occ();
     }
@@ -335,7 +335,7 @@ void State::make(Move m)
     const Square dst  = get_dst(m);
 
     // Update the 50 move rule.
-    board[us][src] == PAWN || board[them][dst] != NONE ? 
+    board[us][src] == pawn || board[them][dst] != none ? 
         fmr = 0 : fmr++;
 
     // Remove the ep file and castle rights from the zobrist key.
@@ -397,36 +397,36 @@ void State::make(Move m)
         // Queen promotion.
         case queen_promo:
         {
-            Zobrist::promo(this, src, dst, QUEEN);
+            Zobrist::promo(this, src, dst, queen);
             del_piece(us, src);
-            add_piece(dst, QUEEN);
+            add_piece(dst, queen);
             ep = 0;
             break;
         }
         // Knight underpromotion.
         case knight_promo:
         {
-            Zobrist::promo(this, src, dst, KNIGHT);
+            Zobrist::promo(this, src, dst, knight);
             del_piece(us, src);
-            add_piece(dst, KNIGHT);
+            add_piece(dst, knight);
             ep = 0;
             break;
         }
         // Rook underpromotion.
         case rook_promo:
         {
-            Zobrist::promo(this, src, dst, ROOK);
+            Zobrist::promo(this, src, dst, rook);
             del_piece(us, src);
-            add_piece(dst, ROOK);
+            add_piece(dst, rook);
             ep = 0;
             break;
         }
         // Bishop underpromotion.
         case bishop_promo:
         {
-            Zobrist::promo(this, src, dst, BISHOP);
+            Zobrist::promo(this, src, dst, bishop);
             del_piece(us, src);
-            add_piece(dst, BISHOP);
+            add_piece(dst, bishop);
             ep = 0;
             break;
         }
@@ -441,8 +441,8 @@ void State::make(Move m)
         }
     }
     // Update castle rights.
-    castle &= CASTLE_RIGHTS[src];
-    castle &= CASTLE_RIGHTS[dst];
+    castle &= Castle_rights[src];
+    castle &= Castle_rights[dst];
 
     // Add updated castle rights back into the zobrist key, and swap
     // turns.
@@ -461,28 +461,28 @@ U64 State::valid_king_moves() const
     U64 m;
     const Square * s;
 
-    const Dir L   = us == WHITE ? SW : NW;
-    const Dir R   = us == WHITE ? SE : NE;
+    const Dir L   = us == white ? SW : NW;
+    const Dir R   = us == white ? SE : NE;
 
     // Remove king from occupancy to check squares attacked behind the king.
-    const U64 o = (occupancy[us] | occupancy[them]) ^ pieces[us][KING];
+    const U64 o = (occupancy[us] | occupancy[them]) ^ pieces[us][king];
 
-    m = king_moves[p_king_sq()];
-    m &= ~(shift_e(pieces[them][PAWN], R) | shift_w(pieces[them][PAWN], L));
+    m = King_moves[p_king_sq()];
+    m &= ~(shift_e(pieces[them][pawn], R) | shift_w(pieces[them][pawn], L));
 
-    for (s = piece_list[them][KNIGHT]; *s != NO_SQ; ++s)
-        m &= ~(knight_moves[*s]);
+    for (s = piece_list[them][knight]; *s != no_sq; ++s)
+        m &= ~(Knight_moves[*s]);
 
-    for (s = piece_list[them][BISHOP]; *s != NO_SQ; ++s)
+    for (s = piece_list[them][bishop]; *s != no_sq; ++s)
         m &= ~(Bmagic(*s, o));
 
-    for (s = piece_list[them][ROOK]; *s != NO_SQ; ++s)
+    for (s = piece_list[them][rook]; *s != no_sq; ++s)
         m &= ~(Rmagic(*s, o));
 
-    for (s = piece_list[them][QUEEN]; *s != NO_SQ; ++s)
+    for (s = piece_list[them][queen]; *s != no_sq; ++s)
         m &= ~(Qmagic(*s, o));
 
-    m &= ~(king_moves[e_king_sq()]);
+    m &= ~(King_moves[e_king_sq()]);
     m &= ~(occupancy[us]);
 
     return m;
@@ -496,9 +496,9 @@ U64 State::valid_king_moves() const
 
 bool State::in_check()
 {
-    const Square k = piece_list[us][KING][0];
+    const Square k = piece_list[us][king][0];
     return (pawn_attacks[us][k] & e_pawn())
-         | (knight_moves[k] & e_knight())
+         | (Knight_moves[k] & e_knight())
          | (Bmagic(k, occ()) & (e_bishop() | e_queen()))
          | (Rmagic(k, occ()) & (e_rook() | e_queen()));
 }
@@ -525,70 +525,70 @@ const char * State::get_EPD() const
             empty = 0;
             EPD.append("/");
         }
-        switch (board[WHITE][i])
+        switch (board[white][i])
         {
-            case PAWN:
+            case pawn:
                 if (empty > 0) EPD.append(std::to_string(empty));
                 empty = 0;
                 EPD.append("P");
                 break;
-            case KNIGHT:
+            case knight:
                 if (empty > 0) EPD.append(std::to_string(empty));
                 empty = 0;
                 EPD.append("N");
                 break;
-            case BISHOP:
+            case bishop:
                 if (empty > 0) EPD.append(std::to_string(empty));
                 empty = 0;
                 EPD.append("B");
                 break;
-            case ROOK:
+            case rook:
                 if (empty > 0) EPD.append(std::to_string(empty));
                 empty = 0;
                 EPD.append("R");
                 break;
-            case QUEEN:
+            case queen:
                 if (empty > 0) EPD.append(std::to_string(empty));
                 empty = 0;
                 EPD.append("Q");
                 break;
-            case KING:
+            case king:
                 if (empty > 0) EPD.append(std::to_string(empty));
                 empty = 0;
                 EPD.append("K");
                 break;
         }
-        switch (board[BLACK][i])
+        switch (board[black][i])
         {
-            case NONE:
+            case none:
                 empty++;
                 break;
-            case PAWN:
+            case pawn:
                 if (empty > 0) EPD.append(std::to_string(empty));
                 empty = 0;
                 EPD.append("p");
                 break; 
-            case KNIGHT:
+            case knight:
                 if (empty > 0) EPD.append(std::to_string(empty));
                 empty = 0;
                 EPD.append("n");
                 break;     
-            case BISHOP:
+            case bishop:
                 if (empty > 0) EPD.append(std::to_string(empty));
                 empty = 0;
                 EPD.append("b");
                 break;      
-            case ROOK:
+            case rook:
                 if (empty > 0) EPD.append(std::to_string(empty));
                 empty = 0;
                 EPD.append("r");
                 break;
-            case QUEEN:
+            case queen:
                 if (empty > 0) EPD.append(std::to_string(empty));
                 empty = 0;
                 EPD.append("q");
                 break;
-            case KING:
+            case king:
                 if (empty > 0) EPD.append(std::to_string(empty));
                 empty = 0;
                 EPD.append("k");
@@ -599,10 +599,10 @@ const char * State::get_EPD() const
     EPD.append(" ");
     us ? EPD.append("b") : EPD.append("w");
     EPD.append(" ");
-    if (castle & W_KING_CASTLE)  EPD.append("K");
-    if (castle & W_QUEEN_CASTLE) EPD.append("Q");
-    if (castle & B_KING_CASTLE)  EPD.append("k");
-    if (castle & B_QUEEN_CASTLE) EPD.append("q");
+    if (castle & w_king_castle)  EPD.append("K");
+    if (castle & w_queen_castle) EPD.append("Q");
+    if (castle & b_king_castle)  EPD.append("k");
+    if (castle & b_queen_castle) EPD.append("q");
     EPD.append(" ");
     if (ep != 0)
     {
@@ -623,19 +623,19 @@ const char * State::get_EPD() const
 
 std::ostream & operator << (std::ostream & o, const State & s)
 {
-    const char * W_PAWN   = "\u2659";
-    const char * W_KNIGHT = "\u2658";
-    const char * W_BISHOP = "\u2657";
-    const char * W_ROOK   = "\u2656";
-    const char * W_QUEEN  = "\u2655";
-    const char * W_KING   = "\u2654";
-    const char * B_PAWN   = "\u265F";
-    const char * B_KNIGHT = "\u265E";
-    const char * B_BISHOP = "\u265D";
-    const char * B_ROOK   = "\u265C";
-    const char * B_QUEEN  = "\u265B";
-    const char * B_KING   = "\u265A";
-    const char * EMPTY    = " ";
+    const char * W_pawn   = "\u2659";
+    const char * W_knight = "\u2658";
+    const char * W_bishop = "\u2657";
+    const char * W_rook   = "\u2656";
+    const char * W_queen  = "\u2655";
+    const char * W_king   = "\u2654";
+    const char * B_pawn   = "\u265F";
+    const char * B_knight = "\u265E";
+    const char * B_bishop = "\u265D";
+    const char * B_rook   = "\u265C";
+    const char * B_queen  = "\u265B";
+    const char * B_king   = "\u265A";
+    const char * Empty    = " ";
 
     std::string nums[8] = {"1", "2", "3", "4", "5", "6", "7", "8"};
     const std::string bar = " +-+-+-+-+-+-+-+-+";
@@ -646,19 +646,19 @@ std::ostream & operator << (std::ostream & o, const State & s)
         if (i % 8 == 7)
             o << nums[i / 8] << "|";
 
-        o << (s.board[WHITE][i] == PAWN   ? W_PAWN
-            : s.board[WHITE][i] == KNIGHT ? W_KNIGHT
-            : s.board[WHITE][i] == BISHOP ? W_BISHOP
-            : s.board[WHITE][i] == ROOK   ? W_ROOK
-            : s.board[WHITE][i] == QUEEN  ? W_QUEEN
-            : s.board[WHITE][i] == KING   ? W_KING
-            : s.board[BLACK][i] == PAWN   ? B_PAWN
-            : s.board[BLACK][i] == KNIGHT ? B_KNIGHT
-            : s.board[BLACK][i] == BISHOP ? B_BISHOP
-            : s.board[BLACK][i] == ROOK   ? B_ROOK
-            : s.board[BLACK][i] == QUEEN  ? B_QUEEN
-            : s.board[BLACK][i] == KING   ? B_KING
-            : EMPTY) << "|";
+        o << (s.board[white][i] == pawn   ? W_pawn
+            : s.board[white][i] == knight ? W_knight
+            : s.board[white][i] == bishop ? W_bishop
+            : s.board[white][i] == rook   ? W_rook
+            : s.board[white][i] == queen  ? W_queen
+            : s.board[white][i] == king   ? W_king
+            : s.board[black][i] == pawn   ? B_pawn
+            : s.board[black][i] == knight ? B_knight
+            : s.board[black][i] == bishop ? B_bishop
+            : s.board[black][i] == rook   ? B_rook
+            : s.board[black][i] == queen  ? B_queen
+            : s.board[black][i] == king   ? B_king
+            : Empty) << "|";
 
         if (i % 8 == 0)
             o << '\n' << bar << '\n';

@@ -11,15 +11,15 @@ namespace Zobrist
 	void init()
 	{
 		srand(6736199);
-		for (PieceType p = PAWN; p <= NONE; ++p)
+		for (PieceType p = pawn; p <= none; ++p)
 		{
-			for (Square s = FIRST_SQ; s <= LAST_SQ; ++s)
+			for (Square s = first_sq; s <= last_sq; ++s)
 			{
-				piece_rand[WHITE][p][s] = rand_64();
-				piece_rand[BLACK][p][s] = rand_64();
+				piece_rand[white][p][s] = rand_64();
+				piece_rand[black][p][s] = rand_64();
 			}
 		}
-		for (File f = A_FILE; f <= H_FILE; ++f)
+		for (File f = a_file; f <= h_file; ++f)
 		{
 			ep_file_rand[f] = rand_64();
 		}
@@ -32,23 +32,23 @@ namespace Zobrist
 
 	void init_pieces(State * s)
 	{
-		for (Square sq = FIRST_SQ; sq <= LAST_SQ; ++sq)
+		for (Square sq = first_sq; sq <= last_sq; ++sq)
 		{
-			if (s->on_square(sq, s->us) != NONE)
+			if (s->on_square(sq, s->us) != none)
 			{
 				s->key ^= piece_rand[s->us][s->on_square(sq, s->us)][sq];
 			} 
-			else if (s->on_square(sq, s->them) != NONE)
+			else if (s->on_square(sq, s->them) != none)
 			{
 				s->key ^= piece_rand[s->them][s->on_square(sq, s->them)][sq];
 			}
 			else
 			{
-				s->key ^= piece_rand[s->us][NONE][sq];
+				s->key ^= piece_rand[s->us][none][sq];
 			}
 		}
 
-		if (s->us == WHITE) s->key ^= side_to_move_rand;
+		if (s->us == white) s->key ^= side_to_move_rand;
 
 		if (s->ep) 
 		{
@@ -67,17 +67,17 @@ namespace Zobrist
 
 	void promo(State * s, int src, int dst, int piece)
 	{
-		s->key ^= piece_rand[s->us  ][PAWN ][src];
+		s->key ^= piece_rand[s->us  ][pawn ][src];
 		s->key ^= piece_rand[s->us  ][piece][dst];
 		s->key ^= piece_rand[s->them][s->board[s->them][dst]][dst];
 	}
 
 	void en_passant(State * s, int src, int dst, int ep)
 	{
-		s->key ^= piece_rand[s->us  ][PAWN ][src];
-		s->key ^= piece_rand[s->us  ][PAWN ][dst];
-		s->key ^= piece_rand[s->them][NONE ][dst];
-		s->key ^= piece_rand[s->them][PAWN ][ep];
+		s->key ^= piece_rand[s->us  ][pawn ][src];
+		s->key ^= piece_rand[s->us  ][pawn ][dst];
+		s->key ^= piece_rand[s->them][none ][dst];
+		s->key ^= piece_rand[s->them][pawn ][ep];
 	}
 
 	void ep(U64 & key, U64 ep)
