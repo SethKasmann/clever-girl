@@ -14,8 +14,8 @@ struct Check
 {
     Check(State & s) : checker(s.checkers()), checks(pop_count(checker))
     {
-        checks == 1 ? ray = between_dia[s.p_king_sq()][get_lsb(checker)] 
-                          | between_hor[s.p_king_sq()][get_lsb(checker)]
+        checks == 1 ? ray = between_dia[s.king_sq(s.us)][get_lsb(checker)] 
+                          | between_hor[s.king_sq(s.us)][get_lsb(checker)]
                     : ray = checker = Full;
     }
     U64 checker;

@@ -11,6 +11,7 @@ U64 between_hor[Board_size][Board_size];
 U64 coplanar[Board_size][Board_size];
 U64 adj_files[Board_size];
 U64 in_front[Player_size][Board_size];
+U64 king_net_bb[Player_size][Board_size];
 
 const U64 Knight_moves[Board_size] =
 {
@@ -58,29 +59,32 @@ void bb_init()
     {
         U64 bit = 1ULL << sq_src;
         square_bb[sq_src] = bit;
-        pawn_attacks[white][sq_src] = pawn_move_bb<RIGHT, white>(bit) 
-                                    | pawn_move_bb<LEFT , white>(bit);
-        pawn_attacks[black][sq_src] = pawn_move_bb<RIGHT, black>(bit) 
-                                    | pawn_move_bb<LEFT , black>(bit);
-        pawn_push[white][sq_src]    = pawn_move_bb<PUSH , white>(bit);
-        pawn_push[black][sq_src]    = pawn_move_bb<PUSH , black>(bit);
+        pawn_attacks[white][sq_src] = ((bit & Not_h_file) << 7)
+                                    | ((bit & Not_a_file) << 9);
+        pawn_attacks[black][sq_src] = ((bit & Not_h_file) >> 9)
+                                    | ((bit & Not_a_file) >> 7);
+        pawn_push[white][sq_src]    = bit << 8;
+        pawn_push[black][sq_src]    = bit >> 8;
 
         U64 front = east_fill(bit) | west_fill(bit);
         in_front[white][sq_src] = north_fill(front << 8);
         in_front[black][sq_src] = south_fill(front >> 8);
+
+        king_net_bb[white][sq_src] = King_moves[sq_src] | (King_moves[sq_src] << 16);
+        king_net_bb[black][sq_src] = King_moves[sq_src] | (King_moves[sq_src] >> 16);
 
         file_bb[sq_src] = north_fill(bit) | south_fill(bit);
         rank_bb[sq_src] = east_fill(bit) | west_fill(bit);
 
         if (bit & Rank_2)
         {
-            pawn_dbl_push[white][sq_src] = pawn_move_bb<PUSH, white>(pawn_move_bb<PUSH, white>(bit));
+            pawn_dbl_push[white][sq_src] = bit << 16;
             pawn_dbl_push[black][sq_src] = 0;
         }
         else if (bit & Rank_7)
         {
             pawn_dbl_push[white][sq_src] = 0;
-            pawn_dbl_push[black][sq_src] = pawn_move_bb<PUSH, black>(pawn_move_bb<PUSH, black>(bit));
+            pawn_dbl_push[black][sq_src] = bit >> 16;
         }
         else
         {

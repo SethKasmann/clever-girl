@@ -23,6 +23,7 @@ extern U64 between_hor[Board_size][Board_size];
 extern U64 coplanar[Board_size][Board_size];
 extern U64 adj_files[Board_size];
 extern U64 in_front[Player_size][Board_size];
+extern U64 king_net_bb[Player_size][Board_size];
 extern const U64 Knight_moves[Board_size];
 extern const U64 King_moves[Board_size];
 

@@ -21,10 +21,10 @@ void push_pawn_moves(State & s, MoveList * mlist, Check & ch)
     const U64 Promo = C == white ? Rank_8 : Rank_1;
     const int dir   = C == white ? 8      : -8;
 
-    const Square * sq;
+    const Square* sq;
     Square src, dst;
 
-    for (sq = s.piece_list[C][pawn]; *sq != no_sq; ++sq)
+    for (sq = s.piece<pawn>(C); *sq != no_sq; ++sq)
     {
         src = *sq;
         dst = src + dir;
@@ -86,22 +86,25 @@ void push_pawn_moves(State & s, MoveList * mlist, Check & ch)
     }
 
     U64 a, push, dbl, promo, en_pass;
-
     // En passant.
-    en_pass = pawn_move_bb<PUSH, C>(s.ep & ch.checker) & s.empty(); 
-    if (en_pass)
+    if (s.ep)
     {
-        dst = get_lsb(en_pass);
-        a = pawn_attacks[!C][dst] & s.p_pawn();
-        while (a)
+        en_pass = pawn_move_bb<PUSH, C>(s.ep & ch.checker) & s.empty();
+        if (en_pass)
         {
-            if (s.is_attacked_by_slider(s.ep | get_lsb_bb(a)))
+            dst = get_lsb(en_pass);
+            a = pawn_attacks[!C][dst] & s.piece_bb<pawn>(C);
+            while (a)
             {
-                return;
+                if (s.check(s.ep | get_lsb_bb(a)))
+                {
+                    return;
+                }
+                mlist->push(pop_lsb(a), dst, en_passant, EP);
             }
-            mlist->push(pop_lsb(a), dst, en_passant, EP);
         }
     }
+
 }
 
 // ----------------------------------------------------------------------------
@@ -113,12 +116,12 @@ template <PieceType P>
 void push_moves(State & s, MoveList * mlist, Check & ch)
 {
     U64 m, a;
-    Square * src;
+    const Square* src;
     int score;
-    for (src = s.piece_list[s.us][P]; *src != no_sq; ++src)
+    for (src = s.piece<P>(s.us); *src != no_sq; ++src)
     {
         m  = s.attack_bb<P>(*src) & (ch.ray | ch.checker);
-        a  = m & s.e_occ();
+        a  = m & s.occ(s.them);
         m &= s.empty();
         while (a)
         {
@@ -140,10 +143,10 @@ void push_king_moves(State & s, MoveList * mlist, Check & ch)
     int score;
     Square k, dst;
 
-    k = s.p_king_sq();
+    k = s.king_sq(s.us);
 
     m = s.valid_king_moves();
-    a = m & s.e_occ();
+    a = m & s.occ(s.them);
     m ^= a;
 
     while (m) 
@@ -161,14 +164,14 @@ void push_king_moves(State & s, MoveList * mlist, Check & ch)
 
     if (s.k_castle() 
         && !(between_hor[k][k-3] & s.occ())
-        && !s.is_attacked(k-1) 
-        && !s.is_attacked(k-2))
+        && !s.attacked(k-1) 
+        && !s.attacked(k-2))
         mlist->push(k, k-2, king_cast, C);
 
     if (s.q_castle()
         && !(between_hor[k][k+4] & s.occ())
-        && !s.is_attacked(k+1)
-        && !s.is_attacked(k+2))
+        && !s.attacked(k+1)
+        && !s.attacked(k+2))
         mlist->push(k, k+2, queen_cast, C);
 }
 
@@ -191,7 +194,7 @@ void check_legal(State & s, MoveList * mlist)
     for (Move m = *mlist->c; mlist->c < mlist->e; m = *mlist->c)
     {
         if (get_src(m) & pin 
-         && !(coplanar[get_src(m)][get_dst(m)] & s.p_king()))
+         && !(coplanar[get_src(m)][get_dst(m)] & s.piece_bb<king>(s.us)))
             *mlist->c = *(--mlist->e);
         else
             mlist->c++;
@@ -201,12 +204,25 @@ void check_legal(State & s, MoveList * mlist)
 template<Color C>
 void push(State & s, MoveList * mlist, Check & ch)
 {
+    std::cout << "push pawn...\n";
     push_pawn_moves<C>(s, mlist, ch);
+        std::cout << "push k...\n";
+
     push_moves<knight>(s, mlist, ch);
+        std::cout << "push b...\n";
+
     push_moves<bishop>(s, mlist, ch);
+        std::cout << "push r...\n";
+
     push_moves<rook  >(s, mlist, ch);
+        std::cout << "push q...\n";
+
     push_moves<queen >(s, mlist, ch);
+        std::cout << "push king...\n";
+
     push_king_moves(s, mlist, ch);
+        std::cout << "done..\n";
+
 }
 
 // ----------------------------------------------------------------------------

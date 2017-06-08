@@ -14,23 +14,23 @@ int eval(const State & s, const Color c)
     {
         print_bb(rank_bb[*p - dir]);
     	score += Pst_pawn[gs][c][*p];
-    	isolated = adj_files[*p] & s.piece_bb(c, pawn);
-        passed   = adj_files[*p] & in_front[c][*p] & s.piece_bb(!c, pawn);
-        doubled  = pop_count(file_bb[*p] & s.piece_bb(c, pawn)) > 1;
-        connected = rank_bb[*p - dir] & s.piece_bb(c, pawn) & adj_files[*p];
+    	isolated = adj_files[*p] & s.piece_bb<pawn>(c);
+        passed   = adj_files[*p] & in_front[c][*p] & s.piece_bb<pawn>(!c);
+        doubled  = pop_count(file_bb[*p] & s.piece_bb<pawn>(c)) > 1;
+        connected = rank_bb[*p - dir] & s.piece_bb<pawn>(c) & adj_files[*p];
     	if (isolated)  
             score += Isolated;
-        if (passed)    
-            score += Passed;
         if (doubled)   
             score += Doubled;
         if (connected) 
             score += Connected;
+        if (passed)    
+            score += Passed;
     }
     score += s.piece_count[c][pawn] * Pawn_wt;
 
     // Knight evaluation.
-    for (p = s.piece_list[c][knight]; *p != no_sq; ++p)
+    for (p = s.piece<knight>(c); *p != no_sq; ++p)
     {
     	score += Pst_knight[gs][c][*p];
     }
@@ -38,28 +38,28 @@ int eval(const State & s, const Color c)
 
 
     // Bishop evaluation.
-    for (p = s.piece_list[c][bishop]; *p != no_sq; ++p)
+    for (p = s.piece<bishop>(c); *p != no_sq; ++p)
     {
     	score += Pst_bishop[gs][c][*p];
     }
     score += s.piece_count[c][bishop] * Bishop_wt;
 
     // Rook evaluation.
-    for (p = s.piece_list[c][rook]; *p != no_sq; ++p)
+    for (p = s.piece<rook>(c); *p != no_sq; ++p)
     {
     	score += Pst_rook[gs][c][*p];
     }
     score += s.piece_count[c][rook] * Rook_wt;
 
     // Queen evaluation.
-    for (p = s.piece_list[c][queen]; *p != no_sq; ++p)
+    for (p = s.piece<queen>(c); *p != no_sq; ++p)
     {
     	score += Pst_queen[gs][c][*p];
     }
     score += s.piece_count[c][queen] * Queen_wt;
 
     // King evaluation.
-    p = s.piece_list[c][king];
+    p = s.piece<king>(c);
     score += Pst_king[gs][c][*p];
 
     return score;

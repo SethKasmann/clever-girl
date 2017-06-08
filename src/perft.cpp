@@ -81,7 +81,9 @@ void perft_tree(State & s, int depth)
 		return;
 
 	MoveList mlist;
+	std::cout << "pushing..\n";
 	push_moves(s, &mlist);
+	std::cout << "pushed..\n";
 
 	if (mlist.size() == 0)
 		return;
@@ -96,7 +98,9 @@ void perft_tree(State & s, int depth)
 	while (mlist.size() > 0)
 	{
 		std::memmove(&c, &s, sizeof s);
+		std::cout << "making...\n";
 		c.make(mlist.pop());
+		std::cout << "made..\n";
 		perft_tree(c, depth-1);
 	}
 	return;

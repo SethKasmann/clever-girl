@@ -304,22 +304,22 @@ U64 State::get_pins() const
     U64 ray, pin = 0;
     for (i = 0; i < piece_count[them][bishop]; ++i)
     {
-        ray = between_dia[piece_list[them][bishop][i]][p_king_sq()];
-        if (pop_count(ray & occ()) == 1 && ray & p_occ())
-            pin |= ray & p_occ();
+        ray = between_dia[piece_list[them][bishop][i]][king_sq(us)];
+        if (pop_count(ray & occ()) == 1 && ray & occ(us))
+            pin |= ray & occ(us);
     }
     for (i = 0; i < piece_count[them][rook]; ++i)
     {
-        ray = between_hor[piece_list[them][rook][i]][p_king_sq()];
-        if (pop_count(ray & occ()) == 1 && ray & p_occ())
-            pin |= ray & p_occ();
+        ray = between_hor[piece_list[them][rook][i]][king_sq(us)];
+        if (pop_count(ray & occ()) == 1 && ray & occ(us))
+            pin |= ray & occ(us);
     }
     for (i = 0; i < piece_count[them][queen]; ++i)
     {
-        ray = between_dia[piece_list[them][queen][i]][p_king_sq()]
-            | between_hor[piece_list[them][queen][i]][p_king_sq()];
-        if (pop_count(ray & occ()) == 1 && ray & p_occ())
-            pin |= ray & p_occ();
+        ray = between_dia[piece_list[them][queen][i]][king_sq(us)]
+            | between_hor[piece_list[them][queen][i]][king_sq(us)];
+        if (pop_count(ray & occ()) == 1 && ray & occ(us))
+            pin |= ray & occ(us);
     }
     return pin;
 }
@@ -331,6 +331,7 @@ U64 State::get_pins() const
 
 void State::make(Move m)
 {
+    std::cout << "in make...\n";
     const Square src  = get_src(m);
     const Square dst  = get_dst(m);
 
@@ -433,7 +434,9 @@ void State::make(Move m)
         // En-Passant.
         case en_passant:
         {
+            std::cout << "found it...\n";
             Zobrist::en_passant(this, src, dst, get_lsb(ep));
+            std::cout << "i think...\n";
             move_piece(src, dst);
             del_piece(them, get_lsb(ep));
             ep = 0;
@@ -448,7 +451,7 @@ void State::make(Move m)
     // turns.
     Zobrist::castle(key, castle);
     Zobrist::turn(key);
-    assert(!in_check());
+    assert(!check());
     swap_turn();
 }
 
@@ -465,25 +468,25 @@ U64 State::valid_king_moves() const
     const Dir R   = us == white ? SE : NE;
 
     // Remove king from occupancy to check squares attacked behind the king.
-    const U64 o = (occupancy[us] | occupancy[them]) ^ pieces[us][king];
+    const U64 o = occ() ^ piece_bb<king>(us);
 
-    m = King_moves[p_king_sq()];
+    m = King_moves[king_sq(us)];
     m &= ~(shift_e(pieces[them][pawn], R) | shift_w(pieces[them][pawn], L));
 
-    for (s = piece_list[them][knight]; *s != no_sq; ++s)
+    for (s = piece<knight>(them); *s != no_sq; ++s)
         m &= ~(Knight_moves[*s]);
 
-    for (s = piece_list[them][bishop]; *s != no_sq; ++s)
+    for (s = piece<bishop>(them); *s != no_sq; ++s)
         m &= ~(Bmagic(*s, o));
 
-    for (s = piece_list[them][rook]; *s != no_sq; ++s)
+    for (s = piece<rook>(them); *s != no_sq; ++s)
         m &= ~(Rmagic(*s, o));
 
-    for (s = piece_list[them][queen]; *s != no_sq; ++s)
+    for (s = piece<queen>(them); *s != no_sq; ++s)
         m &= ~(Qmagic(*s, o));
 
-    m &= ~(King_moves[e_king_sq()]);
-    m &= ~(occupancy[us]);
+    m &= ~(King_moves[king_sq(them)]);
+    m &= ~(occ(us));
 
     return m;
 }
@@ -493,7 +496,7 @@ U64 State::valid_king_moves() const
 // Function to check whether the current player's king is in check. Used 
 // mostly for debugging.
 // ----------------------------------------------------------------------------
-
+/*
 bool State::in_check()
 {
     const Square k = piece_list[us][king][0];
@@ -502,6 +505,7 @@ bool State::in_check()
          | (Bmagic(k, occ()) & (e_bishop() | e_queen()))
          | (Rmagic(k, occ()) & (e_rook() | e_queen()));
 }
+*/
 
 // ----------------------------------------------------------------------------
 // Function to return the EPD string of the current position, used to query 

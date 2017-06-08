@@ -23,30 +23,21 @@ struct State
     const char * get_EPD() const;
 
     // Access piece bitboards.
-    U64 piece_bb(const Color c, const PieceType p) const;
-    U64 p_pawn() const;
-    U64 e_pawn() const;
-    U64 p_knight() const;
-    U64 e_knight() const;
-    U64 p_bishop() const;
-    U64 e_bishop() const;
-    U64 p_rook() const;
-    U64 e_rook() const;
-    U64 p_queen() const;
-    U64 e_queen() const;
-    U64 p_king() const;
-    U64 e_king() const;
 
-    // Access king square.
-    Square p_king_sq() const;
-    Square e_king_sq() const;
+    template<PieceType P> U64 piece_bb(Color c) const;
+    template<PieceType P> const Square* piece(Color c) const;
+
+    Square king_sq(Color c) const;
+
+    bool check() const;
+    bool check(U64 change) const;
+    bool attacked(Square s) const;
+    U64 attackers(Square s) const;
+    template<PieceType> U64 attack_bb(Square s) const;
 
     // Board occupancy
     U64 occ() const;
-    U64 p_occ() const;
-    U64 & p_occ();
-    U64 e_occ() const;
-    U64 & e_occ();
+    U64 occ(Color c) const;
     U64 empty() const;
     PieceType on_square(const Square s, const Color c) const;
     PieceType on_square(const Square s) const;
@@ -71,9 +62,6 @@ struct State
     U64 get_pins() const;
 
     // Check and attack information.
-    template<PieceType> U64 attack_bb(const Square s) const;
-    bool is_attacked(const Square s) const;
-    bool is_attacked_by_slider(U64 change) const;
     bool in_check();
     U64 checkers() const;
 
@@ -139,94 +127,22 @@ void State::swap_turn()
     us   = !us;
 }
 
-inline
-U64 State::piece_bb(const Color c, const PieceType p) const
+template<PieceType P>
+inline const Square* State::piece(Color c) const
 {
-    return pieces[c][p];
+    return piece_list[c][P];
+}
+
+template<PieceType P>
+inline U64 State::piece_bb(Color c) const
+{
+    return pieces[c][P];
 }
 
 inline
-U64 State::p_pawn() const
+Square State::king_sq(Color c) const
 {
-    return pieces[us][pawn];
-}
-
-inline
-U64 State::e_pawn() const
-{
-    return pieces[them][pawn];
-}
-
-inline
-U64 State::p_knight() const
-{
-    return pieces[us][knight];
-}
-
-inline
-U64 State::e_knight() const
-{
-    return pieces[them][knight];
-}
-
-inline
-U64 State::p_bishop() const
-{
-    return pieces[us][bishop];
-}
-
-inline
-U64 State::e_bishop() const
-{
-    return pieces[them][bishop];
-}
-
-inline
-U64 State::p_rook() const
-{
-    return pieces[us][rook];
-}
-
-inline
-U64 State::e_rook() const
-{
-    return pieces[them][rook];
-}
-
-inline
-U64 State::p_queen() const
-{
-    return pieces[us][queen];
-}
-
-inline
-U64 State::e_queen() const
-{
-    return pieces[them][queen];
-}
-
-inline
-U64 State::p_king() const
-{
-    return pieces[us][king];
-}
-
-inline
-U64 State::e_king() const
-{
-    return pieces[them][king];
-}
-
-inline
-Square State::p_king_sq() const
-{
-    return piece_list[us][king][0];
-}
-
-inline
-Square State::e_king_sq() const
-{
-    return piece_list[them][king][0];
+    return piece_list[c][king][0];
 }
 
 inline
@@ -242,33 +158,15 @@ PieceType State::on_square(const Square s, const Color c) const
 } 
 
 inline
-U64 State::p_occ() const
-{
-    return occupancy[us];
-}
-
-inline
-U64 & State::p_occ()
-{
-    return occupancy[us];
-}
-
-inline
-U64 State::e_occ() const
-{
-    return occupancy[them];
-}
-
-inline
-U64 & State::e_occ()
-{
-    return occupancy[them];
-}
-
-inline
 U64 State::occ() const
 {
     return occupancy[white] | occupancy[black];
+}
+
+inline
+U64 State::occ(Color c) const
+{
+    return occupancy[c];
 }
 
 inline
@@ -290,52 +188,71 @@ bool State::q_castle() const
 }
 
 template<>
-inline U64 State::attack_bb<knight>(const Square s) const
+inline U64 State::attack_bb<pawn>(Square s) const
+{
+    return pawn_attacks[us][s];
+}
+
+template<>
+inline U64 State::attack_bb<knight>(Square s) const
 {
     return Knight_moves[s];
 }
 
 template<>
-inline U64 State::attack_bb<bishop>(const Square s) const
+inline U64 State::attack_bb<bishop>(Square s) const
 {
     return Bmagic(s, occ());
 }
 
 template<>
-inline U64 State::attack_bb<rook>(const Square s) const
+inline U64 State::attack_bb<rook>(Square s) const
 {
     return Rmagic(s, occ());
 }
 
 template<>
-inline U64 State::attack_bb<queen>(const Square s) const
+inline U64 State::attack_bb<queen>(Square s) const
 {
     return Qmagic(s, occ());
 }
 
 inline
-bool State::is_attacked(const Square s) const
+bool State::attacked(Square s) const
 {
-    return (pawn_attacks[us][s] & e_pawn())
-        || (Knight_moves[s] & e_knight())
-        || (Bmagic(s, occ() ^ p_king()) & (e_bishop() | e_queen()))
-        || (Rmagic(s, occ() ^ p_king()) & (e_rook()   | e_queen()));
+    return attack_bb< pawn >(s) &  piece_bb< pawn >(them)
+        || attack_bb<knight>(s) &  piece_bb<knight>(them)
+        || attack_bb<bishop>(s) & (piece_bb<bishop>(them) | piece_bb<queen>(them))
+        || attack_bb< rook >(s) & (piece_bb< rook >(them) | piece_bb<queen>(them));
 }
 
 inline
-bool State::is_attacked_by_slider(U64 change) const
+bool State::check() const
 {
-    return (Bmagic(p_king_sq(), occ() ^ change) & (e_bishop() | e_queen()))
-         | (Rmagic(p_king_sq(), occ() ^ change) & (e_rook()   | e_queen()));
+    return attacked(king_sq(us));
+}
+
+inline
+U64 State::attackers(Square s) const
+{
+    return (attack_bb< pawn >(s) &  piece_bb< pawn >(them)
+         | attack_bb<knight>(s) &  piece_bb<knight>(them)
+         | attack_bb<bishop>(s) & (piece_bb<bishop>(them) | piece_bb<queen>(them))
+         | attack_bb< rook >(s) & (piece_bb< rook >(them) | piece_bb<queen>(them)));
 }
 
 inline
 U64 State::checkers() const
 {
-    return (pawn_attacks[us][p_king_sq()] &  e_pawn())
-         | (Knight_moves[p_king_sq()]     &  e_knight())
-         | (Bmagic(p_king_sq(), occ())    & (e_bishop() | e_queen()))
-         | (Rmagic(p_king_sq(), occ())    & (e_rook()   | e_queen()));
+    return attackers(king_sq(us));
 }
+
+inline
+bool State::check(U64 change) const
+{
+    return (Bmagic(king_sq(us), occ() ^ change) & (piece_bb<bishop>(them) | piece_bb<queen>(them)))
+         | (Rmagic(king_sq(us), occ() ^ change) & (piece_bb< rook >(them) | piece_bb<queen>(them)));
+}
+
 
 #endif
