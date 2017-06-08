@@ -100,45 +100,6 @@ inline Rank get_rank(U64 bb)
    return Rank(get_lsb(bb) / 8);
 }
 
-template<PawnShift P, Color C>
-U64 pawn_move_bb(U64 bb);
-
-template<>
-inline U64 pawn_move_bb<PUSH, white>(U64 bb)
-{
-   return bb << PUSH;
-}
-
-template<>
-inline U64 pawn_move_bb<LEFT, white>(U64 bb)
-{
-   return (bb & Not_a_file) << LEFT;
-}
-
-template<>
-inline U64 pawn_move_bb<RIGHT, white>(U64 bb)
-{
-   return (bb & Not_h_file) << RIGHT;
-}
-
-template<>
-inline U64 pawn_move_bb<PUSH, black>(U64 bb)
-{
-   return bb >> PUSH;
-}
-
-template<>
-inline U64 pawn_move_bb<LEFT, black>(U64 bb)
-{
-   return (bb & Not_h_file) >> LEFT;
-}
-
-template<>
-inline U64 pawn_move_bb<RIGHT, black>(U64 bb)
-{
-   return (bb & Not_a_file) >> RIGHT;
-}
-
 inline
 U64 shift_up(U64 bb, const Dir D)
 {
@@ -284,20 +245,4 @@ U64 north_west_fill(U64 gen)
    return gen;
 }
 
-inline
-U64 attack_ray_rook(U64 k, U64 r)
-{
-   return r > k ?
-      (north_fill(k) & south_fill(r)) | (east_fill(k) & west_fill(r)):
-      (south_fill(k) & north_fill(r)) | (west_fill(k) & east_fill(r));
-}
-
-inline
-U64 attack_ray_bishop(U64 k, U64 b)
-{
-   return b > k ?
-      (north_east_fill(k) & south_west_fill(b)) | (north_west_fill(k) & south_east_fill(b)):
-      (south_west_fill(k) & north_east_fill(b)) | (south_east_fill(k) & north_west_fill(b));
-}
- 
 #endif

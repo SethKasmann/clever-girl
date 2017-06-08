@@ -30,14 +30,14 @@ void push_pawn_moves(State & s, MoveList * mlist, Check & ch)
         dst = src + dir;
         if (dst & Promo)
         {
-            if (s.board[s.them][dst+1] != none && dst & Promo)
+            if (dst & Not_a_file && s.board[s.them][dst+1] != none)
             {
                 mlist->push(src, dst+1, queen_promo,  QP);
                 mlist->push(src, dst+1, knight_promo, NP);
                 mlist->push(src, dst+1, rook_promo,   RP);
                 mlist->push(src, dst+1, bishop_promo, BP);
             }
-            if (s.board[s.them][dst-1] != none && dst & Promo)
+            if (dst & Not_h_file && s.board[s.them][dst-1] != none)
             {
                 mlist->push(src, dst-1, queen_promo,  QP);
                 mlist->push(src, dst-1, knight_promo, NP);
@@ -73,6 +73,7 @@ void push_pawn_moves(State & s, MoveList * mlist, Check & ch)
         }
     }
 
+    
     if (ch.checks)
     {
         for (Move m = *mlist->c; mlist->c < mlist->e; m = *mlist->c)
@@ -89,7 +90,7 @@ void push_pawn_moves(State & s, MoveList * mlist, Check & ch)
     // En passant.
     if (s.ep)
     {
-        en_pass = pawn_move_bb<PUSH, C>(s.ep & ch.checker) & s.empty();
+        en_pass = pawn_push[C][get_lsb(s.ep & ch.checker)] & s.empty();
         if (en_pass)
         {
             dst = get_lsb(en_pass);
@@ -104,7 +105,6 @@ void push_pawn_moves(State & s, MoveList * mlist, Check & ch)
             }
         }
     }
-
 }
 
 // ----------------------------------------------------------------------------
@@ -204,25 +204,12 @@ void check_legal(State & s, MoveList * mlist)
 template<Color C>
 void push(State & s, MoveList * mlist, Check & ch)
 {
-    std::cout << "push pawn...\n";
     push_pawn_moves<C>(s, mlist, ch);
-        std::cout << "push k...\n";
-
     push_moves<knight>(s, mlist, ch);
-        std::cout << "push b...\n";
-
     push_moves<bishop>(s, mlist, ch);
-        std::cout << "push r...\n";
-
     push_moves<rook  >(s, mlist, ch);
-        std::cout << "push q...\n";
-
     push_moves<queen >(s, mlist, ch);
-        std::cout << "push king...\n";
-
     push_king_moves(s, mlist, ch);
-        std::cout << "done..\n";
-
 }
 
 // ----------------------------------------------------------------------------

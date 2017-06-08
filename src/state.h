@@ -23,17 +23,9 @@ struct State
     const char * get_EPD() const;
 
     // Access piece bitboards.
-
     template<PieceType P> U64 piece_bb(Color c) const;
     template<PieceType P> const Square* piece(Color c) const;
-
     Square king_sq(Color c) const;
-
-    bool check() const;
-    bool check(U64 change) const;
-    bool attacked(Square s) const;
-    U64 attackers(Square s) const;
-    template<PieceType> U64 attack_bb(Square s) const;
 
     // Board occupancy
     U64 occ() const;
@@ -45,10 +37,6 @@ struct State
     // Castle rights.
     bool k_castle() const;
     bool q_castle() const;
-
-    // Piece differentials.
-    template<PieceType P>
-    int piece_diff() const;
 
     // Functions involved in making a move.
     void make(Move m);
@@ -62,8 +50,12 @@ struct State
     U64 get_pins() const;
 
     // Check and attack information.
-    bool in_check();
+    bool attacked(Square s) const;
+    bool check() const;
+    bool check(U64 change) const;
+    U64 attackers(Square s) const;
     U64 checkers() const;
+    template<PieceType> U64 attack_bb(Square s) const;
 
     // Print
     friend std::ostream & operator << (std::ostream & o, const State & state);

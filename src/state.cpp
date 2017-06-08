@@ -331,7 +331,6 @@ U64 State::get_pins() const
 
 void State::make(Move m)
 {
-    std::cout << "in make...\n";
     const Square src  = get_src(m);
     const Square dst  = get_dst(m);
 
@@ -367,7 +366,7 @@ void State::make(Move m)
         {
             Zobrist::move(this, src, dst);
             move_piece(src, dst);
-            ep = 1ULL << dst;
+            ep = square_bb[dst];
             Zobrist::ep(key, ep);
             break;
         }
@@ -434,9 +433,7 @@ void State::make(Move m)
         // En-Passant.
         case en_passant:
         {
-            std::cout << "found it...\n";
             Zobrist::en_passant(this, src, dst, get_lsb(ep));
-            std::cout << "i think...\n";
             move_piece(src, dst);
             del_piece(them, get_lsb(ep));
             ep = 0;
@@ -471,7 +468,7 @@ U64 State::valid_king_moves() const
     const U64 o = occ() ^ piece_bb<king>(us);
 
     m = King_moves[king_sq(us)];
-    m &= ~(shift_e(pieces[them][pawn], R) | shift_w(pieces[them][pawn], L));
+    m &= ~(shift_e(piece_bb<pawn>(them), R) | shift_w(piece_bb<pawn>(them), L));
 
     for (s = piece<knight>(them); *s != no_sq; ++s)
         m &= ~(Knight_moves[*s]);

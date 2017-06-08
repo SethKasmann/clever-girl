@@ -4,7 +4,7 @@
 #include <string>
 
 
-//#define NDEBUG
+#define NDEBUG
 #include <assert.h>
 
 // ----------------------------------------------------------------------------
@@ -129,20 +129,6 @@ enum MoveScore
 	Q  = 4,
 	C  = 10,
 	EP = 25
-};
-
-enum PawnShift
-{
-	PUSH  = 8,
-	LEFT  = 9,
-	RIGHT = 7
-};
-
-enum CheckType
-{
-	NO_CHECK,
-	SINGLE_CHECK,
-	DOUBLE_CHECK
 };
 
 enum Dir
