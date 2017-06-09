@@ -51,6 +51,21 @@ static const U64 Not_h_file = 0xFEFEFEFEFEFEFEFE;
 void bb_init();
 //unsigned int pop_count(U64);
 
+inline U64 operator&(Square s, U64 u)
+{
+   return square_bb[s] & u;
+}
+
+inline U64 operator|(Square s, U64 u)
+{
+   return square_bb[s] & u;
+}
+
+inline U64 operator^(Square s, U64 u)
+{
+   return square_bb[s] & u;
+}
+
 // Returns the number of 1-bits.
 inline int pop_count(U64 bb)
 {

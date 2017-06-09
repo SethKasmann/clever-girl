@@ -5,6 +5,7 @@ int eval(const State & s, const Color c)
     const Square * p;
     const int dir = c == white ? 8 : -8;
     int score = Draw;
+    int king_threats = 0;
 
     bool gs = false; // determing game stage, middle or late
 
@@ -12,7 +13,6 @@ int eval(const State & s, const Color c)
     bool isolated, passed, doubled, connected;
     for (p = s.piece_list[c][pawn]; *p != no_sq; ++p)
     {
-        print_bb(rank_bb[*p - dir]);
     	score += Pst_pawn[gs][c][*p];
     	isolated = adj_files[*p] & s.piece_bb<pawn>(c);
         passed   = adj_files[*p] & in_front[c][*p] & s.piece_bb<pawn>(!c);
@@ -33,14 +33,17 @@ int eval(const State & s, const Color c)
     for (p = s.piece<knight>(c); *p != no_sq; ++p)
     {
     	score += Pst_knight[gs][c][*p];
+        if (s.attack_bb<knight>(*p) & king_net_bb[!c][s.king_sq(!c)])
+            king_threats += Knight_th;
     }
     score += s.piece_count[c][knight] * Knight_wt;
-
 
     // Bishop evaluation.
     for (p = s.piece<bishop>(c); *p != no_sq; ++p)
     {
     	score += Pst_bishop[gs][c][*p];
+        if (s.attack_bb<bishop>(*p) & king_net_bb[!c][s.king_sq(!c)])
+            king_threats += Bishop_th;
     }
     score += s.piece_count[c][bishop] * Bishop_wt;
 
@@ -48,6 +51,8 @@ int eval(const State & s, const Color c)
     for (p = s.piece<rook>(c); *p != no_sq; ++p)
     {
     	score += Pst_rook[gs][c][*p];
+        if (s.attack_bb<rook>(*p) & king_net_bb[!c][s.king_sq(!c)])
+            king_threats += Rook_th;
     }
     score += s.piece_count[c][rook] * Rook_wt;
 
@@ -55,12 +60,14 @@ int eval(const State & s, const Color c)
     for (p = s.piece<queen>(c); *p != no_sq; ++p)
     {
     	score += Pst_queen[gs][c][*p];
+        if (s.attack_bb<queen>(*p) & king_net_bb[!c][s.king_sq(!c)])
+            king_threats += Queen_th;
     }
     score += s.piece_count[c][queen] * Queen_wt;
 
     // King evaluation.
-    p = s.piece<king>(c);
-    score += Pst_king[gs][c][*p];
+    score += Pst_king[gs][c][s.king_sq(c)];
+    score += Safety_table[king_threats];
 
     return score;
 }

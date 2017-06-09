@@ -19,12 +19,12 @@ State::State(const State & s)
 
 void State::operator=(const State & s)
 {
-    us =         s.us;
-    them =       s.them;
-    castle =     s.castle;
-    key =        s.key;
-    fmr =        s.fmr;
-    ep = s.ep;
+    us =     s.us;
+    them =   s.them;
+    castle = s.castle;
+    key =    s.key;
+    fmr =    s.fmr;
+    ep =     s.ep;
     std::memcpy(board,       s.board,       sizeof board);
     std::memcpy(piece_count, s.piece_count, sizeof piece_count);
     std::memcpy(piece_list,  s.piece_list,  sizeof piece_list);
@@ -43,14 +43,15 @@ void State::operator=(const State & s)
 // all the necessary information to restart a game from a particular position."
 // ----------------------------------------------------------------------------
 
-State::State(std::string & fen) : castle(0), ep(0), 
-                                  us(white), them(black)
+State::State(std::string & fen) 
+  : fmr(0), castle(0), board(), piece_count(), piece_list(), piece_index(), 
+    pieces(), occupancy(), ep(0), key(0), us(white), them(black)
 {
-    fmr = 0; // NEED TO CHANGE THIS
-    U64 bit = 0x8000000000000000ULL;
+    U64 bit = square_bb[A8];
     int i = 0;
     int position = 0;
     bool set_pieces = true;
+
     for (PieceType p = pawn; p < none; ++p)
     {
         pieces[white][p]      = 0;

@@ -9,6 +9,7 @@
 #include <string>
 #include <cmath>
 #include <cstring>
+#include <algorithm>
 #include "bitboard.h"
 #include "types.h"
 
@@ -243,7 +244,7 @@ inline
 bool State::check(U64 change) const
 {
     return (Bmagic(king_sq(us), occ() ^ change) & (piece_bb<bishop>(them) | piece_bb<queen>(them)))
-         | (Rmagic(king_sq(us), occ() ^ change) & (piece_bb< rook >(them) | piece_bb<queen>(them)));
+        || (Rmagic(king_sq(us), occ() ^ change) & (piece_bb< rook >(them) | piece_bb<queen>(them)));
 }
 
 

@@ -41,7 +41,7 @@ enum Color
 	black 
 };
 
-enum PieceType
+enum PieceType : int
 {
 	pawn,
 	knight,
@@ -209,7 +209,5 @@ template<typename T>
 inline T & operator -=(T & t0, const T t1) { return t0 = t0 - t1; }
 template<typename T>
 inline T operator!(const T t) { return T(!bool(t)); }
-template<typename T>
-inline U64 operator&(const T t, const U64 u) { return u & (1ULL << t); }
 
 #endif

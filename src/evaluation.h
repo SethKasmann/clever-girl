@@ -11,6 +11,11 @@ static const int Bishop_wt = 300;
 static const int Rook_wt   = 500;
 static const int Queen_wt  = 950;
 
+static const int Knight_th = 2;
+static const int Bishop_th = 2;
+static const int Rook_th   = 3;
+static const int Queen_th  = 5;
+
 static const int Checkmate = 32767;
 static const int Stalemate = 0;
 static const int Draw = 0;

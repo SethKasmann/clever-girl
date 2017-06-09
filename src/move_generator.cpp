@@ -193,8 +193,8 @@ void check_legal(State & s, MoveList * mlist)
     // source and destination locations.
     for (Move m = *mlist->c; mlist->c < mlist->e; m = *mlist->c)
     {
-        if (get_src(m) & pin 
-         && !(coplanar[get_src(m)][get_dst(m)] & s.piece_bb<king>(s.us)))
+        if (get_src(m) & pin ? 
+            !(coplanar[get_src(m)][get_dst(m)] & s.piece_bb<king>(s.us)) : false)
             *mlist->c = *(--mlist->e);
         else
             mlist->c++;
