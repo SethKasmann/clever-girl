@@ -53,8 +53,8 @@ void choose(State & s)
 int main()
 {
     init();
-    perft_test();
-    std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq";
+    //perft_test();
+    std::string fen = "8/P1k5/K7/8/8/8/8/8 w";
     int depth = 6;
     perft(fen, depth);
     /*

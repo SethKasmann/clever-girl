@@ -2,6 +2,7 @@
 #define MOVE_GENERATOR_H
 
 #include <cmath>
+#include <algorithm>
 #include "state.h"
 #include "bitboard.h"
 #include "MagicMoves.hpp"
@@ -26,21 +27,30 @@ struct Check
 class MoveList
 {
 public:
-    MoveList() : e(_m), c(_m) 
-    {}
-    ~MoveList() 
-    {}
-    int size() { return e - _m; }
+    MoveList() : e(_m), c(_m) {}
+    ~MoveList() {}
+    int size() const
+    { 
+        return e - _m; 
+    }
     void push(int src, int dst, int p, int s)
     {
         *(e++) = src | dst << 6 | p << 12 | s << 16;
     }
-    Move pop() { return *(--e); }
-private:
-public:
+    Move pop() 
+    { 
+        return *(--e); 
+    }
+    void sort()
+    {
+        std::stable_sort(_m, e, std::greater<int>());
+    }
+
     Move _m[Max_size];
     Move * c;
     Move * e;
+
+    friend std::ostream & operator << (std::ostream & o, const MoveList & mlist);
 };
 
 void mg_init();

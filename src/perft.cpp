@@ -93,6 +93,11 @@ void perft_tree(State & s, int depth)
 	}
 
 	State c;
+	std::cout << mlist;
+	mlist.sort();
+	std::cout << mlist;
+	int z;
+	std::cin >> z;
 	while (mlist.size() > 0)
 	{
 		std::memmove(&c, &s, sizeof s);

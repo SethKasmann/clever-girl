@@ -240,3 +240,15 @@ void push_moves(State & s, MoveList * mlist)
 
     check_legal(s, mlist);
 }
+
+std::ostream & operator << (std::ostream & o, const MoveList & mlist)
+{
+    const Move * i;
+    o << "MoveList size=" << mlist.size() << '\n'
+      << "{\n";
+    for (i = mlist._m; i < mlist.e; ++i)
+    {
+        o << "  " << to_string(*i) << " " << get_score(*i) << '\n';
+    }
+    o << "}\n";
+}

@@ -78,6 +78,11 @@ enum File
     h_file
 };
 
+inline File file(Square s)
+{
+    return File(s & 0x7);
+}
+
 enum Rank
 {
     rank_1,
@@ -89,6 +94,11 @@ enum Rank
     rank_7,
     rank_8
 };
+
+inline Rank rank(Square s)
+{
+    return Rank(s >> 3);
+}
 
 enum CR
 {
@@ -172,6 +182,7 @@ enum Prop
 inline Square get_src(Move m) { return Square(m & 0x3F); }
 inline Square get_dst(Move m) { return Square((m & 0xFC0) >> 6); }
 inline Prop get_prop(Move m)  { return Prop((m & 0xF000) >> 12); }
+inline int get_score(Move m)  { return (m & 0x7F0000) >> 16; }
 
 // ----------------------------------------------------------------------------
 // Search Types
@@ -209,5 +220,24 @@ template<typename T>
 inline T & operator -=(T & t0, const T t1) { return t0 = t0 - t1; }
 template<typename T>
 inline T operator!(const T t) { return T(!bool(t)); }
+
+inline char to_char(File f)
+{
+    return char('a' + f);
+}
+
+inline char to_char(Rank r)
+{
+    return char('1' + r);
+}
+
+inline std::string to_string(Move m)
+{
+    return std::string { to_char(file(get_src(m))), 
+                         to_char(rank(get_src(m))), 
+                         ',',
+                         to_char(file(get_dst(m))), 
+                         to_char(rank(get_dst(m))) };
+}
 
 #endif
