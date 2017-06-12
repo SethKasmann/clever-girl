@@ -47,251 +47,78 @@ State::State(std::string & fen)
   : fmr(0), castle(0), board(), piece_count(), piece_list(), piece_index(), 
     pieces(), occupancy(), ep(0), key(0), us(white), them(black)
 {
-    U64 bit = square_bb[A8];
-    int i = 0;
-    int position = 0;
-    bool set_pieces = true;
+    int i, enpass, position;
+    std::string::iterator it;
+    Square s;
+    Color c;
+    PieceType p;
 
-    for (PieceType p = pawn; p < none; ++p)
+    for (p = pawn; p < none; ++p)
     {
-        pieces[white][p]      = 0;
-        pieces[black][p]      = 0;
-        piece_count[white][p] = 0;
-        piece_count[black][p] = 0;
-        for (int i = 0; i < Piece_max; ++i)
+        for (i = 0; i < Piece_max; ++i)
         {
             piece_list[white][p][i] = no_sq;
             piece_list[black][p][i] = no_sq;
         }
     }
-    for (Square s = first_sq; s <= last_sq; ++s)
+    for (s = first_sq; s <= last_sq; ++s)
     {
         board[white][s] = none;
         board[black][s] = none;
-        piece_index[s]  = 0;
     }
-
-    for (i; i < fen.size(); ++i)
+    position = 0;
+    for (it = fen.begin(); it < fen.end(); ++it)
     {
-        if (!set_pieces) break;
-        Square s = Square(63 - position);
-        switch (fen[i])
+        if (isdigit(*it))
+            position += *it - '0';
+        else if (isalpha(*it))
         {
-            case 'P':
-                pieces[white][pawn] |= bit >> position;
-                piece_list[white][pawn][piece_count[white][pawn]] = s;
-                piece_index[s] = piece_count[white][pawn];
-                piece_count[white][pawn]++;
-                position++;
-                break;
-            case 'N':
-                pieces[white][knight] |= bit >> position;
-                piece_list[white][knight][piece_count[white][knight]] = s;
-                piece_index[s] = piece_count[white][knight];
-                piece_count[white][knight]++;
-                position++;
-                break;
-            case 'B':
-                pieces[white][bishop] |= bit >> position;
-                piece_list[white][bishop][piece_count[white][bishop]] = s;
-                piece_index[s] = piece_count[white][bishop];
-                piece_count[white][bishop]++;
-                position++;
-                break;
-            case 'R':
-                pieces[white][rook] |= bit >> position;
-                piece_list[white][rook][piece_count[white][rook]] = s;
-                piece_index[s] = piece_count[white][rook];
-                piece_count[white][rook]++;
-                position++;
-                break;
-            case 'Q':
-                pieces[white][queen] |= bit >> position;
-                piece_list[white][queen][piece_count[white][queen]] = s;
-                piece_index[s] = piece_count[white][queen];
-                piece_count[white][queen]++;
-                position++;
-                break;
-            case 'K':
-                pieces[white][king] |= bit >> position;
-                piece_list[white][king][piece_count[white][king]] = s;
-                piece_index[s] = piece_count[white][king];
-                piece_count[white][king]++;
-                position++;
-                break;
-            case 'p':
-                pieces[black][pawn] |= bit >> position;
-                piece_list[black][pawn][piece_count[black][pawn]] = s;
-                piece_index[s] = piece_count[black][pawn];
-                piece_count[black][pawn]++;
-                position++;
-                break;
-            case 'n':
-                pieces[black][knight] |= bit >> position;
-                piece_list[black][knight][piece_count[black][knight]] = s;
-                piece_index[s] = piece_count[black][knight];
-                piece_count[black][knight]++;
-                position++;
-                break;
-            case 'b':
-                pieces[black][bishop] |= bit >> position;
-                piece_list[black][bishop][piece_count[black][bishop]] = s;
-                piece_index[s] = piece_count[black][bishop];
-                piece_count[black][bishop]++;
-                position++;
-                break;
-            case 'r':
-                pieces[black][rook] |= bit >> position;
-                piece_list[black][rook][piece_count[black][rook]] = s;
-                piece_index[s] = piece_count[black][rook];
-                piece_count[black][rook]++;
-                position++;
-                break;
-            case 'q':
-                pieces[black][queen] |= bit >> position;
-                piece_list[black][queen][piece_count[black][queen]] = s;
-                piece_index[s] = piece_count[black][queen];
-                piece_count[black][queen]++;
-                position++;
-                break;
-            case 'k':
-                pieces[black][king] |= bit >> position;
-                piece_list[black][king][piece_count[black][king]] = s;
-                piece_index[s] = piece_count[black][king];
-                piece_count[black][king]++;
-                position++;
-                break;
-            case '1':
-                position += 1;
-                break;
-            case '2':
-                position += 2;
-                break;
-            case '3':
-                position += 3;
-                break;
-            case '4':
-                position += 4;
-                break;
-            case '5':
-                position += 5;
-                break;
-            case '6':
-                position += 6;
-                break;
-            case '7':
-                position += 7;
-                break;
-            case '8':
-                position += 8;
-                break;
-            case ' ':
-                set_pieces = false;
-                break;
+            c = isupper(*it) ? white : black;
+            s = last_sq - position;
+            char t = tolower(*it);
+            p = t == 'p' ? pawn
+              : t == 'n' ? knight
+              : t == 'b' ? bishop
+              : t == 'r' ? rook
+              : t == 'q' ? queen
+              : king;
+            add_piece(c, p, s);
+            position++;
         }
-    }
-
-    if (fen[i] == 'w') 
-    {
-        us   = white;
-        them = black;
-    }
-    else if (fen[i] == 'b') 
-    {
-        us   = black;
-        them = white;
-    }
-    i += 2;
-
-    occupancy[white] = pieces[white][pawn]   | pieces[white][knight]
-                     | pieces[white][bishop] | pieces[white][rook]
-                     | pieces[white][queen]  | pieces[white][king];
-    occupancy[black] = pieces[black][pawn]   | pieces[black][knight]
-                     | pieces[black][bishop] | pieces[black][rook]
-                     | pieces[black][queen]  | pieces[black][king];
-
-    int fen_table[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
-
-    int en_pass = -1;
-    for (i; i < fen.size(); ++i)
-    {
-        switch (fen[i])
-        {   
-            case 'K':
-                castle += 1;
-                break;
-            case 'Q':
-                castle += 2;
-                break;
-            case 'k':
-                castle += 4;
-                break;
-            case 'q':
-                castle += 8;
-                break;
-            case 'a':
-                en_pass = fen_table[int(fen[i + 1]) - 49] * 8 + 7;
-                break;
-            case 'b':
-                en_pass = fen_table[int(fen[i + 1]) - 49] * 8 + 6;
-                break;
-            case 'c':
-                en_pass = fen_table[int(fen[i + 1]) - 49] * 8 + 5;
-                break;
-            case 'd':
-                en_pass = fen_table[int(fen[i + 1]) - 49] * 8 + 4;
-                break;
-            case 'e':
-                en_pass = fen_table[int(fen[i + 1]) - 49] * 8 + 3;
-                break;
-            case 'f':
-                en_pass = fen_table[int(fen[i + 1]) - 49] * 8 + 2;
-                break;
-            case 'g':
-                en_pass = fen_table[int(fen[i + 1]) - 49] * 8 + 1;
-                break;
-            case 'h':
-                en_pass = fen_table[int(fen[i + 1]) - 49] * 8 + 0;
-                break;
-        }
-        if (en_pass > -1)
+        else if (*it == ' ')
         {
-            i++;
-            if (en_pass / 8 == 2)
-            {
-                en_pass += 8;
-            }
-            else
-            {
-                en_pass -= 8;
-            }
-            ep = 1ULL << en_pass;
+            ++it;
+            break;
         }
     }
+    us   = *it == 'w' ? white : black;
+    them = !us;
 
-    for (Square s = H1; s <= A8; ++s)
+    enpass = -1;
+    for (++it; it < fen.end(); ++it)
     {
-        U64 bit = 1ULL << s;
-
-        if (occ() & bit)
+        if (*it == 'K')
+            castle += w_king_castle;
+        else if (*it == 'Q')
+            castle += w_queen_castle;
+        else if (*it == 'k')
+            castle += b_king_castle;
+        else if (*it == 'q')
+            castle += b_queen_castle;
+        else if (isalpha(*it))
         {
-            const Color c = occupancy[white] & bit ? white : black;
-            if (pieces[c][pawn] & bit)
-                board[c][s] = pawn;
-            else if (pieces[c][knight] & bit)
-                board[c][s] = knight;
-            else if (pieces[c][bishop] & bit)
-                board[c][s] = bishop;
-            else if (pieces[c][rook] & bit)
-                board[c][s] = rook;
-            else if (pieces[c][queen] & bit)
-                board[c][s] = queen;
-            else if (pieces[c][king] & bit)
-                board[c][s] = king;
-            else
-                assert(false);
+            enpass = 'h' - *it;
+            ++it;
+            enpass += 8 * (*it - '1');
         }
     }
+
+    if (enpass > -1)
+    {
+        enpass += square_bb[enpass] & Rank_3 ? 8 : -8;
+        ep = square_bb[enpass];
+    }
+
     Zobrist::init_pieces(this);
 }
 

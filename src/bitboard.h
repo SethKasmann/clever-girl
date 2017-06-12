@@ -151,19 +151,19 @@ U64 shift_ep(U64 bb, const Dir D)
 inline
 void clear_bit(U64 & bb, int dst)
 {
-   bb &= ~(1ULL << dst);
+   bb &= ~(square_bb[dst]);
 }
 
 inline
 void set_bit(U64 & bb, int dst)
 {
-   bb |= 1ULL << dst;
+   bb |= square_bb[dst];
 }
 
 inline 
 void move_bit(U64 & bb, int src, int dst)
 {
-   bb ^= (1ULL << src) | (1ULL << dst);
+   bb ^= square_bb[src] | square_bb[dst];
 }
 
 // Prints a bitboard for debugging purposes.

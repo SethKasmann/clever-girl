@@ -42,6 +42,7 @@ struct State
     // Functions involved in making a move.
     void make(Move m);
     void add_piece(int, PieceType);
+    void add_piece(Color c, PieceType p, Square s);
     void move_piece(int, int);
     void del_piece(bool, int);
     void swap_turn();
@@ -75,6 +76,16 @@ struct State
     Color them;
 };
 
+inline void State::add_piece(Color c, PieceType p, Square s)
+{
+    set_bit(pieces[c][p], s);
+    set_bit(occupancy[c], s);
+    board[c][s] = p;
+    piece_index[s] = piece_count[c][p];
+    piece_list[c][p][piece_index[s]] = s;
+    piece_count[c][p]++;
+}
+
 inline void State::add_piece(int dst, PieceType p)
 {
     if (board[them][dst] != none)
@@ -103,7 +114,7 @@ inline void State::move_piece(int src, int dst)
 inline void State::del_piece(bool c, int dst)
 {
     PieceType p = board[c][dst];
-    piece_count[c][p] -= 1;
+    piece_count[c][p]--;
     clear_bit(pieces[c][p], dst);
     clear_bit(occupancy[c], dst);
     board[c][dst] = none;
