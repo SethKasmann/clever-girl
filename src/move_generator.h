@@ -39,7 +39,7 @@ public:
     }
     Move pop() 
     { 
-        return *(--e); 
+        return *(--e);
     }
     void sort()
     {

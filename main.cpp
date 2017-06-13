@@ -54,7 +54,7 @@ int main()
 {
     init();
     //perft_test();
-    std::string fen = "8/P1k5/K7/8/8/8/8/8 w";
+    std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
     int depth = 6;
     perft(fen, depth);
     /*
