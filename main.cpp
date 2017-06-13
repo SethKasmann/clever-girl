@@ -6,6 +6,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include "search.h"
 #include "src/book.c"
 #include "perft.h"
 #include "zobrist.h"
@@ -55,8 +56,10 @@ int main()
     init();
     //perft_test();
     std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
-    int depth = 6;
-    perft(fen, depth);
+    int depth = 12;
+    State s(fen);
+    std::cout << to_string(search(s)) << '\n';
+    //perft(fen, depth);
     /*
     std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
     State test(fen);

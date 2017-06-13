@@ -188,8 +188,8 @@ inline int get_score(Move m)  { return (m & 0x7F0000) >> 16; }
 // Search Types
 // ----------------------------------------------------------------------------
 
-const int Neg_inf   = -1001;
-const int Pos_inf   = 1001;
+const int Neg_inf   = -50000;
+const int Pos_inf   = 50000;
 const int Killer_size = 2;
 const int Max_ply   = 50;
 
