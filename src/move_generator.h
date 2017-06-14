@@ -62,4 +62,13 @@ public:
 void mg_init();
 void push_moves(State &, MoveList *);
 
+inline std::string to_string(Move m)
+{
+    return std::string { to_char(file(get_src(m))), 
+                         to_char(rank(get_src(m))), 
+                         ',',
+                         to_char(file(get_dst(m))), 
+                         to_char(rank(get_dst(m))) };
+}
+
 #endif

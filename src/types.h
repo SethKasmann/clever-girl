@@ -120,6 +120,8 @@ enum CR
 
 typedef unsigned int Move;
 
+static const int No_move = 0;
+
 static const int Score[Types_size][Types_size] = 
 {
     { 25, 29, 30, 32, 35, 0 },  
@@ -229,15 +231,6 @@ inline char to_char(File f)
 inline char to_char(Rank r)
 {
     return char('1' + r);
-}
-
-inline std::string to_string(Move m)
-{
-    return std::string { to_char(file(get_src(m))), 
-                         to_char(rank(get_src(m))), 
-                         ',',
-                         to_char(file(get_dst(m))), 
-                         to_char(rank(get_dst(m))) };
 }
 
 #endif

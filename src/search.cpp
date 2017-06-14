@@ -17,11 +17,11 @@ int negamax(State & s, int d, int alpha, int beta)
     if (tte.key == s.key && tte.depth >= d)
     {
         table_hits++;
-        if (tte.type == pv)
+        if (tte.type == pv)             // PV Node, return the score.
             return tte.score;
-        else if (tte.type == cut)
+        else if (tte.type == cut)       // Cut Node, adjust alpha.
             a = std::max(a, tte.score);
-        else
+        else                            // All Node, adjust beta.
             b = std::min(b, tte.score);
 
         // If an early cutoff is caused by the entry, return it's score.
