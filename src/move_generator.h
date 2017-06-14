@@ -37,13 +37,19 @@ public:
     {
         *(e++) = src | dst << 6 | p << 12 | s << 16;
     }
+    Move sort_pv(Move move)
+    {
+        Move* pv = std::find(_m, e, move);
+        std::swap(*pv, *(--e));
+        std::stable_sort(_m, e++);
+    }
     Move pop() 
     { 
         return *(--e);
     }
     void sort()
     {
-        std::stable_sort(_m, e, std::greater<int>());
+        std::stable_sort(_m, e);
     }
 
     Move _m[Max_size];

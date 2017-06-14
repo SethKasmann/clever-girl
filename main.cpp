@@ -55,7 +55,7 @@ int main()
 {
     init();
     //perft_test();
-    std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -";
+    std::string fen = "1k6/1b6/8/8/7R/8/8/4K2R b K";
     int depth = 12;
     State s(fen);
     std::cout << to_string(search(s)) << '\n';
