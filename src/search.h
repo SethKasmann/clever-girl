@@ -6,8 +6,10 @@
 #include "move_generator.h"
 #include "state.h"
 #include "types.h"
+#include "transpositiontable.h"
 
 extern int search_nodes;
+extern int table_hits;
 
 struct Candidate
 {
