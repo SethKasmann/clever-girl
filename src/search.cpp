@@ -91,26 +91,38 @@ int negamax(State & s, int d, int alpha, int beta)
 
 Move search(State & s)
 {
-    const int d = 8; // Depth to search. Will adjust this later.
-    int a = Neg_inf;
+    const int depth = 6; // Depth to search. Will adjust this later.
+    int a, d, i;
 
     MoveList mlist;
     push_moves(s, &mlist);
+    mlist.c = mlist.e;
+    mlist.sort();
+
+    std::vector<Candidate> candidates;
+    std::vector<Candidate>::iterator it;
+
+    while (mlist.size() > 0)
+        candidates.insert(candidates.begin() ,Candidate(mlist.pop(), 0));
 
     State c;
     Move m;
-    std::vector<Candidate> candidates;
     // Need to check and return a null move if it's checkmate/stalemate.
-    while (mlist.size() > 0)
+
+    // Iterative deepening.
+    for (d = 1; d <= depth; ++d)
     {
-        std::memmove(&c, &s, sizeof s);
-        m = mlist.pop();
-        c.make(m);
-        candidates.push_back(Candidate(m, negamax(c, d - 1, Neg_inf, -a)));
-        a = std::max(a, candidates.back().score);
+        a = Neg_inf;
+        for (it = candidates.end() - 1; it >= candidates.begin(); --it)
+        {
+            std::memmove(&c, &s, sizeof s);
+            c.make(it->move);
+            it->score = -negamax(c, d - 1, Neg_inf, -a);
+            a = std::max(a, it->score);
+        }
+        std::stable_sort(candidates.begin(), candidates.end());
     }
-    std::stable_sort(candidates.begin(), candidates.end());
     std::cout << search_nodes << '\n';
     std::cout << table_hits << '\n';
-    return candidates.front().move;
+    return candidates.back().move;
 }
