@@ -3,16 +3,19 @@
 int search_nodes = 0;
 int table_hits = 0;
 
+static PV pvlist[Max_ply];
+
 int negamax(State & s, int d, int alpha, int beta)
 {
     search_nodes += 1;
     int a = alpha;
     int b = beta;
-
     bool entry_flag = false;
+    Move best_move = No_move;
 
     // Get a reference to the correct transposition table location.
     TableEntry& tte = ttable.get(s.key);
+
     // Check if table entry is valid and matches the position key.
     if (tte.key == s.key && tte.depth >= d)
     {
@@ -28,8 +31,11 @@ int negamax(State & s, int d, int alpha, int beta)
         if (a >= b)
             return tte.score;
 
-        entry_flag = true;
+        best_move = tte.best;
     }
+    // If no transposition is found, look for a principle variation.
+    else if (d > 1 && pvlist[d - 1].key == s.key)
+        best_move = pvlist[d - 1].move;
 
     // Evaluate leaf nodes.
     if (d == 0)
@@ -43,17 +49,15 @@ int negamax(State & s, int d, int alpha, int beta)
     if (mlist.size() == 0)
         return s.check() ? Checkmate : Stalemate;
 
+    // Extract the best move to the front and sort the remaining moves.
+    mlist.extract(best_move);
+    mlist.sort();
+
     int best = Neg_inf;
     int val;
-    Move m, best_move;
-    // If an entry is found, sort the movelist with the pv move at the front.
-    // If no entry is found, sort normally.
-    if (entry_flag)
-        mlist.sort_pv(tte.best);
-    else
-        mlist.sort();
-
+    Move m;
     State c;
+
     while (mlist.size() > 0)
     {
         std::memmove(&c, &s, sizeof s);    // Copy current state.
@@ -66,7 +70,7 @@ int negamax(State & s, int d, int alpha, int beta)
             best_move = m;                 // Store the best move.
         }
         a = std::max(a, best);
-        if (a >= b)                        // Alpha beta pruning.
+        if (a >= b)                        // Alpha-Beta pruning.
             break;
     }
 
@@ -78,12 +82,16 @@ int negamax(State & s, int d, int alpha, int beta)
     tte.depth = d;
     tte.key   = s.key;
 
-    return best;
+    // Store principle variation in the pvlist.
+    if (tte.type == pv)
+        pvlist[d] = PV(best_move, s.key);
+
+    return best;                           // Fail-Soft alpha beta score.
 }
 
 Move search(State & s)
 {
-    const int d = 7; // Depth to search. Will adjust this later.
+    const int d = 8; // Depth to search. Will adjust this later.
     int a = Neg_inf;
 
     MoveList mlist;

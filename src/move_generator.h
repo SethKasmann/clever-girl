@@ -37,11 +37,13 @@ public:
     {
         *(e++) = src | dst << 6 | p << 12 | s << 16;
     }
-    Move sort_pv(Move move)
+    void extract(Move move)
     {
-        Move* pv = std::find(_m, e, move);
-        std::swap(*pv, *(--e));
-        std::stable_sort(_m, e++);
+        c = e;
+        if (move == No_move)
+            return;
+        Move* pv = std::find(_m, c, move);
+        std::swap(*pv, *(--c));
     }
     Move pop() 
     { 
@@ -49,7 +51,7 @@ public:
     }
     void sort()
     {
-        std::stable_sort(_m, e);
+        std::stable_sort(_m, c);
     }
 
     Move _m[Max_size];
@@ -69,6 +71,6 @@ inline std::string to_string(Move m)
                          ',',
                          to_char(file(get_dst(m))), 
                          to_char(rank(get_dst(m))) };
-}
+}   
 
 #endif

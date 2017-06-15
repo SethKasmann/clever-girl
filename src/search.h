@@ -2,6 +2,7 @@
 #define SEARCH_H
 
 #include <algorithm>
+#include <stack>
 #include "evaluation.h"
 #include "move_generator.h"
 #include "state.h"
@@ -21,6 +22,14 @@ struct Candidate
 	}
 	Move move;
 	int score;
+};
+
+struct PV
+{
+	PV() {};
+	PV(Move m, U64 k) : move(m), key(k) {}
+	Move move;
+	U64 key;
 };
 
 Move search(State & s);
