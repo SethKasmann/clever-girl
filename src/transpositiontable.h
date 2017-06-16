@@ -33,6 +33,15 @@ public:
 	{
 		return table[key % table.capacity()];
 	}
+	void clear()
+	{
+		table.clear();
+	}
+	void resize(int size_mb)
+	{
+		table.clear();
+		table.reserve(size_mb * 1000 * 1000 / sizeof(TableEntry));
+	}
 private:
 	std::vector<TableEntry> table;
 };

@@ -70,7 +70,7 @@ inline std::string to_string(Move m)
                          to_char(rank(get_src(m))), 
                          ',',
                          to_char(file(get_dst(m))), 
-                         to_char(rank(get_dst(m))) };
+                         to_char(rank(get_dst(m)))};
 }   
 
 #endif
