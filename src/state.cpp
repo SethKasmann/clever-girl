@@ -43,12 +43,12 @@ void State::operator=(const State & s)
 // all the necessary information to restart a game from a particular position."
 // ----------------------------------------------------------------------------
 
-State::State(std::string & fen) 
+State::State(const std::string & fen) 
   : fmr(0), castle(0), board(), piece_count(), piece_list(), piece_index(), 
     pieces(), occupancy(), ep(0), key(0), us(white), them(black)
 {
     int i, enpass, position;
-    std::string::iterator it;
+    std::string::const_iterator it;
     Square s;
     Color c;
     PieceType p;

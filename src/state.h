@@ -16,7 +16,7 @@
 struct State
 {
     State() {};
-    State(std::string &);
+    State(const std::string &);
     State(const State & s);
     void operator=(const State &);
 
