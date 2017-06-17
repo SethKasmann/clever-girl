@@ -223,14 +223,33 @@ inline T & operator -=(T & t0, const T t1) { return t0 = t0 - t1; }
 template<typename T>
 inline T operator!(const T t) { return T(!bool(t)); }
 
-inline char to_char(File f)
+inline std::string to_string(File f)
 {
-    return char('a' + f);
+    return std::string(1, char('a' + f));
 }
 
-inline char to_char(Rank r)
+inline std::string to_string(Rank r)
 {
-    return char('1' + r);
+    return std::string(1, char('1' + r));
 }
+
+inline std::string to_string(Prop p)
+{
+    return p == queen_promo  ? "q"
+         : p == knight_promo ? "k"
+         : p == rook_promo   ? "r"
+         : p == bishop_promo ? "b"
+         : "";
+}
+
+inline std::string to_string(Move m)
+{
+    return to_string(file(get_src(m))) 
+         + to_string(rank(get_src(m)))
+         + to_string(file(get_dst(m))) 
+         + to_string(rank(get_dst(m)))
+         + to_string(get_prop(m));
+}   
+
 
 #endif
