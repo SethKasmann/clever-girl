@@ -53,6 +53,11 @@ public:
     {
         std::stable_sort(_m, c);
     }
+    void clear()
+    {
+        c = _m;
+        e = _m;
+    }
 
     Move _m[Max_size];
     Move * c;
