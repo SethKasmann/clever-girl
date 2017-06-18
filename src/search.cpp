@@ -4,6 +4,7 @@ int search_nodes = 0;
 int table_hits = 0;
 
 static PV pvlist[Max_ply];
+GameList glist;
 
 int negamax(State & s, int d, int alpha, int beta)
 {
@@ -12,6 +13,10 @@ int negamax(State & s, int d, int alpha, int beta)
     int b = beta;
     bool entry_flag = false;
     Move best_move = No_move;
+
+    // Check for draw.
+    if (glist.repeat() || s.fmr > 99)
+        return Draw;
 
     // Get a reference to the correct transposition table location.
     TableEntry& tte = ttable.get(s.key);
@@ -63,7 +68,9 @@ int negamax(State & s, int d, int alpha, int beta)
         std::memmove(&c, &s, sizeof s);    // Copy current state.
         m = mlist.pop();                   // Get the next move.
         c.make(m);                         // Make move.
+        glist.push(m, c.key);              // Add move to gamelist.
         val = -negamax(c, d - 1, -b, -a);  // Recursive search call.
+        --glist;                           // Remove move from gamelist.
         if (val > best)
         {
             best = val;                    // Store the best value.
@@ -117,11 +124,16 @@ Move search(State & s)
         {
             std::memmove(&c, &s, sizeof s);
             c.make(it->move);
+            glist.push(it->move, c.key);
             it->score = -negamax(c, d - 1, Neg_inf, -a);
+            --glist;
             a = std::max(a, it->score);
         }
         std::stable_sort(candidates.begin(), candidates.end());
     }
+
+    s.make(candidates.back().move);
+    glist.push(candidates.back().move, s.key);
     std::cout << search_nodes << '\n';
     std::cout << table_hits << '\n';
     return candidates.back().move;
