@@ -164,18 +164,19 @@ void State::make(Move m)
 
     // Update the 50 move rule.
     board[us][src] == pawn || board[them][dst] != none ? 
-        fmr = 0 : fmr++;
+        fmr = 0 : fmr++;    
 
     // Remove the ep file and castle rights from the zobrist key.
-    if (ep) Zobrist::ep(key, ep);
-    Zobrist::castle(key, castle);
+    if (ep)
+        key ^= Zobrist::key(get_file(ep));
+    key ^= Zobrist::key(castle);
 
     switch (get_prop(m))
     {
         // Quiet moves.
         case quiet:
         {
-            Zobrist::move(this, src, dst);
+            key ^= Zobrist::key(us, on_square(src, us), src, dst);
             move_piece(src, dst);
             ep = 0;
             break;
@@ -183,7 +184,8 @@ void State::make(Move m)
         // Attacking moves.
         case attack:
         {
-            Zobrist::move(this, src, dst);
+            key ^= Zobrist::key(us, on_square(src, us), src, dst);
+            key ^= Zobrist::key(them, on_square(dst, them), dst);
             del_piece(them, dst);
             move_piece(src, dst);
             ep = 0;
@@ -192,20 +194,18 @@ void State::make(Move m)
         // Double pawn push.
         case dbl_push:
         {
-            Zobrist::move(this, src, dst);
+            key ^= Zobrist::key(us, pawn, src, dst);
             move_piece(src, dst);
             ep = square_bb[dst];
-            Zobrist::ep(key, ep);
+            key ^= Zobrist::key(get_file(ep));
             break;
         }
         // King castle.
         case king_cast:
         {
-            const int rook_src = src-3;
-            const int rook_dst = dst+1;
-            Zobrist::move(this, rook_src, rook_dst);
-            Zobrist::move(this, src, dst);
-            move_piece(rook_src, rook_dst);
+            key ^= Zobrist::key(us, rook, src-3, dst+1);
+            key ^= Zobrist::key(us, king, src, dst);
+            move_piece(src-3, dst+1);
             move_piece(src, dst);
             ep = 0;
             break;
@@ -213,11 +213,9 @@ void State::make(Move m)
         // Queen castle.
         case queen_cast:
         {
-            const int rook_src = src+4;
-            const int rook_dst = dst-1;
-            Zobrist::move(this, rook_src, rook_dst);
-            Zobrist::move(this, src, dst);
-            move_piece(rook_src, rook_dst);
+            key ^= Zobrist::key(us, rook, src+4, dst-1);
+            key ^= Zobrist::key(us, king, src, dst);
+            move_piece(src+4, dst-1);
             move_piece(src, dst);
             ep = 0;
             break;
@@ -225,7 +223,8 @@ void State::make(Move m)
         // Queen promotion.
         case queen_promo:
         {
-            Zobrist::promo(this, src, dst, queen);
+            key ^= Zobrist::key(us, pawn, src);
+            key ^= Zobrist::key(us, queen, dst);
             del_piece(us, src);
             add_piece(dst, queen);
             ep = 0;
@@ -234,7 +233,8 @@ void State::make(Move m)
         // Knight underpromotion.
         case knight_promo:
         {
-            Zobrist::promo(this, src, dst, knight);
+            key ^= Zobrist::key(us, pawn, src);
+            key ^= Zobrist::key(us, knight, dst);
             del_piece(us, src);
             add_piece(dst, knight);
             ep = 0;
@@ -243,7 +243,8 @@ void State::make(Move m)
         // Rook underpromotion.
         case rook_promo:
         {
-            Zobrist::promo(this, src, dst, rook);
+            key ^= Zobrist::key(us, pawn, src);
+            key ^= Zobrist::key(us, rook, dst);
             del_piece(us, src);
             add_piece(dst, rook);
             ep = 0;
@@ -252,7 +253,8 @@ void State::make(Move m)
         // Bishop underpromotion.
         case bishop_promo:
         {
-            Zobrist::promo(this, src, dst, bishop);
+            key ^= Zobrist::key(us, pawn, src);
+            key ^= Zobrist::key(us, bishop, dst);
             del_piece(us, src);
             add_piece(dst, bishop);
             ep = 0;
@@ -261,7 +263,9 @@ void State::make(Move m)
         // En-Passant.
         case en_passant:
         {
-            Zobrist::en_passant(this, src, dst, get_lsb(ep));
+            key ^= Zobrist::key(us, pawn, src, dst);
+            key ^= Zobrist::key(them, pawn, get_lsb(ep));
+            key ^= Zobrist::key(get_file(ep));
             move_piece(src, dst);
             del_piece(them, get_lsb(ep));
             ep = 0;
@@ -274,8 +278,8 @@ void State::make(Move m)
 
     // Add updated castle rights back into the zobrist key, and swap
     // turns.
-    Zobrist::castle(key, castle);
-    Zobrist::turn(key);
+    key ^= Zobrist::key(castle);
+    key ^= Zobrist::key();
     assert(!check());
     swap_turn();
 }
