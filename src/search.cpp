@@ -6,6 +6,42 @@ int table_hits = 0;
 static PV pvlist[Max_ply];
 GameList glist;
 
+int qsearch(State & s, int d, int alpha, int beta)
+{
+    int qscore = evaluate(s);
+
+    // If a beta cutoff is found, return the qscore.
+    if (qscore >= beta)
+        return beta;
+
+    // Update alpha.
+    alpha = std::max(alpha, qscore);
+
+    // Generate moves and create the movelist.
+    MoveList mlist;
+    push_moves(s, &mlist);
+    mlist.sort();
+
+    int val;
+    Move m;
+    State c;
+
+    while (mlist.size() > 0)
+    {
+        m = mlist.pop();                         // Get the next move.
+        // TODO: remove "4" constant.
+        if (get_score(m) <= 4)                   // Break if a quiet move is found.
+            break;
+        std::memmove(&c, &s, sizeof s);          // Copy current state.
+        c.make(m);                               // Make move.
+        val = -qsearch(c, d - 1, -beta, -alpha); // Recursive call to qsearch.
+        if (val >= beta)                         // Alpha-Beta pruning.
+            return beta;
+        alpha = std::max(alpha, val);
+    }
+    return alpha;                                // Fail-Hard alpha beta score.
+}
+
 int negamax(State & s, int d, int alpha, int beta)
 {
     search_nodes += 1;
@@ -44,7 +80,12 @@ int negamax(State & s, int d, int alpha, int beta)
 
     // Evaluate leaf nodes.
     if (d == 0)
-        return evaluate(s);
+    {
+        // Only evaluate if the previous move was not a capture.
+        // Otherwise, call qsearch.
+        return glist.last_cap() ? qsearch(s, d, a, b)
+                                : evaluate(s);
+    }
 
     // Generate moves and create the movelist.
     MoveList mlist;

@@ -42,6 +42,18 @@ public:
 		table.clear();
 		table.reserve(size_mb * 1000 * 1000 / sizeof(TableEntry));
 	}
+	void store(U64 key, Move best, NodeType type, int depth, int score)
+	{
+		TableEntry& at = get(key);
+		if (at.depth <= depth)
+		{
+			at.key   = key;
+			at.best  = best;
+			at.type  = type;
+		    at.depth = depth;
+		    at.score = score;
+		}
+	}
 private:
 	std::vector<TableEntry> table;
 };

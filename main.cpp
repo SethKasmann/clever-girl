@@ -55,6 +55,7 @@ void choose(State & s)
 int main()
 {
     init();
+    //perft_test();
     uci();
 
     return 0;

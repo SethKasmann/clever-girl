@@ -50,6 +50,11 @@ public:
     {
         e = history;
     }
+    // Possible issue with this. It doesn't cover EP attacks.
+    bool last_cap() const
+    {
+        return get_prop((e-1)->move) == attack;
+    }
 private:
     History history[1024];
     History* e;
