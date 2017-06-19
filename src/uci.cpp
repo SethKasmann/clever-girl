@@ -1,17 +1,65 @@
 #include "uci.h"
 
+void go(std::istringstream & is, State & s)
+{
+    std::cout << to_string(search(s)) << '\n';
+    std::cout << s;
+}
+
 void position(std::istringstream & is, State & s)
 {
     std::string token, fen;
+    MoveList mlist;
+    Move m;
+    bool start_flag = false;
+
+    s = State(Start_fen);
+    glist.clear();
+    glist.push(No_move, s.key);
 
     is >> token;
     if (token == "fen")
     {
         while (is >> token && token != "moves")
             fen += token + " ";
-        s = State(fen);
     }
-    std::cout << fen << '\n';
+    else if (token == "startpos")
+    {
+        start_flag = true;
+        is >> token;
+    }
+    else
+    {
+        std::cout << "unknown command\n";
+        return;
+    }
+
+    while (is >> token)
+    {
+        token.erase(std::remove(token.begin(), token.end(), ','), 
+                    token.end());
+        push_moves(s, &mlist);
+        while (mlist.size() > 0)
+        {
+            m = mlist.pop();
+            if (to_string(m) == token)
+            {
+                // Only make moves if the start flag is true.
+                s.make(m);
+                glist.push(m, s.key);
+                break;
+            }
+            if (mlist.size() == 0)
+            {
+                std::cout << "illegal move found: " << token << '\n';
+                return;
+            }
+        }
+        mlist.clear();
+    }
+    // If start flag is false, initialize board state with fen string.
+    if (!start_flag)
+        s = State(fen);
     std::cout << s;
 }
 
@@ -62,6 +110,8 @@ void uci()
         }
         else if (token == "position")
             position(is, root);
+        else if (token == "go")
+            go(is, root);
 
     }
 }
