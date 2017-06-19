@@ -41,7 +41,7 @@ enum Color
     black 
 };
 
-enum PieceType : int
+enum PieceType
 {
     pawn,
     knight,
@@ -225,7 +225,7 @@ inline T operator!(const T t) { return T(!bool(t)); }
 
 inline std::string to_string(File f)
 {
-    return std::string(1, char('a' + f));
+    return std::string(1, char('h' - f));
 }
 
 inline std::string to_string(Rank r)
