@@ -43,8 +43,7 @@ public:
     }
     bool repeat()
     {
-        return size() >= 4 ? ((e-1)->key == (e-3)->key) 
-                          && ((e-2)->key == (e-4)->key) 
+        return size() >= 5 ? ((e-1)->key == (e-5)->key) 
                            : false;
     }
     void clear()
