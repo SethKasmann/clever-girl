@@ -48,7 +48,7 @@ int negamax(State & s, int d, int alpha, int beta)
     search_nodes += 1;
     int a = alpha;
     int b = beta;
-    bool entry_flag = false;
+    bool tte_flag = false;
     Move best_move = No_move;
     int i;
 
@@ -75,10 +75,13 @@ int negamax(State & s, int d, int alpha, int beta)
             return tte.score;
 
         best_move = tte.best;
+        tte_flag = true;
     }
     // If no transposition is found, look for a principle variation.
+    /*
     else if (d > 1 && pvlist[d - 1].key == s.key)
         best_move = pvlist[d - 1].move;
+        */
 
     // Evaluate leaf nodes.
     if (d == 0)
@@ -91,6 +94,9 @@ int negamax(State & s, int d, int alpha, int beta)
     // Check if the position is checkmate/stalemate.
     if (mlist.size() == 0)
         return s.check() ? Checkmate : Stalemate;
+
+    // If no transposition was found, look for a principle variation.
+    if (!tte_flag && pvlist[d - 1].key)
 
     // Extract the best move to the front and sort the remaining moves.
     mlist.extract(best_move);
@@ -153,7 +159,13 @@ Move search(State & s)
 
     MoveList mlist;
     push_moves(s, &mlist);
-    mlist.c = mlist.e;
+
+    if (mlist.size() == 0)
+    {
+        std::cout << "0000" << '\n';
+        return No_move;
+    }
+
     mlist.sort();
 
     std::vector<Candidate> candidates;
