@@ -239,6 +239,7 @@ void push_moves(State & s, MoveList * mlist)
     }
 
     check_legal(s, mlist);
+    mlist->c = mlist->e;
 }
 
 std::ostream & operator << (std::ostream & o, const MoveList & mlist)
@@ -248,7 +249,7 @@ std::ostream & operator << (std::ostream & o, const MoveList & mlist)
       << "{\n";
     for (i = mlist._m; i < mlist.e; ++i)
     {
-        o << "  " << to_string(*i) << " " << get_score(*i) << '\n';
+        o << "  " << to_string(*i) << " " << get_score(*i) << " " << get_prop(*i) << '\n';
     }
     o << "}\n";
 }

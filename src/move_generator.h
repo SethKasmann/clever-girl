@@ -39,7 +39,6 @@ public:
     }
     void extract(Move move)
     {
-        c = e;
         if (move == No_move)
             return;
         Move* pv = std::find(_m, c, move);
@@ -58,6 +57,41 @@ public:
         c = _m;
         e = _m;
     }
+    void order_killer(Move* killers)
+    {
+        Move* k;
+        int offset, i;
+
+        offset = 1;
+        for (i = 0; i < Killer_size; ++i)
+        {
+            k = std::find(_m, c, *(killers + i));
+            if (k != c)
+            {
+                std::swap(*k, *(std::find_if_not(k, c, is_quiet)-offset));
+                offset++;
+            }
+        }
+    }
+    /*
+    void order_killer(Move move0, Move move1)
+    {
+        Move* k;
+        int offset = 1;
+        k = std::find(_m, c, move0);
+        if (k != c)
+        {
+            std::cout << "I'm sorting a killer!\n";
+            std::cout << "Killer move:" << to_string(*k) << '\n';
+            std::cout << *this;
+            std::swap(*k, *(std::find_if_not(k, c, is_quiet)-1));
+            std::cout << "It's sorted!\n";
+            std::cout << *this;
+            int z;
+            std::cin >> z;
+        }
+    }
+    */
 
     Move _m[Max_size];
     Move * c;

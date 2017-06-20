@@ -4,6 +4,7 @@ int search_nodes = 0;
 int table_hits = 0;
 
 static PV pvlist[Max_ply];
+static Move killers[Max_ply][Killer_size];
 GameList glist;
 
 int qsearch(State & s, int d, int alpha, int beta)
@@ -30,7 +31,7 @@ int qsearch(State & s, int d, int alpha, int beta)
     {
         m = mlist.pop();                         // Get the next move.
         // TODO: remove "4" constant.
-        if (get_score(m) <= 4)                   // Break if a quiet move is found.
+        if (get_score(m) <= 5)                   // Break if a quiet move is found.
             break;
         std::memmove(&c, &s, sizeof s);          // Copy current state.
         c.make(m);                               // Make move.
@@ -49,6 +50,7 @@ int negamax(State & s, int d, int alpha, int beta)
     int b = beta;
     bool entry_flag = false;
     Move best_move = No_move;
+    int i;
 
     // Check for draw.
     if (glist.repeat() || s.fmr > 99)
@@ -80,12 +82,7 @@ int negamax(State & s, int d, int alpha, int beta)
 
     // Evaluate leaf nodes.
     if (d == 0)
-    {
-        // Only evaluate if the previous move was not a capture.
-        // Otherwise, call qsearch.
-        return glist.last_cap() ? qsearch(s, d, a, b)
-                                : evaluate(s);
-    }
+        return qsearch(s, d, a, b);
 
     // Generate moves and create the movelist.
     MoveList mlist;
@@ -98,6 +95,10 @@ int negamax(State & s, int d, int alpha, int beta)
     // Extract the best move to the front and sort the remaining moves.
     mlist.extract(best_move);
     mlist.sort();
+
+    // Confirm a killer move has been stored at this ply.
+    if (killers[glist.ply()][0] != No_move) 
+        mlist.order_killer(killers[glist.ply()]); 
 
     int best = Neg_inf;
     int val;
@@ -119,7 +120,15 @@ int negamax(State & s, int d, int alpha, int beta)
         }
         a = std::max(a, best);
         if (a >= b)                        // Alpha-Beta pruning.
+        {   
+            // If a quiet move caused a beta cut off, store as a killer move.
+            if (is_quiet(m) && m != killers[glist.ply()][0])
+            {
+                killers[glist.ply()][1] = killers[glist.ply()][0];
+                killers[glist.ply()][0] = m;
+            }
             break;
+        }
     }
 
     // Store information to the TableEntry reference.
@@ -174,8 +183,21 @@ Move search(State & s)
     }
 
     s.make(candidates.back().move);
-    glist.push(candidates.back().move, s.key);
+    glist.push_root(candidates.back().move, s.key);
     std::cout << search_nodes << '\n';
     std::cout << table_hits << '\n';
     return candidates.back().move;
+}
+
+void search_init()
+{
+    int i, j;
+
+    for (i = 0; i < Max_ply; ++i)
+    {
+        for (j = 0; j < Killer_size; ++j)
+        {
+            killers[i][j] = No_move;
+        }
+    }
 }

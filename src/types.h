@@ -129,7 +129,7 @@ static const int Score[Types_size][Types_size] =
     { 18, 20, 23, 27, 33, 0 },  
     { 15, 16, 17, 22, 31, 0 },  
     { 11, 12, 13, 14, 21, 0 },  
-    { 5,  6,  7,  8,  9,  0 } 
+    { 6,  7,  8,  9,  10, 0 } 
 };
 
 enum MoveScore
@@ -139,7 +139,7 @@ enum MoveScore
     NP = 3,
     QP = 36,
     Q  = 4,
-    C  = 10,
+    C  = 5,
     EP = 25
 };
 
@@ -185,6 +185,10 @@ inline Square get_src(Move m) { return Square(m & 0x3F); }
 inline Square get_dst(Move m) { return Square((m & 0xFC0) >> 6); }
 inline Prop get_prop(Move m)  { return Prop((m & 0xF000) >> 12); }
 inline int get_score(Move m)  { return (m & 0x7F0000) >> 16; }
+inline bool is_quiet(Move m)
+{
+    return get_prop(m) == quiet || get_prop(m) == dbl_push;
+}
 
 // ----------------------------------------------------------------------------
 // Search Types

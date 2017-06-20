@@ -21,8 +21,15 @@ struct History
 class GameList
 {
 public:
-    GameList() : e(history)
+    GameList() : e(history), r(history)
     {}
+    void push_root(Move m, U64 k)
+    {
+        e->move = m;
+        e->key  = k;
+        ++e;
+        ++r;
+    }
     void push(Move m, U64 k)
     {
         e->move = m;
@@ -41,6 +48,10 @@ public:
     {
         return e - history;
     }
+    int ply() const
+    {
+        return e - r - 1;
+    }
     bool repeat()
     {
         return size() >= 5 ? ((e-1)->key == (e-5)->key) 
@@ -49,15 +60,12 @@ public:
     void clear()
     {
         e = history;
-    }
-    // Possible issue with this. It doesn't cover EP attacks.
-    bool last_cap() const
-    {
-        return get_prop((e-1)->move) == attack;
+        r = history;
     }
 private:
     History history[1024];
     History* e;
+    History* r;
 };
 
 struct Candidate
@@ -82,5 +90,6 @@ struct PV
 
 extern GameList glist;
 Move search(State & s);
+void search_init();
 
 #endif  

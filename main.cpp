@@ -18,6 +18,7 @@ void init()
     mg_init();
     Zobrist::init();
     bb_init();
+    search_init();
 
     // initialize opening book database
 
