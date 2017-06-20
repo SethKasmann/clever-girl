@@ -37,6 +37,10 @@ public:
     {
         *(e++) = src | dst << 6 | p << 12 | s << 16;
     }
+    bool contains(Move move)
+    {
+        return std::find(_m, e, move) != e;
+    }
     void extract(Move move)
     {
         if (move == No_move)
@@ -73,25 +77,6 @@ public:
             }
         }
     }
-    /*
-    void order_killer(Move move0, Move move1)
-    {
-        Move* k;
-        int offset = 1;
-        k = std::find(_m, c, move0);
-        if (k != c)
-        {
-            std::cout << "I'm sorting a killer!\n";
-            std::cout << "Killer move:" << to_string(*k) << '\n';
-            std::cout << *this;
-            std::swap(*k, *(std::find_if_not(k, c, is_quiet)-1));
-            std::cout << "It's sorted!\n";
-            std::cout << *this;
-            int z;
-            std::cin >> z;
-        }
-    }
-    */
 
     Move _m[Max_size];
     Move * c;
