@@ -43,13 +43,13 @@ int qsearch(State & s, int d, int alpha, int beta)
     return alpha;                                // Fail-Hard alpha beta score.
 }
 
+template<NodeType NT>
 int negamax(State & s, int d, int alpha, int beta)
 {
     search_nodes += 1;
     int a = alpha;
     int b = beta;
-    bool tte_flag = false;
-    Move best_move = No_move;
+    Move pv_move = No_move;
     int i;
 
     // Check for draw.
@@ -74,14 +74,11 @@ int negamax(State & s, int d, int alpha, int beta)
         if (a >= b)
             return tte.score;
 
-        best_move = tte.best;
-        tte_flag = true;
+        pv_move = tte.best;
     }
     // If no transposition is found, look for a principle variation.
-    /*
     else if (d > 1 && pvlist[d - 1].key == s.key)
-        best_move = pvlist[d - 1].move;
-        */
+        pv_move = pvlist[d - 1].move;
 
     // Evaluate leaf nodes.
     if (d == 0)
@@ -95,11 +92,8 @@ int negamax(State & s, int d, int alpha, int beta)
     if (mlist.size() == 0)
         return s.check() ? Checkmate : Stalemate;
 
-    // If no transposition was found, look for a principle variation.
-    if (!tte_flag && pvlist[d - 1].key)
-
     // Extract the best move to the front and sort the remaining moves.
-    mlist.extract(best_move);
+    mlist.extract(pv_move);
     mlist.sort();
 
     // Confirm a killer move has been stored at this ply.
@@ -108,7 +102,7 @@ int negamax(State & s, int d, int alpha, int beta)
 
     int best = Neg_inf;
     int val;
-    Move m;
+    Move m, best_move;
     State c;
 
     while (mlist.size() > 0)
@@ -117,7 +111,20 @@ int negamax(State & s, int d, int alpha, int beta)
         m = mlist.pop();                   // Get the next move.
         c.make(m);                         // Make move.
         glist.push(m, c.key);              // Add move to gamelist.
-        val = -negamax(c, d - 1, -b, -a);  // Recursive search call.
+
+        // Scout alrogithm. Search pv_move with a full window.
+        if (m == pv_move && NT == pv)
+            val = -negamax(c, d - 1, -b, -a);
+        else
+        {
+            // Search all other nodes with a full window.
+            val = -negamax(c, d - 1, -(a + 1), -a);
+            // If an alpha improvement caused fail high, research using
+            // a full window.
+            if (a < val && b > val)
+                val = -negamax(c, d - 1, -b, -a);
+        }
+
         --glist;                           // Remove move from gamelist.
         if (val > best)
         {
@@ -141,7 +148,7 @@ int negamax(State & s, int d, int alpha, int beta)
     // Current method is to always replace.
     tte.best  = best_move;
     tte.score = best;
-    tte.type  = best <= a ? all : best >= b ? cut : pv;
+    tte.type  = best <= alpha ? all : best >= b ? cut : pv;
     tte.depth = d;
     tte.key   = s.key;
 
@@ -187,6 +194,12 @@ Move search(State & s)
             std::memmove(&c, &s, sizeof s);
             c.make(it->move);
             glist.push(it->move, c.key);
+  /*
+            if it->move == candidates.back()
+                it->score = -negamax<pv>(c, d - 1, Neg_inf, -a)
+            else
+                it->score = -negamax<cut>(c, d - 1, Neg_inf, -a)
+            */
             it->score = -negamax(c, d - 1, Neg_inf, -a);
             --glist;
             a = std::max(a, it->score);
