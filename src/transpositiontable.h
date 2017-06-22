@@ -29,23 +29,14 @@ public:
 		table.reserve(Default_size);
 	}
 	~TranspositionTable() {}
-	TableEntry& get(U64 key)
+	const TableEntry* probe(U64 key) const
 	{
-		return table[key % table.capacity()];
+		return table.data() + key % table.capacity();
 	}
 	TableEntry& operator[](U64 key)
 	{
 		return table[key % table.capacity()];
 	}
-	/*
-	bool contains(U64 key, int depth) const
-	{
-		int i = key % table.capacity();
-		if (table[i].key == key && table[i].)
-	    return table[key % table.capacity()].key == key
-	        && table[key % table.capacity]
-	}
-	*/
 	void clear()
 	{
 		table.clear();
@@ -53,12 +44,12 @@ public:
 	void resize(int size_mb)
 	{
 		table.clear();
-		table.reserve(size_mb * 1000 * 1000 / sizeof(TableEntry));
+		table.resize(size_mb * 1000 * 1000 / sizeof(TableEntry));
 	}
 	void store(U64 key, Move best, NodeType type, int depth, int score)
 	{
 		int i = key % table.capacity();
-		if (table[i].depth <= depth)
+		if (table[i].depth < depth)
 		{
 			table[i].key   = key;
 			table[i].best  = best;

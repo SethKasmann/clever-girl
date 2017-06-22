@@ -23,38 +23,6 @@ struct Check
     U64 ray;
     int checks;
 };
-/*
-template<typename T, size_t S>
-class Stack
-{
-public:
-    Stack()
-    : end(arr), cur(arr)
-    {}
-    ~Stack()
-    {}
-    size_t size() const
-    {
-        return end - arr;
-    }
-    bool contains(T t)
-    {
-        return std::find(arr, end, t) != end;
-    }
-    void push(T t)
-    {
-        *end++ = t;
-    }
-    T pop()
-    {
-        return 
-    }
-private:
-    T* cur;
-    T* end;
-    T arr[S];
-};
-*/
 
 class MoveList
 {

@@ -57,28 +57,25 @@ int negamax(State & s, int d, int alpha, int beta)
         return Draw;
 
     // Get a reference to the correct transposition table location.
-    TableEntry& tte = ttable.get(s.key);
+    const TableEntry* test = ttable.probe(s.key);
 
     // Check if table entry is valid and matches the position key.
-    if (tte.key == s.key && tte.depth >= d)
+    if (test->key == s.key && test->depth >= d)
     {
         table_hits++;
-        if (tte.type == pv)             // PV Node, return the score.
-            return tte.score;
-        else if (tte.type == cut)       // Cut Node, adjust alpha.
-            a = std::max(a, tte.score);
+        if (test->type == pv)             // PV Node, return the score.
+            return test->score;
+        else if (test->type == cut)       // Cut Node, adjust alpha.
+            a = std::max(a, test->score);
         else                            // All Node, adjust beta.
-            b = std::min(b, tte.score);
+            b = std::min(b, test->score);
 
         // If an early cutoff is caused by the entry, return it's score.
         if (a >= b)
-            return tte.score;
+            return test->score;
 
-        pv_move = tte.best;
+        pv_move = test->best;
     }
-    // If no transposition is found, look for a principle variation.
-    else if (d > 1 && pvlist[d - 1].key == s.key)
-        pv_move = pvlist[d - 1].move;
 
     // Evaluate leaf nodes.
     if (d == 0)
@@ -91,6 +88,15 @@ int negamax(State & s, int d, int alpha, int beta)
     // Check if the position is checkmate/stalemate.
     if (mlist.size() == 0)
         return s.check() ? Checkmate : Stalemate;
+
+    if (NT == pv && d > 1)
+    {
+        if (pvlist[d - 1].key == s.key)
+            pv_move = pvlist[d - 1].move;
+        else
+            ;
+            // Internal Iterative Deepening
+    }
 
     // Extract the best move to the front and sort the remaining moves.
     mlist.extract(pv_move);
@@ -136,6 +142,7 @@ int negamax(State & s, int d, int alpha, int beta)
         a = std::max(a, best);
         if (a >= b)                        // Alpha-Beta pruning.
         {   
+            a = b;
             // If a quiet move caused a beta cut off, store as a killer move.
             if (is_quiet(m) && m != killers[glist.ply()][0])
             {
@@ -146,19 +153,14 @@ int negamax(State & s, int d, int alpha, int beta)
         }
     }
 
-    // Store information to the TableEntry reference.
-    // Current method is to always replace.
-    tte.best  = best_move;
-    tte.score = best;
-    tte.type  = best <= alpha ? all : best >= b ? cut : pv;
-    tte.depth = d;
-    tte.key   = s.key;
+    // Store in transposition table, using depth first replacement.
+    ttable.store(s.key, best_move, a <= alpha ? all : a >= b ? cut : pv, d, a);
 
-    // Store principle variation in the pvlist.
-    if (tte.type == pv)
+    // Store principle variation if alpha was improved.
+    if (a > alpha && a < b)
         pvlist[d] = PV(best_move, s.key);
 
-    return best;                           // Fail-Soft alpha beta score.
+    return a;                           // Fail-Hard alpha beta score.
 }
 
 Move search(State & s)
@@ -197,10 +199,15 @@ Move search(State & s)
             c.make(it->move);
             glist.push(it->move, c.key);
 
+            //it->score = -negamax<pv>(c, d - 1, Neg_inf, -a);
             if (it->move == candidates.back().move)
                 it->score = -negamax<pv>(c, d - 1, Neg_inf, -a);
             else
-                it->score = -negamax<cut>(c, d - 1, Neg_inf, -a);
+            {
+                it->score = -negamax<cut>(c, d - 1, -(a + 1), -a);
+                if (it->score > a)
+                    it->score = -negamax<pv>(c, d - 1, Neg_inf, -a);
+            }
 
             --glist;
             a = std::max(a, it->score);
