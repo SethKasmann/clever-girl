@@ -33,6 +33,19 @@ public:
 	{
 		return table[key % table.capacity()];
 	}
+	TableEntry& operator[](U64 key)
+	{
+		return table[key % table.capacity()];
+	}
+	/*
+	bool contains(U64 key, int depth) const
+	{
+		int i = key % table.capacity();
+		if (table[i].key == key && table[i].)
+	    return table[key % table.capacity()].key == key
+	        && table[key % table.capacity]
+	}
+	*/
 	void clear()
 	{
 		table.clear();
@@ -44,14 +57,14 @@ public:
 	}
 	void store(U64 key, Move best, NodeType type, int depth, int score)
 	{
-		TableEntry& at = get(key);
-		if (at.depth <= depth)
+		int i = key % table.capacity();
+		if (table[i].depth <= depth)
 		{
-			at.key   = key;
-			at.best  = best;
-			at.type  = type;
-		    at.depth = depth;
-		    at.score = score;
+			table[i].key   = key;
+			table[i].best  = best;
+			table[i].type  = type;
+			table[i].depth = depth;
+			table[i].score = score;
 		}
 	}
 private:

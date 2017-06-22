@@ -7,7 +7,7 @@ static PV pvlist[Max_ply];
 static Move killers[Max_ply][Killer_size];
 GameList glist;
 
-int qsearch(State & s, int d, int alpha, int beta)
+int qsearch(State& s, int d, int alpha, int beta)
 {
     int qscore = evaluate(s);
 
@@ -114,15 +114,17 @@ int negamax(State & s, int d, int alpha, int beta)
 
         // Scout alrogithm. Search pv_move with a full window.
         if (m == pv_move && NT == pv)
-            val = -negamax(c, d - 1, -b, -a);
+            val = -negamax<pv>(c, d - 1, -b, -a);
         else
         {
             // Search all other nodes with a full window.
-            val = -negamax(c, d - 1, -(a + 1), -a);
+            val = NT == cut ? -negamax<all>(c, d - 1, -(a + 1), -a)
+                            : -negamax<cut>(c, d - 1, -(a + 1), -a);
+
             // If an alpha improvement caused fail high, research using
             // a full window.
             if (a < val && b > val)
-                val = -negamax(c, d - 1, -b, -a);
+                val = -negamax<pv>(c, d - 1, -b, -a);
         }
 
         --glist;                           // Remove move from gamelist.
@@ -194,13 +196,12 @@ Move search(State & s)
             std::memmove(&c, &s, sizeof s);
             c.make(it->move);
             glist.push(it->move, c.key);
-  /*
-            if it->move == candidates.back()
-                it->score = -negamax<pv>(c, d - 1, Neg_inf, -a)
+
+            if (it->move == candidates.back().move)
+                it->score = -negamax<pv>(c, d - 1, Neg_inf, -a);
             else
-                it->score = -negamax<cut>(c, d - 1, Neg_inf, -a)
-            */
-            it->score = -negamax(c, d - 1, Neg_inf, -a);
+                it->score = -negamax<cut>(c, d - 1, Neg_inf, -a);
+
             --glist;
             a = std::max(a, it->score);
         }
