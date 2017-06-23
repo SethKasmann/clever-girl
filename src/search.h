@@ -68,13 +68,19 @@ private:
     History* r;
 };
 
-struct Candidate
+struct RootMove
 {
-    Candidate(Move m, int s) : move(m), score(s)
+    RootMove() : move(No_move), score(0)
     {}
-    bool operator<(const Candidate& c) const
+    RootMove(Move m, int s) : move(m), score(s)
+    {}
+    bool operator<(const RootMove& c) const
     {
         return score < c.score;
+    }
+    bool operator>(const RootMove& c) const
+    {
+        return score > c.score;
     }
     Move move;
     int score;
@@ -88,8 +94,17 @@ struct PV
     U64 key;
 };
 
+struct SearchInfo
+{
+    int time[Player_size], inc[Player_size];
+    int moves_to_go, depth, nodes, mate, move_time;
+    bool infinite, ponder;
+    std::vector<Move> sm;
+};
+
 extern GameList glist;
-Move search(State & s);
+void setup_search(State& s, SearchInfo& si);
+Move search(State& s);
 void search_init();
 
 #endif  

@@ -163,63 +163,84 @@ int negamax(State & s, int d, int alpha, int beta)
     return a;                           // Fail-Hard alpha beta score.
 }
 
-Move search(State & s)
+Move search(State & s, std::vector<RootMove>& rmoves)
 {
+    std::vector<RootMove>::iterator it;
+    State c;
+    int a, d;
     const int depth = 6; // Depth to search. Will adjust this later.
-    int a, d, i;
 
-    MoveList mlist;
-    push_moves(s, &mlist);
-
-    if (mlist.size() == 0)
+    if (rmoves.empty())
     {
         std::cout << "0000" << '\n';
         return No_move;
     }
 
-    mlist.sort();
-
-    std::vector<Candidate> candidates;
-    std::vector<Candidate>::iterator it;
-
-    while (mlist.size() > 0)
-        candidates.insert(candidates.begin() ,Candidate(mlist.pop(), 0));
-
-    State c;
-    Move m;
-    // Need to check and return a null move if it's checkmate/stalemate.
-
     // Iterative deepening.
     for (d = 1; d <= depth; ++d)
     {
         a = Neg_inf;
-        for (it = candidates.end() - 1; it >= candidates.begin(); --it)
+        // Reverse sort to bring the best moves to the front.
+        std::stable_sort(rmoves.begin(), rmoves.end(), std::greater<RootMove>());
+        for (it = rmoves.begin(); it != rmoves.end(); ++it)
         {
-            std::memmove(&c, &s, sizeof s);
-            c.make(it->move);
-            glist.push(it->move, c.key);
+            std::memmove(&c, &s, sizeof s); // Copy current state.
+            c.make(it->move);               // Make move.
+            glist.push(it->move, c.key);    // Push new move to the game list.
 
-            //it->score = -negamax<pv>(c, d - 1, Neg_inf, -a);
-            if (it->move == candidates.back().move)
+            // Search PV with a full window.
+            if (it == rmoves.begin())
                 it->score = -negamax<pv>(c, d - 1, Neg_inf, -a);
             else
             {
+                // Search other nodes with a null window.
                 it->score = -negamax<cut>(c, d - 1, -(a + 1), -a);
+                // Perform a research on fail high.
                 if (it->score > a)
                     it->score = -negamax<pv>(c, d - 1, Neg_inf, -a);
             }
-
             --glist;
-            a = std::max(a, it->score);
+            a = std::max(a, it->score);     // Update alpha.
         }
-        std::stable_sort(candidates.begin(), candidates.end());
     }
 
-    s.make(candidates.back().move);
-    glist.push_root(candidates.back().move, s.key);
-    std::cout << search_nodes << '\n';
-    std::cout << table_hits << '\n';
-    return candidates.back().move;
+    // After search is complete, make the best move.
+    RootMove best = *std::max_element(rmoves.begin(), rmoves.end());
+    s.make(best.move);
+    glist.push_root(best.move, s.key);
+    std::cout << s;
+    std::cout << to_string(best.move) << '\n';
+    return best.move;
+}
+
+void setup_search(State& s, SearchInfo& si)
+{
+    std::vector<RootMove> rmoves;
+    RootMove r;
+    MoveList mlist;
+
+    // Initialize only certain root moves if specified by the uci.
+    if (!si.sm.empty())
+    {
+        for (std::vector<Move>::iterator it = si.sm.begin(); it != si.sm.end(); ++it)
+        {
+            r.move  = *it;
+            r.score = get_score(*it);
+            rmoves.push_back(r);
+        }
+    }
+    // Initialize all possible root moves.
+    else
+    {
+        push_moves(s, &mlist);
+        while (mlist.size() > 0)
+        {
+            r.move  = mlist.pop();
+            r.score = get_score(r.move);
+            rmoves.push_back(r);
+        }
+    }
+    search(s, rmoves);
 }
 
 void search_init()
