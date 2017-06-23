@@ -1,15 +1,76 @@
 #include "uci.h"
 
+// Check if a move given by the uci is valid.
+Move get_uci_move(std::string & token, State & s)
+{
+    MoveList mlist;
+    Move m;
+
+    token.erase(std::remove(token.begin(), token.end(), ','),
+                    token.end());
+    push_moves(s, &mlist);
+    while (mlist.size() > 0)
+    {
+        m = mlist.pop();
+        if (to_string(m) == token)
+            return m;
+        if (mlist.size() == 0)
+            return No_move;
+    }
+    return No_move;
+}
+
 void go(std::istringstream & is, State & s)
 {
-    std::cout << to_string(search(s)) << '\n';
-    std::cout << s;
+    std::string token;
+    SearchInfo search_info;
+    Move m;
+
+    is >> token;
+
+    if (token == "searchmoves")
+    {
+        while (is >> token)
+        {
+            m = get_uci_move(token, s);
+            if (m != No_move)
+                search_info.sm.push_back(m);
+            else
+            {
+                std::cout << "illegal move found: " << token << '\n';
+                return;
+            }
+        }
+    }
+    else if (token == "ponder")
+        search_info.ponder = true;
+    else if (token == "wtime")
+        is >> search_info.time[white];
+    else if (token == "btime")
+        is >> search_info.time[black];
+    else if (token == "winc")
+        is >> search_info.inc[white];
+    else if (token == "binc")
+        is >> search_info.inc[black];
+    else if (token == "movestogo")
+        is >> search_info.moves_to_go;
+    else if (token == "depth")
+        is >> search_info.depth;
+    else if (token == "nodes")
+        is >> search_info.nodes;
+    else if (token == "mate")
+        is >> search_info.mate;
+    else if (token == "movetime")
+        is >> search_info.move_time;
+    else if (token == "infinite")
+        search_info.infinite = true;
+
+    setup_search(s, search_info);
 }
 
 void position(std::istringstream & is, State & s)
 {
     std::string token, fen;
-    MoveList mlist;
     Move m;
     bool start_flag = false;
 
@@ -36,26 +97,17 @@ void position(std::istringstream & is, State & s)
 
     while (is >> token)
     {
-        token.erase(std::remove(token.begin(), token.end(), ','), 
-                    token.end());
-        push_moves(s, &mlist);
-        while (mlist.size() > 0)
+        m = get_uci_move(token, s);
+        if (m == No_move)
         {
-            m = mlist.pop();
-            if (to_string(m) == token)
-            {
-                // Only make moves if the start flag is true.
-                s.make(m);
-                glist.push(m, s.key);
-                break;
-            }
-            if (mlist.size() == 0)
-            {
-                std::cout << "illegal move found: " << token << '\n';
-                return;
-            }
+            std::cout << "illegal move found: " << token << '\n';
+            return;
         }
-        mlist.clear();
+        else
+        {
+            s.make(m);
+            glist.push(m, s.key);
+        }
     }
     // If start flag is false, initialize board state with fen string.
     if (!start_flag)
