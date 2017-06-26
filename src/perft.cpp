@@ -68,11 +68,7 @@ void perft(std::string & fen, int depth)
 	nodes = 0;
 	State s(fen);
 	std::cout << s;
-	Timer::start_clock("perft");
 	perft_tree(s, depth);
-	const float T = Timer::clock_time("perft")/1000.0;
-	std::cout << "Time:" << T << '\n'
-			  << "NPS :" << nodes/T << '\n';
 }
 
 void perft_tree(State & s, int depth)

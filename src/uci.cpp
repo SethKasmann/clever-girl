@@ -57,7 +57,7 @@ void go(std::istringstream & is, State & s)
     else if (token == "depth")
         is >> search_info.depth;
     else if (token == "nodes")
-        is >> search_info.nodes;
+        is >> search_info.max_nodes;
     else if (token == "mate")
         is >> search_info.mate;
     else if (token == "movetime")
@@ -65,6 +65,13 @@ void go(std::istringstream & is, State & s)
     else if (token == "infinite")
         search_info.infinite = true;
 
+    search_info.start_time = system_time();
+    if (!search_info.move_time)
+        search_info.move_time = allocate_time(search_info.time[s.us], 
+                                              glist.ply() / 2, 
+                                              search_info.moves_to_go);
+    std::cout << search_info.time[s.us] << '\n';
+    std::cout << search_info.move_time << '\n';
     setup_search(s, search_info);
 }
 

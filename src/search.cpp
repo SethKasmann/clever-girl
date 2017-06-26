@@ -7,8 +7,36 @@ static PV pvlist[Max_ply];
 static Move killers[Max_ply][Killer_size];
 GameList glist;
 
-int qsearch(State& s, int d, int alpha, int beta)
+bool terminate_check(SearchInfo& si)
 {
+    // Check to see if we have run out of time.
+    if (system_time() - si.start_time >= si.move_time)
+    {
+        si.quit = true;
+        return true;
+    }
+
+    // Check for command from gui.
+    std::string command, token;
+    std::getline(std::cin, command);
+    std::istringstream is(command);
+    is >> std::skipws >> token;
+
+    if (token == "stop" || token == "quit")
+    {
+        si.quit = true;
+        return true;
+    }
+    return false;
+}
+
+int qsearch(State& s, SearchInfo& si, int d, int alpha, int beta)
+{
+    if (si.quit || (si.nodes % 3000 == 0 && terminate_check(si)))
+        return 0;
+
+    si.nodes++;
+
     int qscore = evaluate(s);
 
     // If a beta cutoff is found, return the qscore.
@@ -35,7 +63,7 @@ int qsearch(State& s, int d, int alpha, int beta)
             break;
         std::memmove(&c, &s, sizeof s);          // Copy current state.
         c.make(m);                               // Make move.
-        val = -qsearch(c, d - 1, -beta, -alpha); // Recursive call to qsearch.
+        val = -qsearch(c, si, d - 1, -beta, -alpha); // Recursive call to qsearch.
         if (val >= beta)                         // Alpha-Beta pruning.
             return beta;
         alpha = std::max(alpha, val);
@@ -44,7 +72,7 @@ int qsearch(State& s, int d, int alpha, int beta)
 }
 
 template<NodeType NT>
-int negamax(State & s, int d, int alpha, int beta)
+int negamax(State & s, SearchInfo& si, int d, int alpha, int beta)
 {
     search_nodes += 1;
     int a = alpha;
@@ -52,6 +80,10 @@ int negamax(State & s, int d, int alpha, int beta)
     Move pv_move = No_move;
     int i;
 
+    if (si.quit || (si.nodes % 3000 == 0 && terminate_check(si)))
+        return 0;
+
+    si.nodes++;
     // Check for draw.
     if (glist.repeat() || s.fmr > 99)
         return Draw;
@@ -79,7 +111,7 @@ int negamax(State & s, int d, int alpha, int beta)
 
     // Evaluate leaf nodes.
     if (d == 0)
-        return qsearch(s, d, a, b);
+        return qsearch(s, si, d, a, b);
 
     // Generate moves and create the movelist.
     MoveList mlist;
@@ -120,17 +152,17 @@ int negamax(State & s, int d, int alpha, int beta)
 
         // Scout alrogithm. Search pv_move with a full window.
         if (m == pv_move && NT == pv)
-            val = -negamax<pv>(c, d - 1, -b, -a);
+            val = -negamax<pv>(c, si, d - 1, -b, -a);
         else
         {
             // Search all other nodes with a full window.
-            val = NT == cut ? -negamax<all>(c, d - 1, -(a + 1), -a)
-                            : -negamax<cut>(c, d - 1, -(a + 1), -a);
+            val = NT == cut ? -negamax<all>(c, si, d - 1, -(a + 1), -a)
+                            : -negamax<cut>(c, si, d - 1, -(a + 1), -a);
 
             // If an alpha improvement caused fail high, research using
             // a full window.
             if (a < val && b > val)
-                val = -negamax<pv>(c, d - 1, -b, -a);
+                val = -negamax<pv>(c, si, d - 1, -b, -a);
         }
 
         --glist;                           // Remove move from gamelist.
@@ -163,7 +195,7 @@ int negamax(State & s, int d, int alpha, int beta)
     return a;                           // Fail-Hard alpha beta score.
 }
 
-Move search(State & s, std::vector<RootMove>& rmoves)
+Move search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
 {
     std::vector<RootMove>::iterator it;
     State c;
@@ -188,20 +220,31 @@ Move search(State & s, std::vector<RootMove>& rmoves)
             c.make(it->move);               // Make move.
             glist.push(it->move, c.key);    // Push new move to the game list.
 
+            it->prev_score = it->score;
             // Search PV with a full window.
             if (it == rmoves.begin())
-                it->score = -negamax<pv>(c, d - 1, Neg_inf, -a);
+                it->score = -negamax<pv>(c, si, d - 1, Neg_inf, -a);
             else
             {
                 // Search other nodes with a null window.
-                it->score = -negamax<cut>(c, d - 1, -(a + 1), -a);
+                it->score = -negamax<cut>(c, si, d - 1, -(a + 1), -a);
                 // Perform a research on fail high.
                 if (it->score > a)
-                    it->score = -negamax<pv>(c, d - 1, Neg_inf, -a);
+                    it->score = -negamax<pv>(c, si, d - 1, Neg_inf, -a);
             }
             --glist;
+            if (si.quit)
+                break;
             a = std::max(a, it->score);     // Update alpha.
         }
+        if (si.quit)
+            break;
+    }
+    // If the search was interrupted, use scores from previous iteration.
+    if (si.quit)
+    {
+        for (it = rmoves.begin(); it != rmoves.end(); ++it)
+            it->score = it->prev_score;
     }
 
     // After search is complete, make the best move.
@@ -240,7 +283,7 @@ void setup_search(State& s, SearchInfo& si)
             rmoves.push_back(r);
         }
     }
-    search(s, rmoves);
+    search(s, si, rmoves);
 }
 
 void search_init()

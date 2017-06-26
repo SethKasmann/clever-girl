@@ -3,11 +3,13 @@
 
 #include <algorithm>
 #include <stack>
+#include <sstream>
 #include "evaluation.h"
 #include "move_generator.h"
 #include "state.h"
 #include "types.h"
 #include "transpositiontable.h"
+#include "timer.h"
 
 extern int search_nodes;
 extern int table_hits;
@@ -70,9 +72,9 @@ private:
 
 struct RootMove
 {
-    RootMove() : move(No_move), score(0)
+    RootMove() : move(No_move), score(0), prev_score(0)
     {}
-    RootMove(Move m, int s) : move(m), score(s)
+    RootMove(Move m, int s) : move(m), score(s), prev_score(s)
     {}
     bool operator<(const RootMove& c) const
     {
@@ -84,6 +86,7 @@ struct RootMove
     }
     Move move;
     int score;
+    int prev_score;
 };
 
 struct PV
@@ -96,15 +99,18 @@ struct PV
 
 struct SearchInfo
 {
+    SearchInfo() : move_time(0), nodes(0), moves_to_go(0), quit(false)
+    {}
     int time[Player_size], inc[Player_size];
-    int moves_to_go, depth, nodes, mate, move_time;
-    bool infinite, ponder;
+    int moves_to_go, depth, max_nodes, nodes, mate, move_time;
+    int64_t start_time;
+    bool infinite, ponder, quit;
     std::vector<Move> sm;
 };
 
 extern GameList glist;
 void setup_search(State& s, SearchInfo& si);
-Move search(State& s);
+Move search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves);
 void search_init();
 
 #endif  
