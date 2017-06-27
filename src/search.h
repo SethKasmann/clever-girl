@@ -4,15 +4,13 @@
 #include <algorithm>
 #include <stack>
 #include <sstream>
+#include <string>
 #include "evaluation.h"
 #include "move_generator.h"
 #include "state.h"
 #include "types.h"
 #include "transpositiontable.h"
 #include "timer.h"
-
-extern int search_nodes;
-extern int table_hits;
 
 struct History
 {
@@ -91,7 +89,7 @@ struct RootMove
 
 struct PV
 {
-    PV() {};
+    PV() : move(No_move), key(0) {}
     PV(Move m, U64 k) : move(m), key(k) {}
     Move move;
     U64 key;
@@ -100,7 +98,10 @@ struct PV
 struct SearchInfo
 {
     SearchInfo() : move_time(0), nodes(0), moves_to_go(0), quit(false)
-    {}
+    {
+        time[white] = 0;
+        time[black] = 0;
+    }
     int time[Player_size], inc[Player_size];
     int moves_to_go, depth, max_nodes, nodes, mate, move_time;
     int64_t start_time;

@@ -1,38 +1,27 @@
-#include "search.h"
-
-int search_nodes = 0;
-int table_hits = 0;
+#include "search.h" 
 
 static PV pvlist[Max_ply];
 static Move killers[Max_ply][Killer_size];
 GameList glist;
 
-bool terminate_check(SearchInfo& si)
+bool interrupt(SearchInfo& si)
 {
     // Check to see if we have run out of time.
     if (system_time() - si.start_time >= si.move_time)
     {
+        std::cout << "quitting...\n";
         si.quit = true;
         return true;
     }
 
-    // Check for command from gui.
-    std::string command, token;
-    std::getline(std::cin, command);
-    std::istringstream is(command);
-    is >> std::skipws >> token;
-
-    if (token == "stop" || token == "quit")
-    {
-        si.quit = true;
-        return true;
-    }
+    // The GUI should be able to send quit commands as well.
+    // I may need multiple threads for this.
     return false;
 }
 
 int qsearch(State& s, SearchInfo& si, int d, int alpha, int beta)
 {
-    if (si.quit || (si.nodes % 3000 == 0 && terminate_check(si)))
+    if (si.quit || (si.nodes % 3000 == 0 && interrupt(si)))
         return 0;
 
     si.nodes++;
@@ -74,19 +63,21 @@ int qsearch(State& s, SearchInfo& si, int d, int alpha, int beta)
 template<NodeType NT>
 int negamax(State & s, SearchInfo& si, int d, int alpha, int beta)
 {
-    search_nodes += 1;
     int a = alpha;
     int b = beta;
     Move pv_move = No_move;
     int i;
 
-    if (si.quit || (si.nodes % 3000 == 0 && terminate_check(si)))
+    if (si.quit || (si.nodes % 3000 == 0 && interrupt(si)))
         return 0;
 
     si.nodes++;
     // Check for draw.
     if (glist.repeat() || s.fmr > 99)
+    {
+        //std::cout << "found a draw\n";
         return Draw;
+    }
 
     // Get a reference to the correct transposition table location.
     const TableEntry* test = ttable.probe(s.key);
@@ -94,9 +85,12 @@ int negamax(State & s, SearchInfo& si, int d, int alpha, int beta)
     // Check if table entry is valid and matches the position key.
     if (test->key == s.key && test->depth >= d)
     {
-        table_hits++;
+        std::cout << "TT hit " << test->key << " " << s.key << " " << test->depth << '\n';
         if (test->type == pv)             // PV Node, return the score.
+        {
+            std::cout << "returning PV...\n";
             return test->score;
+        }
         else if (test->type == cut)       // Cut Node, adjust alpha.
             a = std::max(a, test->score);
         else                            // All Node, adjust beta.
@@ -104,7 +98,10 @@ int negamax(State & s, SearchInfo& si, int d, int alpha, int beta)
 
         // If an early cutoff is caused by the entry, return it's score.
         if (a >= b)
+        {
+            std::cout << "TT cutoff\n";
             return test->score;
+        }
 
         pv_move = test->best;
     }
@@ -199,8 +196,8 @@ Move search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
 {
     std::vector<RootMove>::iterator it;
     State c;
+    RootMove best;
     int a, d;
-    const int depth = 6; // Depth to search. Will adjust this later.
 
     if (rmoves.empty())
     {
@@ -209,7 +206,7 @@ Move search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
     }
 
     // Iterative deepening.
-    for (d = 1; d <= depth; ++d)
+    for (d = 1; !si.quit; ++d)
     {
         a = Neg_inf;
         // Reverse sort to bring the best moves to the front.
@@ -239,16 +236,29 @@ Move search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
         }
         if (si.quit)
             break;
-    }
-    // If the search was interrupted, use scores from previous iteration.
-    if (si.quit)
-    {
-        for (it = rmoves.begin(); it != rmoves.end(); ++it)
-            it->score = it->prev_score;
+        best = *std::max_element(rmoves.begin(), rmoves.end());
+        if (si.quit)
+            std::cout << "si.quit got changed to true...\n";
+
+        // Print info to gui.
+        std::cout << "info "
+                  << "depth " << d
+                  << " time " << system_time() - si.start_time
+                  << " nodes " << si.nodes
+                  << " nps " << si.nodes / (system_time() - si.start_time + 1) * 1000
+                  << " score cp " << best.score
+                  << " pv ";
+        std::cout << to_string(best.move) << " ";
+        for (int i = 1; i < d; ++i)
+        {
+            std::cout << to_string(pvlist[i].move) << " ";
+        }
+        std::cout << '\n';
+
+        // Reset node count.
+        si.nodes = 0;
     }
 
-    // After search is complete, make the best move.
-    RootMove best = *std::max_element(rmoves.begin(), rmoves.end());
     s.make(best.move);
     glist.push_root(best.move, s.key);
     std::cout << s;
@@ -283,6 +293,7 @@ void setup_search(State& s, SearchInfo& si)
             rmoves.push_back(r);
         }
     }
+    ttable.resize(ttable.size());
     search(s, si, rmoves);
 }
 

@@ -41,6 +41,10 @@ public:
 	{
 		table.clear();
 	}
+	int size() const
+	{
+		return table.size();
+	}
 	void resize(int size_mb)
 	{
 		table.clear();
