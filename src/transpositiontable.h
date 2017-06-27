@@ -39,7 +39,14 @@ public:
 	}
 	void clear()
 	{
-		table.clear();
+		for (std::vector<TableEntry>::iterator it = table.begin(); it != table.end(); ++it)
+		{
+			it->key = 0;
+			it->best = No_move;
+			it->type = 0;
+			it->depth = 0;
+			it->score = 0;
+		}
 	}
 	int size() const
 	{

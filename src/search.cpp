@@ -293,7 +293,7 @@ void setup_search(State& s, SearchInfo& si)
             rmoves.push_back(r);
         }
     }
-    ttable.resize(ttable.size());
+    ttable.clear();
     search(s, si, rmoves);
 }
 
