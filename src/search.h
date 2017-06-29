@@ -11,6 +11,7 @@
 #include "types.h"
 #include "transpositiontable.h"
 #include "timer.h"
+#include "misc.h"
 
 struct History
 {
@@ -97,7 +98,7 @@ struct PV
 
 struct SearchInfo
 {
-    SearchInfo() : move_time(0), nodes(0), moves_to_go(0), quit(false)
+    SearchInfo() : move_time(0), nodes(0), moves_to_go(0), quit(false), infinite(false)
     {
         time[white] = 0;
         time[black] = 0;

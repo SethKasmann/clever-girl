@@ -7,11 +7,20 @@ GameList glist;
 bool interrupt(SearchInfo& si)
 {
     // Check to see if we have run out of time.
-    if (system_time() - si.start_time >= si.move_time)
+    if (system_time() - si.start_time >= si.move_time && !si.infinite)
     {
-        std::cout << "quitting...\n";
         si.quit = true;
         return true;
+    }
+
+    if (input_waiting())
+    {
+        std::string command(get_input());
+        if (command == "quit" || command == "stop")
+        {
+            si.quit = true;
+            return true;
+        }
     }
 
     // The GUI should be able to send quit commands as well.
@@ -85,12 +94,8 @@ int negamax(State & s, SearchInfo& si, int d, int alpha, int beta)
     // Check if table entry is valid and matches the position key.
     if (test->key == s.key && test->depth >= d)
     {
-        std::cout << "TT hit " << test->key << " " << s.key << " " << test->depth << '\n';
         if (test->type == pv)             // PV Node, return the score.
-        {
-            std::cout << "returning PV...\n";
             return test->score;
-        }
         else if (test->type == cut)       // Cut Node, adjust alpha.
             a = std::max(a, test->score);
         else                            // All Node, adjust beta.
@@ -98,10 +103,7 @@ int negamax(State & s, SearchInfo& si, int d, int alpha, int beta)
 
         // If an early cutoff is caused by the entry, return it's score.
         if (a >= b)
-        {
-            std::cout << "TT cutoff\n";
             return test->score;
-        }
 
         pv_move = test->best;
     }
@@ -237,32 +239,31 @@ Move search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
         if (si.quit)
             break;
         best = *std::max_element(rmoves.begin(), rmoves.end());
-        if (si.quit)
-            std::cout << "si.quit got changed to true...\n";
 
+        std::string pv_string = to_string(best.move);
+        for (int i = 1; i < d; ++i)
+        {
+            pv_string += " ";
+            pv_string += to_string(pvlist[i].move);
+        }
         // Print info to gui.
         std::cout << "info "
                   << "depth " << d
+                  << " score cp " << best.score
                   << " time " << system_time() - si.start_time
                   << " nodes " << si.nodes
                   << " nps " << si.nodes / (system_time() - si.start_time + 1) * 1000
-                  << " score cp " << best.score
-                  << " pv ";
-        std::cout << to_string(best.move) << " ";
-        for (int i = 1; i < d; ++i)
-        {
-            std::cout << to_string(pvlist[i].move) << " ";
-        }
-        std::cout << '\n';
+                  << " pv " << pv_string << '\n';
 
         // Reset node count.
         si.nodes = 0;
     }
+    std::cout << "bestmove " << to_string(best.move) << '\n';
 
     s.make(best.move);
     glist.push_root(best.move, s.key);
-    std::cout << s;
-    std::cout << to_string(best.move) << '\n';
+    //std::cout << s;
+    //std::cout << to_string(best.move) << '\n';
     return best.move;
 }
 

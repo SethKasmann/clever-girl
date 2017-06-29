@@ -1,4 +1,5 @@
 #include "uci.h"
+#include <fstream>
 
 // Check if a move given by the uci is valid.
 Move get_uci_move(std::string & token, State & s)
@@ -117,7 +118,6 @@ void position(std::istringstream & is, State & s)
     // If start flag is false, initialize board state with fen string.
     if (!start_flag)
         s = State(fen);
-    std::cout << s;
 }
 
 void set_option(std::string & name, std::string & value)
@@ -140,7 +140,9 @@ void uci()
         std::getline(std::cin, command);
         std::istringstream is(command);
         is >> std::skipws >> token;
-
+        std::ofstream file("junk/uci.txt", std::ios::app);
+        file << command << std::endl;
+        file.close();
         if (token == "quit")
             break;
         else if (token == "isready")
@@ -151,7 +153,7 @@ void uci()
                       << "id author Seth Kasmann\n"
                       << "option name Hash type spin default 1 min 1 max 128\n";
             ttable.resize(128);
-            std::cout << "uci ok\n";
+            std::cout << "uciok\n";
         }
         else if (token == "setoption")
         {

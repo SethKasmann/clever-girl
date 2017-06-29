@@ -26,16 +26,16 @@ class TranspositionTable
 public:
 	TranspositionTable()
 	{
-		table.reserve(Default_size);
+		table.resize(Default_size);
 	}
 	~TranspositionTable() {}
 	const TableEntry* probe(U64 key) const
 	{
-		return table.data() + key % table.capacity();
+		return table.data() + key % table.size();
 	}
 	TableEntry& operator[](U64 key)
 	{
-		return table[key % table.capacity()];
+		return table[key % table.size()];
 	}
 	void clear()
 	{
@@ -43,7 +43,7 @@ public:
 		{
 			it->key = 0;
 			it->best = No_move;
-			it->type = 0;
+			it->type = pv;
 			it->depth = 0;
 			it->score = 0;
 		}
@@ -59,7 +59,7 @@ public:
 	}
 	void store(U64 key, Move best, NodeType type, int depth, int score)
 	{
-		int i = key % table.capacity();
+		int i = key % table.size();
 		if (table[i].depth < depth)
 		{
 			table[i].key   = key;

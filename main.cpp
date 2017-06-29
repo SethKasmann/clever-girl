@@ -7,7 +7,7 @@
 #include <string>
 #include <sstream>
 #include "search.h"
-#include "src/book.c"
+//#include "src/book.c"
 #include "perft.h"
 #include "zobrist.h"
 #include "evaluation.h"
@@ -35,6 +35,7 @@ void init()
 }
 
 // Currently unused function to test opening book
+/*
 void choose(State & s)
 {
     strcpy(EPD, s.get_EPD());
@@ -52,8 +53,9 @@ void choose(State & s)
         printf("\n\n");
     }
 }
+*/
 
-int main()
+int main(int argc, char* argv[])
 {
     init();
     //perft_test();
