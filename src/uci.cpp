@@ -141,14 +141,25 @@ void uci()
         std::istringstream is(command);
         is >> std::skipws >> token;
         std::ofstream file("junk/uci.txt", std::ios::app);
-        file << command << std::endl;
+        file << "gui: " << command << std::endl;
         file.close();
         if (token == "quit")
             break;
         else if (token == "isready")
+        {
+            std::ofstream file("junk/uci.txt", std::ios::app);
+            file << "eng: readyok" << std::endl;
+            file.close();
             std::cout << "readyok\n";
+        }
         else if (token == "uci")
         {
+            std::ofstream file("junk/uci.txt", std::ios::app);
+            file << "eng: " << "id name Clever Girl" << std::endl
+                 << "eng: " << "id author Seth Kasmann" << std::endl
+                 << "eng: " << "option name Hash type spin default 1 min 1 max 128" << std::endl
+                 << "eng: " << "uciok" << std::endl;
+            file.close();
             std::cout << "id name Clever Girl\n"
                       << "id author Seth Kasmann\n"
                       << "option name Hash type spin default 1 min 1 max 128\n";
@@ -172,5 +183,7 @@ void uci()
         else if (token == "go")
             go(is, root);
 
+        //std::cin.clear();
+        //std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
     }
 }

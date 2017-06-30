@@ -1,4 +1,5 @@
 #include "search.h" 
+#include <fstream>
 
 static PV pvlist[Max_ply];
 static Move killers[Max_ply][Killer_size];
@@ -247,6 +248,23 @@ Move search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
             pv_string += to_string(pvlist[i].move);
         }
         // Print info to gui.
+
+        std::ofstream file("junk/uci.txt", std::ios::app);
+        file << "eng: info depth ";
+        file << std::to_string(d);
+        file << " score cp ";
+        file << std::to_string(best.score);
+        file << " time ";
+        file << std::to_string(system_time() - si.start_time);
+        file << " nodes ";
+        file << std::to_string(si.nodes);
+        file << " nps ";
+        file << std::to_string(si.nodes / (system_time() - si.start_time + 1) * 1000);
+        file << " pv ";
+        file << pv_string;
+        file << std::endl;
+        file.close();
+        
         std::cout << "info "
                   << "depth " << d
                   << " score cp " << best.score
@@ -258,12 +276,17 @@ Move search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
         // Reset node count.
         si.nodes = 0;
     }
-    std::cout << "bestmove " << to_string(best.move) << '\n';
+    std::ofstream file("junk/uci.txt", std::ios::app);
+    file << "eng: bestmove ";
+    file << to_string(best.move);
+    file << std::endl;
+    file.close();
 
     s.make(best.move);
     glist.push_root(best.move, s.key);
     //std::cout << s;
     //std::cout << to_string(best.move) << '\n';
+    std::cout << "bestmove " << to_string(best.move) << std::endl;
     return best.move;
 }
 
