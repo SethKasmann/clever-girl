@@ -3,7 +3,7 @@
 
 const int min_time = 500; // Absolute minimum time to spend searching.
 
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#if defined(_MSC_VER)
 #include <windows.h>
 inline int64_t system_time()
 {

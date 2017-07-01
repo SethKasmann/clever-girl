@@ -69,14 +69,69 @@ inline U64 operator^(Square s, U64 u)
 // Returns the number of 1-bits.
 inline int pop_count(U64 bb)
 {
-   return __builtin_popcountll(bb); 
+// Check for Visual Studio.
+#if defined(_MSC_VER)
+   #if defined(__INTEL_COMPILER)
+      // Intel's instruction.
+      return _mm_popcnt_u64(bb);
+   #else
+      // AMD's instruction.
+      return static_cast<int>__popcnt64(bb);
+   #endif
+// Check for GCC
+#elif defined(__GNUC__)
+   return __builtin_popcountll(bb);
+#else
+   // Standard algorithm.
+   static const U64 m1 = 0x5555555555555555ull;
+   static const U64 m2 = 0x3333333333333333ull;
+   static const U64 m4 = 0x0f0f0f0f0f0f0f0full;
+   static const U64 h1 = 0x0101010101010101ull;
+   bb -= (bb >> 1) & m1;
+   bb = (bb & m2) + ((bb >> 2) & m2);
+   bb = (bb + (bb >> 4)) & m4;
+   return static_cast<int>((bb * h1) >> 56);
+#endif
 }
 
 // Returns the index of the LSB.
 inline Square get_lsb(U64 bb)
 {
+   // The 64-bit integer must not be 0 or the return is undefined.
    assert(bb);
-   return Square(__builtin_ctzll(bb));
+// Check for Visual Studio.
+#if defined(_MSC_VER)
+   #include <intrin.h>
+   unsigned int index;
+   // For 64-bit windows, we can use _BitScanForward64.
+   #if defined(_M_AMD64) || defined(__x86_64__)
+      // Scan from LSB to MSB for the first bit set.
+      _BitScanForward64(&index, bb);
+      return static_cast<Square>(index);
+   // For 32-bit windows, _BitScanForward64 is not avaliable, but can be
+   // emulated it with _BitScanForward.
+   #else
+      // Scan the first 32 bit word.
+      if (_BitScanForward(&index, bb))
+         return static_cast<Square>(index)
+      // Scan the second 32 bit word.
+      _BitScanForward(&index, bb >> 32);
+      return static_cast<Square>(index);
+   #endif
+// Check for GCC.
+#elif defined(__GNUC__)
+      // Count the trailing zeroes.
+      return static_cast<Square>(__builtin_ctzll(bb));
+#else
+      // DeBrujin Method
+      static const int DeBrujin = 0x077CB531;
+      static const int DeBrujin_table[32] =
+      {
+         0,  1,  28, 2,  29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4,  8
+         31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6,  11, 5,  10, 9
+      };
+      return static_cast<Square>(DeBrujin_table[((bb & -bb) * DeBrujin) >> 27]);
+#endif
 }
 
 inline U64 get_lsb_bb(U64 bb)
