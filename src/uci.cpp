@@ -184,7 +184,5 @@ void uci()
             position(is, root);
         else if (token == "go")
             go(is, root);
-
-        std::cout.flush();
     }
 }

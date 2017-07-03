@@ -84,10 +84,7 @@ int negamax(State & s, SearchInfo& si, int d, int alpha, int beta)
     si.nodes++;
     // Check for draw.
     if (glist.repeat() || s.fmr > 99)
-    {
-        //std::cout << "found a draw\n";
         return Draw;
-    }
 
     // Get a reference to the correct transposition table location.
     const TableEntry* test = ttable.probe(s.key);
@@ -269,7 +266,6 @@ void search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
                   << " nodes " << si.nodes
                   << " nps " << si.nodes / (system_time() - si.start_time + 1) * 1000
                   << " pv " << pv_string << '\n';
-        std::cout.flush();
 
         // Reset node count.
         si.nodes = 0;
@@ -283,7 +279,6 @@ void search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
     s.make(best.move);
     glist.push_root(best.move, s.key);
     std::cout << "bestmove " << to_string(best.move) << '\n';
-    std::cout.flush();
 }
 
 void setup_search(State& s, SearchInfo& si)
