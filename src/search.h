@@ -112,7 +112,7 @@ struct SearchInfo
 
 extern GameList glist;
 void setup_search(State& s, SearchInfo& si);
-Move search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves);
+void search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves);
 void search_init();
 
 #endif  

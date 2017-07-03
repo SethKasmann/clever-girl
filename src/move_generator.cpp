@@ -230,6 +230,7 @@ void push_moves(State & s, MoveList * mlist)
     if (ch.checks == 2)
     {
         push_king_moves(s, mlist, ch);
+        mlist->set();
         return;
     }
     else
@@ -239,7 +240,7 @@ void push_moves(State & s, MoveList * mlist)
     }
 
     check_legal(s, mlist);
-    mlist->c = mlist->e;
+    mlist->set();
 }
 
 std::ostream & operator << (std::ostream & o, const MoveList & mlist)

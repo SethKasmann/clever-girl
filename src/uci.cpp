@@ -135,6 +135,8 @@ void uci()
     State root(Start_fen);
     std::string command, token;
 
+    //std::setvbuf(stdin, NULL, _IONBF, 0);
+
     while (1)
     {
         std::getline(std::cin, command);
@@ -163,7 +165,7 @@ void uci()
             std::cout << "id name Clever Girl\n"
                       << "id author Seth Kasmann\n"
                       << "option name Hash type spin default 1 min 1 max 128\n";
-            ttable.resize(128);
+            //ttable.resize(128);
             std::cout << "uciok\n";
         }
         else if (token == "setoption")
@@ -183,7 +185,6 @@ void uci()
         else if (token == "go")
             go(is, root);
 
-        //std::cin.clear();
-        //std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        std::cout.flush();
     }
 }

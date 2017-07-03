@@ -56,6 +56,10 @@ public:
     {
         std::stable_sort(_m, c);
     }
+    void set()
+    {
+        c = e;
+    }
     void clear()
     {
         c = _m;

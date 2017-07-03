@@ -195,7 +195,7 @@ int negamax(State & s, SearchInfo& si, int d, int alpha, int beta)
     return a;                           // Fail-Hard alpha beta score.
 }
 
-Move search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
+void search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
 {
     std::vector<RootMove>::iterator it;
     State c;
@@ -203,10 +203,7 @@ Move search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
     int a, d;
 
     if (rmoves.empty())
-    {
         std::cout << "0000" << '\n';
-        return No_move;
-    }
 
     // Iterative deepening.
     for (d = 1; !si.quit; ++d)
@@ -272,6 +269,7 @@ Move search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
                   << " nodes " << si.nodes
                   << " nps " << si.nodes / (system_time() - si.start_time + 1) * 1000
                   << " pv " << pv_string << '\n';
+        std::cout.flush();
 
         // Reset node count.
         si.nodes = 0;
@@ -284,10 +282,8 @@ Move search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
 
     s.make(best.move);
     glist.push_root(best.move, s.key);
-    //std::cout << s;
-    //std::cout << to_string(best.move) << '\n';
-    std::cout << "bestmove " << to_string(best.move) << std::endl;
-    return best.move;
+    std::cout << "bestmove " << to_string(best.move) << '\n';
+    std::cout.flush();
 }
 
 void setup_search(State& s, SearchInfo& si)
