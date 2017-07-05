@@ -86,10 +86,11 @@ void push_pawn_moves(State & s, MoveList * mlist, Check & ch)
         mlist->c = mlist->_m;
     }
 
-    U64 a, push, dbl, promo, en_pass;
+    U64 a, en_pass;
     // En passant.
-    if (s.ep)
+    if (s.ep & ch.checker)
     {
+        assert(s.ep & ch.checker);
         en_pass = pawn_push[C][get_lsb(s.ep & ch.checker)] & s.empty();
         if (en_pass)
         {
@@ -156,7 +157,8 @@ void push_king_moves(State & s, MoveList * mlist, Check & ch)
 
     while (a)
     {
-        score = Score[king][s.on_square(dst, s.them)];
+        assert(s.on_square(get_lsb(a), s.them) != none);
+        score = Score[king][s.on_square(get_lsb(a), s.them)];
         mlist -> push(k, pop_lsb(a), attack, score);
     }
 

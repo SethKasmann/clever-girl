@@ -499,5 +499,11 @@ std::ostream & operator << (std::ostream & o, const State & s)
 
     o << "  A B C D E F G H\n";
 
+    o << "Color(us)" << s.us << '\n';
+    o << "Color(them)" << s.them << '\n';
+
+    print_bb(s.occ(white));
+    print_bb(s.occ(black));
+
     return o;
 }

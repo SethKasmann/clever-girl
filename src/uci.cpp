@@ -112,7 +112,7 @@ void position(std::istringstream & is, State & s)
         else
         {
             s.make(m);
-            glist.push(m, s.key);
+            glist.push_root(m, s.key);
         }
     }
     // If start flag is false, initialize board state with fen string.
@@ -135,7 +135,7 @@ void uci()
     State root(Start_fen);
     std::string command, token;
 
-    //std::setvbuf(stdin, NULL, _IONBF, 0);
+    std::setvbuf(stdin, NULL, _IONBF, 0);
 
     while (1)
     {

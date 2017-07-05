@@ -87,7 +87,6 @@ int negamax(State & s, SearchInfo& si, int d, int alpha, int beta)
         return Draw;
 
     // Get a reference to the correct transposition table location.
-    std::cout << "probing TT...\n";
     const TableEntry* test = ttable.probe(s.key);
 
     // Check if table entry is valid and matches the position key.
@@ -106,7 +105,6 @@ int negamax(State & s, SearchInfo& si, int d, int alpha, int beta)
 
         pv_move = test->best;
     }
-    std::cout << "done with TT...\n";
 
     // Evaluate leaf nodes.
     if (d == 0)
@@ -130,10 +128,8 @@ int negamax(State & s, SearchInfo& si, int d, int alpha, int beta)
     }
 
     // Extract the best move to the front and sort the remaining moves.
-    //std::cout << "pre sort\n";
     mlist.extract(pv_move);
     mlist.sort();
-    //std::cout << "post sort\n";
 
     // Confirm a killer move has been stored at this ply.
     if (killers[glist.ply()][0] != No_move) 
@@ -220,7 +216,6 @@ void search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
 
             it->prev_score = it->score;
             // Search PV with a full window.
-            ////std::cout << "in search..\n";
             if (it == rmoves.begin())
                 it->score = -negamax<pv>(c, si, d - 1, Neg_inf, -a);
             else
@@ -231,7 +226,6 @@ void search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
                 if (it->score > a)
                     it->score = -negamax<pv>(c, si, d - 1, Neg_inf, -a);
             }
-            ////std::cout << "out search..\n";
             --glist;
             if (si.quit)
                 break;
@@ -249,7 +243,6 @@ void search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
         }
         // Print info to gui.
 
-        /*
         std::ofstream file("junk/uci.txt", std::ios::app);
         file << "eng: info depth ";
         file << std::to_string(d);
@@ -272,23 +265,20 @@ void search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
                   << " time " << system_time() - si.start_time
                   << " nodes " << si.nodes
                   << " nps " << si.nodes / (system_time() - si.start_time + 1) * 1000
-                  << " pv " << pv_string << '\n';
-                  */
+                  << " pv " << pv_string << '\n' << std::flush;
 
         // Reset node count.
         si.nodes = 0;
     }
-    /*
     std::ofstream file("junk/uci.txt", std::ios::app);
     file << "eng: bestmove ";
     file << to_string(best.move);
     file << std::endl;
     file.close();
-    */
 
     s.make(best.move);
     glist.push_root(best.move, s.key);
-    std::cout << "bestmove " << to_string(best.move) << '\n';
+    std::cout << "bestmove " << to_string(best.move) << '\n' << std::flush;
 }
 
 void setup_search(State& s, SearchInfo& si)
