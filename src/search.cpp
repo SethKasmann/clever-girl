@@ -71,7 +71,7 @@ int qsearch(State& s, SearchInfo& si, int d, int alpha, int beta)
 }
 
 template<NodeType NT>
-int negamax(State & s, SearchInfo& si, int d, int alpha, int beta)
+int search(State & s, SearchInfo& si, int d, int alpha, int beta)
 {
     int a = alpha;
     int b = beta;
@@ -149,17 +149,17 @@ int negamax(State & s, SearchInfo& si, int d, int alpha, int beta)
 
         // Scout alrogithm. Search pv_move with a full window.
         if (m == pv_move && NT == pv)
-            val = -negamax<pv>(c, si, d - 1, -b, -a);
+            val = -search<pv>(c, si, d - 1, -b, -a);
         else
         {
             // Search all other nodes with a full window.
-            val = NT == cut ? -negamax<all>(c, si, d - 1, -(a + 1), -a)
-                            : -negamax<cut>(c, si, d - 1, -(a + 1), -a);
+            val = NT == cut ? -search<all>(c, si, d - 1, -(a + 1), -a)
+                            : -search<cut>(c, si, d - 1, -(a + 1), -a);
 
             // If an alpha improvement caused fail high, research using
             // a full window.
             if (a < val && b > val)
-                val = -negamax<pv>(c, si, d - 1, -b, -a);
+                val = -search<pv>(c, si, d - 1, -b, -a);
         }
 
         --glist;                           // Remove move from gamelist.
@@ -193,7 +193,7 @@ int negamax(State & s, SearchInfo& si, int d, int alpha, int beta)
     return a;                           // Fail-Hard alpha beta score.
 }
 
-void search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
+void iterative_deepening(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
 {
     std::vector<RootMove>::iterator it;
     State c;
@@ -201,7 +201,7 @@ void search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
     int a, d;
 
     if (rmoves.empty())
-        std::cout << "0000" << '\n';
+        std::cout << "bestmove 0000" << std::endl;
 
     // Iterative deepening.
     for (d = 1; !si.quit; ++d)
@@ -218,14 +218,14 @@ void search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
             it->prev_score = it->score;
             // Search PV with a full window.
             if (it == rmoves.begin())
-                it->score = -negamax<pv>(c, si, d - 1, Neg_inf, -a);
+                it->score = -search<pv>(c, si, d - 1, Neg_inf, -a);
             else
             {
                 // Search other nodes with a null window.
-                it->score = -negamax<cut>(c, si, d - 1, -(a + 1), -a);
+                it->score = -search<cut>(c, si, d - 1, -(a + 1), -a);
                 // Perform a research on fail high.
                 if (it->score > a)
-                    it->score = -negamax<pv>(c, si, d - 1, Neg_inf, -a);
+                    it->score = -search<pv>(c, si, d - 1, Neg_inf, -a);
             }
             --glist;
             if (si.quit)
@@ -244,46 +244,23 @@ void search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
             pv_string += " ";
             pv_string += to_string(pvlist[i].move);
         }
+
         // Print info to gui.
-
-        std::ofstream file("junk/uci.txt", std::ios::app);
-        file << "eng: info depth ";
-        file << std::to_string(d);
-        file << " score cp ";
-        file << std::to_string(best.score);
-        file << " time ";
-        file << std::to_string(system_time() - si.start_time);
-        file << " nodes ";
-        file << std::to_string(si.nodes);
-        file << " nps ";
-        file << std::to_string(si.nodes / (system_time() - si.start_time + 1) * 1000);
-        file << " pv ";
-        file << pv_string;
-        file << std::endl;
-        file.close();
-
-        std::cout.flush();
         std::cout << "info "
                   << "depth " << d
                   << " score cp " << best.score
                   << " time " << system_time() - si.start_time
                   << " nodes " << si.nodes
                   << " nps " << si.nodes / (system_time() - si.start_time + 1) * 1000
-                  << " pv " << pv_string << '\n';
+                  << " pv " << pv_string << std::endl;
 
         // Reset node count.
         si.nodes = 0;
     }
-    std::ofstream file("junk/uci.txt", std::ios::app);
-    file << "eng: bestmove ";
-    file << to_string(best.move);
-    file << std::endl;
-    file.close();
 
     s.make(best.move);
     glist.push_root(best.move, s.key);
-    std::cout.flush();
-    std::cout << "bestmove " << to_string(best.move) << '\n';
+    std::cout << "bestmove " << to_string(best.move) << std::endl;
 }
 
 void setup_search(State& s, SearchInfo& si)
@@ -314,7 +291,7 @@ void setup_search(State& s, SearchInfo& si)
         }
     }
     ttable.clear();
-    search(s, si, rmoves);
+    iterative_deepening(s, si, rmoves);
 }
 
 void search_init()
