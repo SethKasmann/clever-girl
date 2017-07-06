@@ -120,8 +120,8 @@ int negamax(State & s, SearchInfo& si, int d, int alpha, int beta)
 
     if (NT == pv && d > 1)
     {
-        if (pvlist[d - 1].key == s.key)
-            pv_move = pvlist[d - 1].move;
+        if (pvlist[glist.ply()].key == s.key)
+            pv_move = pvlist[glist.ply()].move;
         else
             ;
             // Internal Iterative Deepening
@@ -186,8 +186,9 @@ int negamax(State & s, SearchInfo& si, int d, int alpha, int beta)
     ttable.store(s.key, best_move, a <= alpha ? all : a >= b ? cut : pv, d, a);
 
     // Store principle variation if alpha was improved.
-    if (a > alpha && a < b)
-        pvlist[d] = PV(best_move, s.key);
+    //if (a > alpha && a < b)
+    if (NT == pv)
+        pvlist[glist.ply()] = PV(best_move, s.key);
 
     return a;                           // Fail-Hard alpha beta score.
 }
@@ -238,6 +239,8 @@ void search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
         std::string pv_string = to_string(best.move);
         for (int i = 1; i < d; ++i)
         {
+            if (pvlist[i].move == No_move)
+                break;
             pv_string += " ";
             pv_string += to_string(pvlist[i].move);
         }
@@ -259,13 +262,14 @@ void search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
         file << std::endl;
         file.close();
 
+        std::cout.flush();
         std::cout << "info "
                   << "depth " << d
                   << " score cp " << best.score
                   << " time " << system_time() - si.start_time
                   << " nodes " << si.nodes
                   << " nps " << si.nodes / (system_time() - si.start_time + 1) * 1000
-                  << " pv " << pv_string << '\n' << std::flush;
+                  << " pv " << pv_string << '\n';
 
         // Reset node count.
         si.nodes = 0;
@@ -278,7 +282,8 @@ void search(State& s, SearchInfo& si, std::vector<RootMove>& rmoves)
 
     s.make(best.move);
     glist.push_root(best.move, s.key);
-    std::cout << "bestmove " << to_string(best.move) << '\n' << std::flush;
+    std::cout.flush();
+    std::cout << "bestmove " << to_string(best.move) << '\n';
 }
 
 void setup_search(State& s, SearchInfo& si)

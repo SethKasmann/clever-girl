@@ -53,5 +53,4 @@ namespace Zobrist
 
 		s->key ^= castle_rand[s->castle];
 	}
-
 };

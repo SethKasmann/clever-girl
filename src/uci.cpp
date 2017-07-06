@@ -135,7 +135,7 @@ void uci()
     State root(Start_fen);
     std::string command, token;
 
-    std::setvbuf(stdin, NULL, _IONBF, 0);
+    //std::setvbuf(stdin, NULL, _IONBF, 0);
 
     while (1)
     {
