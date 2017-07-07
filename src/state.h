@@ -53,9 +53,10 @@ struct State
 
     // Check and attack information.
     bool attacked(Square s) const;
-    bool attacked(Square s, Color c) const;
+    bool defended(Square s, Color c) const;
     bool check() const;
     bool check(U64 change) const;
+    bool check(U64 change, Color c) const;
     U64 attackers(Square s) const;
     U64 checkers() const;
     template<PieceType> U64 attack_bb(Square s) const;
@@ -223,12 +224,12 @@ inline U64 State::attack_bb<queen>(Square s) const
 }
 
 inline
-bool State::attacked(Square s, Color c) const
+bool State::defended(Square s, Color c) const
 {
-    return attack_bb< pawn >(s) &  piece_bb< pawn >(!c)
-        || attack_bb<knight>(s) &  piece_bb<knight>(!c)
-        || attack_bb<bishop>(s) & (piece_bb<bishop>(!c) | piece_bb<queen>(!c))
-        || attack_bb< rook >(s) & (piece_bb< rook >(!c) | piece_bb<queen>(!c));
+    return pawn_attacks[!c][s]  &  piece_bb< pawn >(c)
+        || attack_bb<knight>(s) &  piece_bb<knight>(c)
+        || attack_bb<bishop>(s) & (piece_bb<bishop>(c) | piece_bb<queen>(c))
+        || attack_bb< rook >(s) & (piece_bb< rook >(c) | piece_bb<queen>(c));
 }
 
 inline
@@ -266,6 +267,13 @@ bool State::check(U64 change) const
 {
     return (Bmagic(king_sq(us), occ() ^ change) & (piece_bb<bishop>(them) | piece_bb<queen>(them)))
         || (Rmagic(king_sq(us), occ() ^ change) & (piece_bb< rook >(them) | piece_bb<queen>(them)));
+}
+
+inline
+bool State::check(U64 change, Color c) const
+{
+    return (Bmagic(king_sq(c), occ() ^ change) & (piece_bb<bishop>(!c) | piece_bb<queen>(!c)))
+        || (Rmagic(king_sq(c), occ() ^ change) & (piece_bb< rook >(!c) | piece_bb<queen>(!c)));
 }
 
 

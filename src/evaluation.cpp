@@ -22,6 +22,31 @@ int outpost(const State & s, Square p, Color c)
     return score;
 }
 
+// Check to see if a pawn push would fork two of the enemy major or minor
+// pieces. Also includes forks involving the enemy's king.
+bool pawn_fork(const State & s, Square p, Color c)
+{
+    assert(p < 56 && p > 7);
+    Square push;
+    
+    push = p + (c == white ? 8 : -8);
+    
+    // Check to see if the push square is not occupied, if the pawn is not on
+    // the edge of the board, and if the push would fork two enemy non-pawn 
+    // pieces.
+    if (   push & s.occ()
+        || !(push & Center_files)
+        || pawn_attacks[c][push] & (s.piece_bb<pawn>(!c) | s.empty() | s.occ(c)))
+        return false;
+
+    // Check to see if the pawn is pinned.
+    if (s.check(square_bb[p], c))
+        return false;
+
+    // Return true if the push square is defended.
+    return s.defended(push, c);
+}
+
 int eval(const State & s, const Color c)
 {
     const Square * p;
@@ -40,6 +65,7 @@ int eval(const State & s, const Color c)
         passed   = adj_files[*p] & in_front[c][*p] & s.piece_bb<pawn>(!c);
         doubled  = pop_count(file_bb[*p] & s.piece_bb<pawn>(c)) > 1;
         connected = rank_bb[*p - dir] & s.piece_bb<pawn>(c) & adj_files[*p];
+        //fork = pawn_fork(s, *p, c);
     	if (isolated)  
             score += Isolated;
         if (doubled)   
@@ -48,6 +74,9 @@ int eval(const State & s, const Color c)
             score += Connected;
         if (passed)    
             score += Passed;
+        /*
+        if (fork)
+            score += Fork;*/
     }
     score += s.piece_count[c][pawn] * Pawn_wt;
 
