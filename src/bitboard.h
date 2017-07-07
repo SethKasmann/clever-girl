@@ -24,8 +24,13 @@ extern U64 coplanar[Board_size][Board_size];
 extern U64 adj_files[Board_size];
 extern U64 in_front[Player_size][Board_size];
 extern U64 king_net_bb[Player_size][Board_size];
+extern U64 outpost_area[Player_size];
+
 extern const U64 Knight_moves[Board_size];
 extern const U64 King_moves[Board_size];
+
+static const U64 Dark_squares  = 0xAA55AA55AA55AA55ULL;
+static const U64 Light_squares = 0x55AA55AA55AA55AAULL;
 
 static const U64 Rank_1 = 0x00000000000000FFULL;
 static const U64 Rank_2 = 0x000000000000FF00ULL;
@@ -177,6 +182,13 @@ U64 shift_up(U64 bb, const Dir D)
         : D == NE ? (bb & Not_h_file) << 9
         : D == NW ? (bb & Not_a_file) << 7
         : 0;
+}
+
+// Return bitboard of same color squares.
+inline
+U64 squares_of_color(Square s)
+{
+   return s & Light_squares ? Light_squares : Dark_squares;
 }
 
 inline

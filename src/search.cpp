@@ -29,6 +29,20 @@ bool interrupt(SearchInfo& si)
     return false;
 }
 
+// Return a string of the pv line.
+std::string uci_pv(Move best, int depth)
+{
+    std::string pv = to_string(best);
+    for (int i = 1; i < depth; ++i)
+    {
+        if (pvlist[i].move == No_move)
+            break;
+        pv += " ";
+        pv += to_string(pvlist[i].move);
+    }
+    return pv;
+}
+
 int qsearch(State& s, SearchInfo& si, int d, int alpha, int beta)
 {
     if (si.quit || (si.nodes % 3000 == 0 && interrupt(si)))
@@ -252,7 +266,7 @@ void iterative_deepening(State& s, SearchInfo& si, std::vector<RootMove>& rmoves
                   << " time " << system_time() - si.start_time
                   << " nodes " << si.nodes
                   << " nps " << si.nodes / (system_time() - si.start_time + 1) * 1000
-                  << " pv " << pv_string << std::endl;
+                  /*<< " pv " << uci_pv(best.move, d)*/ << std::endl;
 
         // Reset node count.
         si.nodes = 0;

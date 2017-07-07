@@ -1,5 +1,27 @@
 #include "evaluation.h"
 
+// Returns the score of a bishop or rook on an outpost square.
+template<PieceType PT>
+int outpost(const State & s, Square p, Color c)
+{
+    int score;
+    // To be an outpost, the piece must be supported by a friendly pawn
+    // and unable to be attacked by an opponents pawn.
+    if (   !(p & outpost_area[c])
+        || !(pawn_attacks[!c][p] & s.piece_bb<pawn>(c))
+        || in_front[c][p] & adj_files[p] & s.piece_bb<pawn>(!c))
+        return 0;
+
+    score = Pst_outpost[PT == bishop][c][p];
+
+    // Extra bonus if the outpost cannot be captured by a minor piece.
+    if (   !s.piece_bb<knight>(!c)
+        && !(s.piece_bb<bishop>(!c) & squares_of_color(p)))
+        score *= 2;
+
+    return score;
+}
+
 int eval(const State & s, const Color c)
 {
     const Square * p;
@@ -10,7 +32,7 @@ int eval(const State & s, const Color c)
     bool gs = false; // determing game stage, middle or late
 
     // Pawn evaluation.
-    bool isolated, passed, doubled, connected;
+    bool isolated, passed, doubled, connected, fork;
     for (p = s.piece_list[c][pawn]; *p != no_sq; ++p)
     {
     	score += Pst_pawn[gs][c][*p];
@@ -35,6 +57,7 @@ int eval(const State & s, const Color c)
     	score += Pst_knight[gs][c][*p];
         if (s.attack_bb<knight>(*p) & king_net_bb[!c][s.king_sq(!c)])
             king_threats += Knight_th;
+        score += outpost<knight>(s, *p, c);
     }
     score += s.piece_count[c][knight] * Knight_wt;
 
@@ -44,6 +67,7 @@ int eval(const State & s, const Color c)
     	score += Pst_bishop[gs][c][*p];
         if (s.attack_bb<bishop>(*p) & king_net_bb[!c][s.king_sq(!c)])
             king_threats += Bishop_th;
+        score += outpost<bishop>(s, *p, c);
     }
     score += s.piece_count[c][bishop] * Bishop_wt;
 

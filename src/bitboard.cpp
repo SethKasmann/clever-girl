@@ -12,6 +12,7 @@ U64 coplanar[Board_size][Board_size];
 U64 adj_files[Board_size];
 U64 in_front[Player_size][Board_size];
 U64 king_net_bb[Player_size][Board_size];
+U64 outpost_area[Player_size];
 
 const U64 Knight_moves[Board_size] =
 {
@@ -123,6 +124,8 @@ void bb_init()
             between_hor[sq_src][sq_dst] = r_attacks;
         }
     }
+    outpost_area[white] = Rank_4 | Rank_5 | Rank_6 | Rank_7;
+    outpost_area[black] = Rank_2 | Rank_3 | Rank_4 | Rank_5;
 }
 
 void print_bb(U64 bb)
