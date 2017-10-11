@@ -14,11 +14,10 @@ Uses copy/make move generation vs. make/unmake. Clocked 120,000,000 nodes/second
 
 ## Evaluation  
 - Uses Adam Hair's piece square tables.  
-- Weights pawn structure including isolated, doubled, connected, or passed pawns.
-- Weights piece count using standard weights for pieces.
-- Weights king safety.
-- Weights bishop and knight outposts.  
-- Weights 
+- Evaluates pawn structure including isolated, doubled, connected, or passed pawns.
+- Lasker's system for piece weights.
+- King safety tables from Stockfish.
+- Evlautes bishop and knight outposts.  
 
 TODO: Endgame detection.
 
