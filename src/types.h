@@ -124,12 +124,12 @@ static const int No_move = 0;
 
 static const int Score[Types_size][Types_size] = 
 {
-    { 25, 29, 30, 32, 35, 0 },  
-    { 19, 24, 26, 28, 34, 0 },  
-    { 18, 20, 23, 27, 33, 0 },  
-    { 15, 16, 17, 22, 31, 0 },  
-    { 11, 12, 13, 14, 21, 0 },  
-    { 6,  7,  8,  9,  10, 0 } 
+    { 26, 30, 31, 33, 36, 0 },  
+    { 20, 25, 27, 29, 35, 0 },  
+    { 19, 21, 24, 28, 34, 0 },  
+    { 16, 17, 18, 23, 32, 0 },  
+    { 12, 13, 14, 15, 22, 0 },  
+    { 7,  8,  9,  10, 11, 0 } 
 };
 
 enum MoveScore
@@ -137,10 +137,11 @@ enum MoveScore
     BP = 1,
     RP = 2,
     NP = 3,
-    QP = 36,
+    QP = 37,
     Q  = 4,
     C  = 5,
-    EP = 25
+    QC = 6,
+    EP = 26
 };
 
 enum Dir
@@ -185,6 +186,7 @@ inline Square get_src(Move m) { return Square(m & 0x3F); }
 inline Square get_dst(Move m) { return Square((m & 0xFC0) >> 6); }
 inline Prop get_prop(Move m)  { return Prop((m & 0xF000) >> 12); }
 inline int get_score(Move m)  { return (m & 0x7F0000) >> 16; }
+inline void set_score(Move* m, int s) { *m = (*m ^ (*m & 0x7F0000)) | (s << 16); };
 inline bool is_quiet(Move m)
 {
     return get_prop(m) == quiet || get_prop(m) == dbl_push;
@@ -207,7 +209,7 @@ enum NodeType
 // ----------------------------------------------------------------------------
 // Operators
 // ----------------------------------------------------------------------------
-
+/*
 template<typename T>
 inline T & operator++(T & t) { return t = T(int(t) + 1); }
 template<typename T>
@@ -226,6 +228,14 @@ template<typename T>
 inline T & operator -=(T & t0, const T t1) { return t0 = t0 - t1; }
 template<typename T>
 inline T operator!(const T t) { return T(!bool(t)); }
+*/
+
+inline Square& operator++(Square& s) { return s = static_cast<Square>(static_cast<int>(s) + 1); }
+inline PieceType& operator++(PieceType& p) { return p = static_cast<PieceType>(static_cast<int>(p) + 1); }
+inline File& operator++(File& f) { return f = static_cast<File>(static_cast<int>(f) + 1); }
+inline Color operator!(const Color c) { return static_cast<Color>(!static_cast<bool>(c)); }
+inline Square operator+(const Square s, const int i) { return static_cast<Square>(static_cast<int>(s) + i); }
+inline Square operator-(const Square s, const int i) { return static_cast<Square>(static_cast<int>(s) - i); }
 
 inline std::string to_string(File f)
 {
