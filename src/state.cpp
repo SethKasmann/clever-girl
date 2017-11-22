@@ -152,6 +152,32 @@ U64 State::get_pins() const
     return pin;
 }
 
+U64 State::get_discovered_checks() const
+{
+    int i;
+    U64 ray, dc = 0;
+    for (i = 0; i < piece_count[us][bishop]; ++i)
+    {
+        ray = between_dia[piece_list[us][bishop][i]][king_sq(them)];
+        if (pop_count(ray & occ()) == 1 && ray & occ(us))
+            dc |= ray & occ(us);
+    }
+    for (i = 0; i < piece_count[them][rook]; ++i)
+    {
+        ray = between_hor[piece_list[us][rook][i]][king_sq(them)];
+        if (pop_count(ray & occ()) == 1 && ray & occ(us))
+            dc |= ray & occ(us);
+    }
+    for (i = 0; i < piece_count[them][queen]; ++i)
+    {
+        ray = between_dia[piece_list[us][queen][i]][king_sq(them)]
+            | between_hor[piece_list[us][queen][i]][king_sq(them)];
+        if (pop_count(ray & occ()) == 1 && ray & occ(us))
+            dc |= ray & occ(us);
+    }
+    return dc;
+}
+
 // ----------------------------------------------------------------------------
 // Make move function responsible for updating the state based on the source, 
 // destination, and type of move.
@@ -161,6 +187,7 @@ void State::make(Move m)
 {
     const Square src  = get_src(m);
     const Square dst  = get_dst(m);
+    const PieceType piece = board[us][get_src(m)];
 
     // Update the 50 move rule.
     board[us][src] == pawn || board[them][dst] != none ? 
@@ -280,6 +307,21 @@ void State::make(Move m)
     // turns.
     key ^= Zobrist::key(castle);
     key ^= Zobrist::key();
+    /*
+    if (occupancy[us] & occupancy[them])
+    {
+        std::cout << "piece: " << piece << '\n';
+        std::cout << to_string(m) << '\n';
+        std::cout << *this << '\n';
+        assert(!(occupancy[us] & occupancy[them]));
+    }
+    if (check())
+    {
+        std::cout << "piece: " << piece << '\n';
+        std::cout << to_string(m) << '\n';
+        std::cout << *this << '\n';
+    }
+    */
     assert(!check());
     swap_turn();
 }
@@ -498,12 +540,12 @@ std::ostream & operator << (std::ostream & o, const State & s)
     }
 
     o << "  A B C D E F G H\n";
-
+/*
     o << "Color(us)" << s.us << '\n';
     o << "Color(them)" << s.them << '\n';
 
     print_bb(s.occ(white));
-    print_bb(s.occ(black));
+    print_bb(s.occ(black));*/
 
     return o;
 }

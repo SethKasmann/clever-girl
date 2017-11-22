@@ -50,6 +50,7 @@ struct State
     // Valid king moves and pins.
     U64 valid_king_moves() const;
     U64 get_pins() const;
+    U64 get_discovered_checks() const;
 
     // Check and attack information.
     bool attacked(Square s) const;
