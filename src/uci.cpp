@@ -27,50 +27,52 @@ void go(std::istringstream & is, State & s)
     SearchInfo search_info;
     Move m;
 
-    is >> token;
-
-    if (token == "searchmoves")
+    while (is >> token)
     {
-        while (is >> token)
+        if (token == "searchmoves")
         {
-            m = get_uci_move(token, s);
-            if (m != No_move)
-                search_info.sm.push_back(m);
-            else
+            while (is >> token)
             {
-                std::cout << "illegal move found: " << token << '\n';
-                return;
+                m = get_uci_move(token, s);
+                if (m != No_move)
+                    search_info.sm.push_back(m);
+                else
+                {
+                    std::cout << "illegal move found: " << token << '\n';
+                    return;
+                }
             }
         }
+        else if (token == "ponder")
+            search_info.ponder = true;
+        else if (token == "wtime")
+            is >> search_info.time[white];
+        else if (token == "btime")
+            is >> search_info.time[black];
+        else if (token == "winc")
+            is >> search_info.inc[white];
+        else if (token == "binc")
+            is >> search_info.inc[black];
+        else if (token == "movestogo")
+            is >> search_info.moves_to_go;
+        else if (token == "depth")
+            is >> search_info.depth;
+        else if (token == "nodes")
+            is >> search_info.max_nodes;
+        else if (token == "mate")
+            is >> search_info.mate;
+        else if (token == "movetime")
+            is >> search_info.move_time;
+        else if (token == "infinite")
+            search_info.infinite = true;
     }
-    else if (token == "ponder")
-        search_info.ponder = true;
-    else if (token == "wtime")
-        is >> search_info.time[white];
-    else if (token == "btime")
-        is >> search_info.time[black];
-    else if (token == "winc")
-        is >> search_info.inc[white];
-    else if (token == "binc")
-        is >> search_info.inc[black];
-    else if (token == "movestogo")
-        is >> search_info.moves_to_go;
-    else if (token == "depth")
-        is >> search_info.depth;
-    else if (token == "nodes")
-        is >> search_info.max_nodes;
-    else if (token == "mate")
-        is >> search_info.mate;
-    else if (token == "movetime")
-        is >> search_info.move_time;
-    else if (token == "infinite")
-        search_info.infinite = true;
 
     search_info.start_time = system_time();
     if (!search_info.move_time)
         search_info.move_time = allocate_time(search_info.time[s.us], 
                                               glist.ply() / 2, 
                                               search_info.moves_to_go);
+    std::cout << search_info.move_time << '\n';
     setup_search(s, search_info);
 }
 
