@@ -5,6 +5,7 @@
 #include <stack>
 #include <sstream>
 #include <string>
+#include <vector>
 #include "evaluation.h"
 #include "move_generator.h"
 #include "state.h"
@@ -69,33 +70,6 @@ private:
     History* r;
 };
 
-struct RootMove
-{
-    RootMove() : move(No_move), score(0), prev_score(0)
-    {}
-    RootMove(Move m, int s) : move(m), score(s), prev_score(s)
-    {}
-    bool operator<(const RootMove& c) const
-    {
-        return score < c.score;
-    }
-    bool operator>(const RootMove& c) const
-    {
-        return score > c.score;
-    }
-    Move move;
-    int score;
-    int prev_score;
-};
-
-struct PV
-{
-    PV() : move(No_move), key(0) {}
-    PV(Move m, U64 k) : move(m), key(k) {}
-    Move move;
-    U64 key;
-};
-
 struct SearchInfo
 {
     SearchInfo() : move_time(0), nodes(0), moves_to_go(0), quit(false), infinite(false)
@@ -112,7 +86,7 @@ struct SearchInfo
 
 extern GameList glist;
 void setup_search(State& s, SearchInfo& si);
-void iterative_deepening(State& s, SearchInfo& si, std::vector<RootMove>& rmoves);
+void iterative_deepening(State& s, SearchInfo& si);
 void search_init();
 
 #endif  
