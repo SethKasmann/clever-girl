@@ -130,7 +130,36 @@ void push_moves(State & s, MoveList * mlist, Check & ch)
             mlist -> push(*src, pop_lsb(a), attack, score);
         }
         while (m)
-            mlist -> push(*src, pop_lsb(m), quiet, Q);
+        {
+            U64 ray;
+            bool gives_check = false;
+            Square dst = pop_lsb(m);
+            if (P == knight)
+                gives_check = Knight_moves[dst] & s.piece_bb<king>(s.them);
+            else if (P == bishop)
+            {
+                ray = between_dia[dst][s.king_sq(s.them)];
+                if (ray && pop_count(ray & s.occ()) == 0)
+                    gives_check = true;
+            }
+            else if (P == rook)
+            {
+                ray = between_hor[dst][s.king_sq(s.them)];
+                if (ray && pop_count(ray & s.occ()) == 0)
+                    gives_check = true;
+            }
+            else
+            {
+                ray = between_dia[dst][s.king_sq(s.them)] | between_hor[dst][s.king_sq(s.them)];
+                if (ray && pop_count(ray & s.occ()) == 0)
+                    gives_check = true;
+            }
+
+            if (gives_check)
+                mlist -> push(*src, dst, quiet, QC);
+            else
+                mlist -> push(*src, dst, quiet, Q);
+        }
     }
 }
 
@@ -184,9 +213,11 @@ void push_king_moves(State & s, MoveList * mlist, Check & ch)
 
 void check_legal(State & s, MoveList * mlist)
 {
-    U64 pin;
+    U64 pin, dc;
 
-    pin = s.get_pins(); // Bitboard of pinned pieces.
+    // Set pinned pieces and discovered check pieces.
+    pin = s.get_pins();
+    dc = s.get_discovered_checks();
 
     if (!pin) return;
     
@@ -195,11 +226,20 @@ void check_legal(State & s, MoveList * mlist)
     // source and destination locations.
     for (Move m = *mlist->c; mlist->c < mlist->e; m = *mlist->c)
     {
+        // Check for pins.
         if (get_src(m) & pin ? 
             !(coplanar[get_src(m)][get_dst(m)] & s.piece_bb<king>(s.us)) : false)
+        {
             *mlist->c = *(--mlist->e);
-        else
-            mlist->c++;
+            continue;
+        }
+
+        // Check for discovered checks.
+        if ((get_src(m) & dc) && get_score(m) < QC && !(coplanar[get_src(m)][get_dst(m)] & s.piece_bb<king>(s.them)))
+        {
+            set_score(mlist->c, QC);
+        }
+        mlist->c++;
     }
 }
 

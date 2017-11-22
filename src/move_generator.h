@@ -3,6 +3,8 @@
 
 #include <cmath>
 #include <algorithm>
+#include <vector>
+#include <array>
 #include "state.h"
 #include "bitboard.h"
 #include "MagicMoves.hpp"
@@ -35,6 +37,7 @@ public:
     }
     void push(int src, int dst, int p, int s)
     {
+        assert(src + dst != 0);
         *(e++) = src | dst << 6 | p << 12 | s << 16;
     }
     bool contains(Move move)
@@ -46,6 +49,7 @@ public:
         if (move == No_move)
             return;
         Move* pv = std::find(_m, c, move);
+        //assert(std::find(_m, c, move) != c);
         std::swap(*pv, *(--c));
     }
     Move pop() 
