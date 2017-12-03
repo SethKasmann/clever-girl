@@ -8,6 +8,7 @@ U64 pawn_push[Player_size][Board_size];
 U64 pawn_dbl_push[Player_size][Board_size];
 U64 between_dia[Board_size][Board_size];
 U64 between_hor[Board_size][Board_size];
+U64 between[Board_size][Board_size];
 U64 coplanar[Board_size][Board_size];
 U64 adj_files[Board_size];
 U64 in_front[Player_size][Board_size];
@@ -54,6 +55,9 @@ const U64 King_moves[Board_size] =
     U64(0x2838000000000000), U64(0x5070000000000000), U64(0xA0E0000000000000), U64(0x40C0000000000000)
 };
 
+U64 bishopMoves[Board_size];
+U64 rookMoves[Board_size];
+
 void bb_init()
 {
     for (Square sq_src = first_sq; sq_src <= last_sq; ++sq_src)
@@ -76,6 +80,12 @@ void bb_init()
 
         file_bb[sq_src] = north_fill(bit) | south_fill(bit);
         rank_bb[sq_src] = east_fill(bit) | west_fill(bit);
+
+        bishopMoves[sq_src] = (north_east_fill(bit) | north_west_fill(bit) 
+                    | south_east_fill(bit) | south_west_fill(bit)) & ~bit;
+
+        rookMoves[sq_src] = (north_fill(bit) | south_fill(bit) 
+                  | east_fill(bit) | west_fill(bit)) & ~bit;
 
         if (bit & Rank_2)
         {
@@ -103,6 +113,7 @@ void bb_init()
                               : sq_dst & File_g ? File_f | File_h
                               : File_g;
 
+
             U64 r_attacks, b_attacks, occ;
             occ = 1ULL << sq_src | 1ULL << sq_dst;
             
@@ -122,6 +133,7 @@ void bb_init()
 
             between_dia[sq_src][sq_dst] = b_attacks;
             between_hor[sq_src][sq_dst] = r_attacks;
+            between[sq_src][sq_dst] = b_attacks | r_attacks;
         }
     }
     outpost_area[white] = Rank_4 | Rank_5 | Rank_6 | Rank_7;

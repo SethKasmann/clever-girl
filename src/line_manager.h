@@ -63,10 +63,12 @@ public:
 		mSize = 0;
 		std::fill(mPv.begin(), mPv.begin() + Max_ply, cgirl::line_element(0, 0));
 	}
-	void check_pv(State pState)
+	void check_pv(State& pState)
 	{
+		State c;
 		MoveList moveList;
 		Move nextMove;
+		std::memmove(&c, &pState, sizeof(pState));
 		for (int i = 0; i < Max_ply; ++i)
 		{
 			nextMove = mPv[i].get_move();
@@ -77,11 +79,11 @@ public:
 			}
 			// Push moves to the move list.
 			moveList.clear();
-			push_moves(pState, &moveList);
+			push_moves(c, &moveList);
 
 			// If the next pv move is in the move list, make the move.
 			if (moveList.contains(nextMove))
-				pState.make(nextMove);
+				c.make(nextMove);
 			// If the next pv move is not found, break the loop.
 			else
 			{

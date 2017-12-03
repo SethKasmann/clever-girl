@@ -15,7 +15,7 @@ const int Max_size = 256;
 
 struct Check
 {
-    Check(State & s) : checker(s.checkers()), checks(pop_count(checker))
+    Check(State & s) : checker(s.getCheckers()), checks(pop_count(checker))
     {
         checks == 1 ? ray = between_dia[s.king_sq(s.us)][get_lsb(checker)] 
                           | between_hor[s.king_sq(s.us)][get_lsb(checker)]
@@ -56,8 +56,16 @@ public:
     { 
         return *(--e);
     }
-    void sort()
+    void sort(const State& s)
     {
+        for (Move* move = _m; move < c; ++move)
+        {
+            if (!is_quiet(*move))
+            {
+                if (s.see(*move) < 0){}
+                    //set_score(move, BC);
+            }
+        }
         std::stable_sort(_m, c);
     }
     void set()

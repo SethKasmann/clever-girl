@@ -20,6 +20,7 @@ extern U64 pawn_push[Player_size][Board_size];
 extern U64 pawn_dbl_push[Player_size][Board_size];
 extern U64 between_dia[Board_size][Board_size];
 extern U64 between_hor[Board_size][Board_size];
+extern U64 between[Board_size][Board_size];
 extern U64 coplanar[Board_size][Board_size];
 extern U64 adj_files[Board_size];
 extern U64 in_front[Player_size][Board_size];
@@ -28,6 +29,8 @@ extern U64 outpost_area[Player_size];
 
 extern const U64 Knight_moves[Board_size];
 extern const U64 King_moves[Board_size];
+extern U64 bishopMoves[Board_size];
+extern U64 rookMoves[Board_size];
 
 static const U64 Dark_squares  = 0xAA55AA55AA55AA55ULL;
 static const U64 Light_squares = 0x55AA55AA55AA55AAULL;

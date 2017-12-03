@@ -8,6 +8,7 @@
 #include <sstream>
 #include "search.h"
 //#include "src/book.c"
+#include "test.h"
 #include "perft.h"
 #include "zobrist.h"
 #include "evaluation.h"
@@ -58,8 +59,9 @@ void choose(State & s)
 int main(int argc, char* argv[])
 {
     init();
-    //perft_test();
+    perftTestDebug();
+    //perftTest();
+    //ccrTest();
     uci();
-
     return 0;
 }

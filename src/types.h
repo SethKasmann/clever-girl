@@ -3,7 +3,6 @@
 
 #include <string>
 
-
 #define NDEBUG
 #include <assert.h>
 
@@ -35,6 +34,14 @@ static const int Castle_rights[Board_size] =
     11, 15, 15,  3, 15, 15, 15,  7
 };
 
+static const int gameStageSize = 2;
+
+enum GameStage
+{
+    middle,
+    late
+};
+
 enum Color 
 { 
     white, 
@@ -52,7 +59,25 @@ enum PieceType
     none
 };
 
-enum Square
+static const int Pawn_wt   = 100;
+static const int Knight_wt = 300;
+static const int Bishop_wt = 300;
+static const int Rook_wt   = 500;
+static const int Queen_wt  = 950;
+static const int King_wt   = 32767;
+
+inline int getPieceValue(PieceType piece)
+{
+    assert(piece != none);
+    return piece == pawn   ? Pawn_wt
+         : piece == knight ? Knight_wt
+         : piece == bishop ? Bishop_wt
+         : piece == rook   ? Rook_wt
+         : piece == queen  ? Queen_wt
+         : King_wt;
+}
+
+enum Square : uint32_t
 {
     H1, G1, F1, E1, D1, C1, B1, A1,
     H2, G2, F2, E2, D2, C2, B2, A2,
@@ -62,7 +87,7 @@ enum Square
     H6, G6, F6, E6, D6, C6, B6, A6,
     H7, G7, F7, E7, D7, C7, B7, A7,
     H8, G8, F8, E8, D8, C8, B8, A8,
-    no_sq = -1,
+    no_sq = 64,
     first_sq = 0, last_sq = 63
 };
 
@@ -134,13 +159,14 @@ static const int Score[Types_size][Types_size] =
 
 enum MoveScore
 {
-    BP = 1,
-    RP = 2,
-    NP = 3,
+    BP = 0,
+    RP = 1,
+    NP = 2,
     QP = 37,
-    Q  = 4,
-    C  = 5,
-    QC = 6,
+    Q  = 3,
+    C  = 4,
+    QC = 5,
+    BC = 6,
     EP = 26
 };
 
@@ -168,7 +194,7 @@ const std::string SQ[64] =
     "h8", "g8", "f8", "e8", "d8", "c8", "b8", "a8"
 };
 
-enum Prop
+enum Prop : uint32_t
 {
     quiet,
     attack,
@@ -189,7 +215,7 @@ inline int get_score(Move m)  { return (m & 0x7F0000) >> 16; }
 inline void set_score(Move* m, int s) { *m = (*m ^ (*m & 0x7F0000)) | (s << 16); };
 inline bool is_quiet(Move m)
 {
-    return get_prop(m) == quiet || get_prop(m) == dbl_push;
+    return get_score(m) < BC;
 }
 
 // ----------------------------------------------------------------------------
@@ -254,6 +280,16 @@ inline std::string to_string(Prop p)
          : p == rook_promo   ? "r"
          : p == bishop_promo ? "b"
          : "";
+}
+
+inline std::string to_string(PieceType p)
+{
+    return p == pawn ? "P"
+         : p == knight ? "N"
+         : p == bishop ? "B"
+         : p == rook ? "R"
+         : p == queen ? "Q"
+         : "K";
 }
 
 inline std::string to_string(Move m)

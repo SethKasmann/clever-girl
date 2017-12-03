@@ -182,11 +182,8 @@ void push_king_moves(State & s, MoveList * mlist, Check & ch)
     while (m) 
         mlist -> push(k, pop_lsb(m), quiet, Q);
 
-    if (ch.checks == 2) return;
-
     while (a)
     {
-        assert(s.on_square(get_lsb(a), s.them) != none);
         score = Score[king][s.on_square(get_lsb(a), s.them)];
         mlist -> push(k, pop_lsb(a), attack, score);
     }
@@ -216,10 +213,10 @@ void check_legal(State & s, MoveList * mlist)
     U64 pin, dc;
 
     // Set pinned pieces and discovered check pieces.
-    pin = s.get_pins();
+    pin = s.get_pins(s.us);//s.get_pins();
     dc = s.get_discovered_checks();
 
-    if (!pin) return;
+    if (!pin && !dc) return;
     
     // Run through the move list. Remove any moves where the source location
     // is a pinned piece and the king square is not on the line formed by the
@@ -227,7 +224,7 @@ void check_legal(State & s, MoveList * mlist)
     for (Move m = *mlist->c; mlist->c < mlist->e; m = *mlist->c)
     {
         // Check for pins.
-        if (get_src(m) & pin ? 
+        if (square_bb[get_src(m)] & pin ? 
             !(coplanar[get_src(m)][get_dst(m)] & s.piece_bb<king>(s.us)) : false)
         {
             *mlist->c = *(--mlist->e);
@@ -235,7 +232,7 @@ void check_legal(State & s, MoveList * mlist)
         }
 
         // Check for discovered checks.
-        if ((get_src(m) & dc) && get_score(m) < QC && !(coplanar[get_src(m)][get_dst(m)] & s.piece_bb<king>(s.them)))
+        if ((square_bb[get_src(m)] & dc) && get_score(m) < QC && !(coplanar[get_src(m)][get_dst(m)] & s.piece_bb<king>(s.them)))
         {
             set_score(mlist->c, QC);
         }

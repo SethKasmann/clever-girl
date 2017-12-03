@@ -2,14 +2,22 @@
 #define EVALUATION_H
 
 #include <iostream>
+#include <array>
+#include <algorithm>
 #include "state.h"
 #include "pst.h"
 
-static const int Pawn_wt   = 100;
-static const int Knight_wt = 300;
-static const int Bishop_wt = 300;
-static const int Rook_wt   = 500;
-static const int Queen_wt  = 950;
+enum Phase
+{
+	pawnPhase   = 0,
+	knightPhase = 1,
+	bishopPhase = 1,
+	rookPhase   = 2,
+	queenPhase  = 4,
+	totalPhase  = 24
+};
+
+static const int tempo = 15;
 
 static const int Knight_th = 2;
 static const int Bishop_th = 2;
@@ -20,11 +28,19 @@ static const int Checkmate = 32767;
 static const int Stalemate = 0;
 static const int Draw = 0;
 
-static const int Passed    = 15;
-static const int Connected = 15;
-static const int Isolated  = -15;
-static const int Doubled   = -10;
-static const int Fork      = 30;
+static const int Passed         = 20;
+static const int Candidate      = 15;
+static const int Connected      = 15;
+static const int Isolated       = -15;
+static const int Doubled        = -10;
+static const int Fork           = 30;
+static const int Full_backwards = -30;
+static const int Backwards      = -10;
+
+static const int Midgame_limit  = 4500;
+static const int Lategame_limit = 2500;
+
+static const size_t hash_size = 8192;
 
 static const int Safety_table[100] = 
 {
@@ -40,6 +56,53 @@ static const int Safety_table[100] =
 	500, 500, 500, 500, 500, 500, 500, 500, 500, 500
 };
 
+static const int knightMobility[] =
+{
+	-75, -50, -5, 0, 5, 10, 20, 35, 50
+};
+
+static const int bishopMobility[] =
+{
+	-75, -50, -5, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50
+};
+
+static const int rookMobility[] =
+{
+	-75, -50, -5, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 50
+};
+
+static const int queenMobility[] =
+{
+	-75, -50, -5, 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 
+	50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50
+};
+
+struct PawnEntry
+{
+	PawnEntry()
+	: mKey(0), mScore(0), mColor(white)
+	{}
+	PawnEntry(U64 pKey, int pScore, Color pColor)
+	: mKey(pKey), mScore(pScore), mColor(pColor)
+	{}
+	U64 mKey;
+	int mScore;
+	Color mColor;
+};
+
+extern std::array<PawnEntry, hash_size> pawnHash;
+
+inline PawnEntry* probe(U64 pKey)
+{
+	return &pawnHash[pKey % pawnHash.size()];
+}
+
+inline void store(U64 pKey, int pScore, Color pColor)
+{
+	pawnHash[pKey % pawnHash.size()] = PawnEntry(pKey, pScore, pColor);
+}
+
+void init_eval();
 int evaluate(const State & s);
 
 #endif

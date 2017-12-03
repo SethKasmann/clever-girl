@@ -53,4 +53,15 @@ namespace Zobrist
 
 		s->key ^= castle_rand[s->castle];
 	}
+
+	void init_pawn_key(State * s)
+	{
+		for (Square sq = first_sq; sq <= last_sq; ++sq)
+		{
+			if (s->on_square(sq, s->us) == pawn)
+				s->pawn_key ^= piece_rand[s->us][pawn][sq];
+			else if (s->on_square(sq, s->them) == pawn)
+				s->pawn_key ^= piece_rand[s->them][pawn][sq];
+		}
+	}
 };

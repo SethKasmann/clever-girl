@@ -72,7 +72,6 @@ void go(std::istringstream & is, State & s)
         search_info.move_time = allocate_time(search_info.time[s.us], 
                                               glist.ply() / 2, 
                                               search_info.moves_to_go);
-    std::cout << search_info.move_time << '\n';
     setup_search(s, search_info);
 }
 
@@ -108,7 +107,7 @@ void position(std::istringstream & is, State & s)
         m = get_uci_move(token, s);
         if (m == No_move)
         {
-            std::cout << "illegal move found: " << token << '\n';
+            std::cout << "illegal move found: " << token << '\n' << s;
             return;
         }
         else

@@ -13,6 +13,13 @@
 #include "transpositiontable.h"
 #include "timer.h"
 #include "misc.h"
+#include "line_manager.h"
+
+enum SearchType
+{
+    qSearch,
+    scoutSearch
+};
 
 struct History
 {
@@ -85,8 +92,10 @@ struct SearchInfo
 };
 
 extern GameList glist;
+extern cgirl::line_manager lineManager;
 void setup_search(State& s, SearchInfo& si);
 void iterative_deepening(State& s, SearchInfo& si);
 void search_init();
+int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int beta);
 
 #endif  

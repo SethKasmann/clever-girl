@@ -1,10 +1,9 @@
 #include "perft.h"
 
-const int Total_tests = 19;
-int nodes = 0;
+const int totalTests = 19;
 
 // Fen positions for perft testing
-std::string fen[Total_tests] =
+const std::string perftFen[totalTests] =
 {
 	"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq",
 	"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq",
@@ -28,7 +27,7 @@ std::string fen[Total_tests] =
 };
 
 // Depth for each fen position for perft testing
-const int depth[Total_tests] = 
+const int perftDepth[totalTests] = 
 { 
 	3, 4, 5, 6, 
 	5, 6, 6, 6, 
@@ -38,7 +37,7 @@ const int depth[Total_tests] =
 };
 
 // Nodes generated for each fen position for perft testing
-const int results[Total_tests] = 
+const int perftResults[totalTests] = 
 {
 	8902, 		197281, 	4865609, 	119060324, 
 	1063513, 	1134888, 	1015133, 	1440467, 
@@ -47,55 +46,91 @@ const int results[Total_tests] =
 	2217, 		567584, 	23527
 };
 
-void perft_test()
+int perft(State & s, int depth)
 {
-	std::cout << "Perft Results:\n"
-			  << "----------------------------------------------\n";
-	for (int i = 0; i < Total_tests; ++i)
-	{
-		nodes = 0;
-		State s(fen[i]);
-		perft_tree(s, depth[i]);
-		std::cout << fen[i] << '\n'
-				  << (nodes == results[i] ? "Success\n" : "Fail\n")
-				  << nodes << " == " << results[i] << '\n'
-				  << "----------------------------------------------\n";
-	}
-}
+	int nodes = 0;
 
-void perft(std::string & fen, int depth)
-{
-	nodes = 0;
-	State s(fen);
-	std::cout << s;
-	perft_tree(s, depth);
-}
-
-void perft_tree(State & s, int depth)
-{
 	if (s.fmr == 100)
-		return;
+		return nodes;
 
 	MoveList mlist;
 	push_moves(s, &mlist);
 
 	if (mlist.size() == 0)
-		return;
+		return nodes;
 
 	if (depth == 1)
 	{
 		nodes += mlist.size();
-		return;
+		return nodes;
 	}
 
 	State c;
-	mlist.sort();
 
 	while (mlist.size() > 0)
 	{
+		Move m = mlist.pop();
 		std::memmove(&c, &s, sizeof s);
-		c.make(mlist.pop());
-		perft_tree(c, depth-1);
+		c.make(m);
+		nodes += perft(c, depth-1);
 	}
-	return;
+
+	return nodes;
+}
+
+void printPerft(const std::string& fen, int maxDepth)
+{
+	int nodes;
+	double nps;
+	int32_t time;
+
+	std::cout << " fen: " << fen << std::endl;
+	std::cout << ' ' << std::setfill('-') << std::setw(53) << std::right << ' '
+		      << std::endl;
+	std::cout << "| perft     | nodes       | nps                      |"
+	          << std::endl;
+    std::cout << "|" << std::setfill('-') << std::setw(53) << std::right << "|"
+	          << std::endl;
+	for (int depth = 1; depth <= maxDepth; ++depth)
+	{
+		nodes = 0;
+		State s(fen);
+		time = system_time();
+		nodes = perft(s, depth);
+		time = system_time() - time;
+		std::cout << "| " << std::setfill(' ') << std::setw(10) << std::left << depth
+		          << "| " << std::setw(12) << std::left << nodes
+		          << "| ";
+		if (time > 0.0)
+			std::cout << std::setw(25) << std::left << std::scientific 
+		              << std::setprecision(2) 
+		              << static_cast<double>(nodes) / (time / 1000.0)
+		              << "|" << std::endl;
+		else
+			std::cout << std::setw(26) << std::right << "|" << std::endl;
+	}
+
+    std::cout << ' ' << std::setfill('-') << std::setw(53) << std::right << ' '
+	          << std::endl;
+}
+
+void perftTest()
+{
+	for (int i = 0; i < totalTests; ++i)
+	{
+		printPerft(perftFen[i], perftDepth[i]);
+	}
+}
+
+void perftTestDebug()
+{
+	int nodes;
+	for (int i = 0; i < totalTests; ++i)
+	{
+		State s(perftFen[i]);
+		nodes = perft(s, perftDepth[i]);
+		std::cout << perftFen[i] << std::endl;
+		std::cout << (nodes == perftResults[i] ? "Success " : "Fail ")
+		          << nodes << " == " << perftResults[i] << std::endl;
+	}
 }

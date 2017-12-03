@@ -1,9 +1,8 @@
 #include "search.h"
-#include "line_manager.h"
 #include <fstream>
 
 static Move killers[Max_ply][Killer_size];
-static cgirl::line_manager lineManager;
+cgirl::line_manager lineManager;
 GameList glist;
 
 bool interrupt(SearchInfo& si)
@@ -46,21 +45,17 @@ int qsearch(State& s, SearchInfo& si, int d, int alpha, int beta)
     // Generate moves and create the movelist.
     MoveList mlist;
     push_moves(s, &mlist);
-    mlist.sort();
+    mlist.sort(s);
 
     int val;
     Move m;
     State c;
 
-    // Check if the position is checkmate/stalemate.
-    //if (mlist.size() == 0)
-        //return s.check() ? Checkmate : Stalemate;
-
     while (mlist.size() > 0)
     {
         m = mlist.pop();                         // Get the next move.
         // TODO: remove "4" constant.
-        if (get_score(m) <= 5)                   // Break if a quiet move is found.
+        if (get_score(m) <= C)                   // Break if a quiet move is found.
             break;
         std::memmove(&c, &s, sizeof s);          // Copy current state.
         c.make(m);                               // Make move.
@@ -138,7 +133,7 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
 
     // Extract the best move to the front and sort the remaining moves.
     mlist.extract(best_move);
-    mlist.sort();
+    mlist.sort(s);
 
     // Confirm a killer move has been stored at this ply.
     if (killers[ply][0] != No_move && mlist.size() > Killer_size) 

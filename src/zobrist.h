@@ -17,6 +17,7 @@ namespace Zobrist
 
 	void init();
 	void init_pieces(State *);
+	void init_pawn_key(State * s);
 
 	// Side to move.
 	inline U64 key()
