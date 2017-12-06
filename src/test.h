@@ -6,6 +6,7 @@
 #include "search.h"
 #include "time.h"
 #include "types.h"
+#include "move.h"
 
 void ccrTest();
 

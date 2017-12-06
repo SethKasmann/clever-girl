@@ -81,10 +81,10 @@ void ccrTest()
 				break;
 		}
 
-		Move pv = lineManager.get_pv_move();
+		Move_t pv = lineManager.get_pv_move();
 
 		std::cout << s;
-		std::cout << "bestmove " << to_string(s.on_square(get_src(pv))) << to_string(pv) << std::endl;
+		std::cout << "bestmove " << to_string(s.onSquare(get_src(pv))) << toString(pv) << std::endl;
 		std::cout << ccrResults[i] << '\n';
 	}
 }

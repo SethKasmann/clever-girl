@@ -8,6 +8,7 @@
 #include "move_generator.h"
 #include "line_element.h"
 #include "types.h"
+#include "move.h"
 
 namespace cgirl {
 
@@ -24,7 +25,7 @@ public:
 	line_manager()
 	: mMatingLine(false), mSize(0)
 	{}
-	void push_to_pv(Move pMove, U64 pKey, int pPly, int pScore)
+	void push_to_pv(Move_t pMove, U64 pKey, int pPly, int pScore)
 	{
 		// Check if this is a mating line.
 		mMatingLine = std::abs(pScore) + pPly >= Checkmate ? true : false;
@@ -46,7 +47,7 @@ public:
 	{
 		return mPv[pPly].get_key();
 	}
-	Move get_pv_move(int pPly=0) const
+	Move_t get_pv_move(int pPly=0) const
 	{
 		return mPv[pPly].get_move();
 	}
@@ -67,12 +68,12 @@ public:
 	{
 		State c;
 		MoveList moveList;
-		Move nextMove;
+		Move_t nextMove;
 		std::memmove(&c, &pState, sizeof(pState));
 		for (int i = 0; i < Max_ply; ++i)
 		{
 			nextMove = mPv[i].get_move();
-			if (nextMove == No_move)
+			if (nextMove == nullMove)
 			{
 				mSize = i;
 				break;
@@ -83,7 +84,7 @@ public:
 
 			// If the next pv move is in the move list, make the move.
 			if (moveList.contains(nextMove))
-				c.make(nextMove);
+				c.make_t(nextMove);
 			// If the next pv move is not found, break the loop.
 			else
 			{

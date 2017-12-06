@@ -9,6 +9,7 @@
 #include "state.h"
 #include "types.h"
 #include "timer.h"
+#include "move.h"
 
 void perftTest();
 void perftTestDebug();

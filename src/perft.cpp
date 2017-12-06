@@ -50,7 +50,7 @@ int perft(State & s, int depth)
 {
 	int nodes = 0;
 
-	if (s.fmr == 100)
+	if (s.getFiftyMoveRule() == 100)
 		return nodes;
 
 	MoveList mlist;
@@ -69,9 +69,9 @@ int perft(State & s, int depth)
 
 	while (mlist.size() > 0)
 	{
-		Move m = mlist.pop();
+		Move_t m = mlist.pop();
 		std::memmove(&c, &s, sizeof s);
-		c.make(m);
+		c.make_t(m);
 		nodes += perft(c, depth-1);
 	}
 
@@ -83,8 +83,9 @@ void printPerft(const std::string& fen, int maxDepth)
 	int nodes;
 	double nps;
 	int32_t time;
+	State s(fen);
 
-	std::cout << " fen: " << fen << std::endl;
+	std::cout << s;
 	std::cout << ' ' << std::setfill('-') << std::setw(53) << std::right << ' '
 		      << std::endl;
 	std::cout << "| perft     | nodes       | nps                      |"
@@ -94,7 +95,6 @@ void printPerft(const std::string& fen, int maxDepth)
 	for (int depth = 1; depth <= maxDepth; ++depth)
 	{
 		nodes = 0;
-		State s(fen);
 		time = system_time();
 		nodes = perft(s, depth);
 		time = system_time() - time;
@@ -129,7 +129,7 @@ void perftTestDebug()
 	{
 		State s(perftFen[i]);
 		nodes = perft(s, perftDepth[i]);
-		std::cout << perftFen[i] << std::endl;
+		//std::cout << perftFen[i] << std::endl;
 		std::cout << (nodes == perftResults[i] ? "Success " : "Fail ")
 		          << nodes << " == " << perftResults[i] << std::endl;
 	}

@@ -2,6 +2,7 @@
 #define TRANSPOSITIONTABLE_H
 
 #include "bitboard.h"
+#include "move.h"
 #include <cstring>
 #include <vector>
 
@@ -11,11 +12,11 @@ struct TableEntry
 {
 	TableEntry() : depth(0), key(0)
 	{}
-	TableEntry(U64 k, Move b, NodeType t, int d, int s)
+	TableEntry(U64 k, Move_t b, NodeType t, int d, int s)
 	  : key(k), best(b), type(t), depth(d), score(s)
 	{}
 	U64 key;
-	Move best;
+	Move_t best;
 	NodeType type;
 	int depth;	
 	int score;
@@ -42,7 +43,7 @@ public:
 		for (std::vector<TableEntry>::iterator it = table.begin(); it != table.end(); ++it)
 		{
 			it->key = 0;
-			it->best = No_move;
+			it->best = nullMove;
 			it->type = pv;
 			it->depth = 0;
 			it->score = 0;
@@ -57,7 +58,7 @@ public:
 		table.clear();
 		table.resize(size_mb * 1000 * 1000 / sizeof(TableEntry));
 	}
-	void store(U64 key, Move best, NodeType type, int depth, int score)
+	void store(U64 key, Move_t best, NodeType type, int depth, int score)
 	{
 		int i = key % table.size();
 		if (table[i].depth < depth)

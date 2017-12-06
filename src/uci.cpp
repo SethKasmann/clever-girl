@@ -2,10 +2,10 @@
 #include <fstream>
 
 // Check if a move given by the uci is valid.
-Move get_uci_move(std::string & token, State & s)
+Move_t get_uci_move(std::string & token, State & s)
 {
     MoveList mlist;
-    Move m;
+    Move_t m;
 
     token.erase(std::remove(token.begin(), token.end(), ','),
                     token.end());
@@ -16,16 +16,16 @@ Move get_uci_move(std::string & token, State & s)
         if (to_string(m) == token)
             return m;
         if (mlist.size() == 0)
-            return No_move;
+            return nullMove;
     }
-    return No_move;
+    return nullMove;
 }
 
 void go(std::istringstream & is, State & s)
 {
     std::string token;
     SearchInfo search_info;
-    Move m;
+    Move_t m;
 
     while (is >> token)
     {
@@ -34,7 +34,7 @@ void go(std::istringstream & is, State & s)
             while (is >> token)
             {
                 m = get_uci_move(token, s);
-                if (m != No_move)
+                if (m != nullMove)
                     search_info.sm.push_back(m);
                 else
                 {
@@ -69,7 +69,7 @@ void go(std::istringstream & is, State & s)
 
     search_info.start_time = system_time();
     if (!search_info.move_time)
-        search_info.move_time = allocate_time(search_info.time[s.us], 
+        search_info.move_time = allocate_time(search_info.time[s.getOurColor()], 
                                               glist.ply() / 2, 
                                               search_info.moves_to_go);
     setup_search(s, search_info);
@@ -78,12 +78,12 @@ void go(std::istringstream & is, State & s)
 void position(std::istringstream & is, State & s)
 {
     std::string token, fen;
-    Move m;
+    Move_t m;
     bool start_flag = false;
 
     s = State(Start_fen);
     glist.clear();
-    glist.push(No_move, s.key);
+    glist.push(nullMove, s.getKey());
 
     is >> token;
     if (token == "fen")
@@ -105,15 +105,15 @@ void position(std::istringstream & is, State & s)
     while (is >> token)
     {
         m = get_uci_move(token, s);
-        if (m == No_move)
+        if (m == nullMove)
         {
             std::cout << "illegal move found: " << token << '\n' << s;
             return;
         }
         else
         {
-            s.make(m);
-            glist.push_root(m, s.key);
+            s.make_t(m);
+            glist.push_root(m, s.getKey());
         }
     }
     // If start flag is false, initialize board state with fen string.

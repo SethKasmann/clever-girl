@@ -6,41 +6,42 @@
 // ----------------------------------------------------------------------------
 
 State::State(const State & s)
-    : fmr(s.fmr), castle(s.castle),     ep(s.ep), 
-      key(s.key), pawn_key(s.pawn_key), us(s.us),         
-      them(s.them)
-{
-    std::cout << "here...\n";
-    int z;
-    std::cin >> z;
-    std::memcpy(pstScore,    s.pstScore,    sizeof pstScore);
-    std::memcpy(board,       s.board,       sizeof board);
-    std::memcpy(piece_count, s.piece_count, sizeof piece_count);
-    std::memcpy(piece_list,  s.piece_list,  sizeof piece_list);
-    std::memcpy(piece_index, s.piece_index, sizeof piece_index);
-    std::memcpy(pieces,      s.pieces,      sizeof pieces);
-    std::memcpy(occupancy,   s.occupancy,   sizeof occupancy);
-}
+: mUs(s.mUs)
+, mThem(s.mThem)
+, mFiftyMoveRule(s.mFiftyMoveRule)
+, mCastleRights(s.mCastleRights)
+, mKey(s.mKey)
+, mPawnKey(s.mPawnKey)
+, mCheckers(s.mCheckers)
+, mEnPassant(s.mEnPassant)
+, mPinned(s.mPinned)
+, mOccupancy(s.mOccupancy)
+, mPieceIndex(s.mPieceIndex)
+, mBoard(s.mBoard)
+, mPstScore(s.mPstScore)
+, mPieces(s.mPieces)
+, mPieceCount(s.mPieceCount)
+, mPieceList(s.mPieceList)
+{}
 
 void State::operator=(const State & s)
 {
-    us =     s.us;
-    them =   s.them;
-    castle = s.castle;
-    key =    s.key;
-    pawn_key = s.pawn_key;
-    fmr =    s.fmr;
-    ep =     s.ep;
-    std::cout << "here...\n";
-    int z;
-    std::cin >> z;
-    std::memcpy(pstScore,    s.pstScore,    sizeof pstScore);
-    std::memcpy(board,       s.board,       sizeof board);
-    std::memcpy(piece_count, s.piece_count, sizeof piece_count);
-    std::memcpy(piece_list,  s.piece_list,  sizeof piece_list);
-    std::memcpy(piece_index, s.piece_index, sizeof piece_index);
-    std::memcpy(pieces,      s.pieces,      sizeof pieces);
-    std::memcpy(occupancy,   s.occupancy,   sizeof occupancy);
+    mUs = s.mUs;
+    mThem = s.mThem;
+    mFiftyMoveRule = s.mFiftyMoveRule;
+    mCastleRights = s.mCastleRights;
+    mKey = s.mKey;
+    mPawnKey = s.mPawnKey;
+    mCheckers = s.mCheckers;
+    mEnPassant = s.mEnPassant;
+    mPinned = s.mPinned;
+    mOccupancy = s.mOccupancy;
+    mPieceIndex = s.mPieceIndex;
+    mBoard = s.mBoard;
+    mPieces = s.mPieces;
+    mPieceCount = s.mPieceCount;
+    mPstScore = s.mPstScore;
+    mPieceList = s.mPieceList;
 }
 
 // ---------------------------------------------------------------------------- //
@@ -53,9 +54,7 @@ void State::operator=(const State & s)
 // all the necessary information to restart a game from a particular position." //
 // ---------------------------------------------------------------------------- //
 
-State::State(const std::string & fen) 
-  : fmr(0), castle(0), board(), piece_count(), piece_list(), piece_index(), 
-    pieces(), occupancy(), ep(0), key(0), pawn_key(0), us(white), them(black)
+State::State(const std::string & fen)
 {
     int i, enpass, position;
     std::string::const_iterator it;
@@ -63,24 +62,8 @@ State::State(const std::string & fen)
     Color c;
     PieceType p;
 
-    pstScore[white][middle] = 0;
-    pstScore[white][late] = 0;
-    pstScore[black][middle] = 0;
-    pstScore[black][late] = 0;
+    init();
 
-    for (p = pawn; p < none; ++p)
-    {
-        for (i = 0; i < Piece_max; ++i)
-        {
-            piece_list[white][p][i] = no_sq;
-            piece_list[black][p][i] = no_sq;
-        }
-    }
-    for (s = first_sq; s <= last_sq; ++s)
-    {
-        board[white][s] = none;
-        board[black][s] = none;
-    }
     position = 0;
     for (it = fen.begin(); it < fen.end(); ++it)
     {
@@ -97,7 +80,10 @@ State::State(const std::string & fen)
               : t == 'r' ? rook
               : t == 'q' ? queen
               : king;
-            add_piece(c, p, s);
+            addPiece(c, p, s);
+            mKey ^= Zobrist::key(c, p, s);
+            if (p == pawn)
+                mPawnKey ^= Zobrist::key(c, p, s);
             position++;
         }
         else if (*it == ' ')
@@ -106,20 +92,29 @@ State::State(const std::string & fen)
             break;
         }
     }
-    us   = *it == 'w' ? white : black;
-    them = !us;
+    if (*it == 'w')
+    {
+        mUs = white;
+        mThem = black;
+    }
+    else
+    {
+        mUs = black;
+        mThem = white;
+        mKey ^= Zobrist::key();
+    }
 
     enpass = -1;
     for (++it; it < fen.end(); ++it)
     {
         if (*it == 'K')
-            castle += w_king_castle;
+            mCastleRights += w_king_castle;
         else if (*it == 'Q')
-            castle += w_queen_castle;
+            mCastleRights += w_queen_castle;
         else if (*it == 'k')
-            castle += b_king_castle;
+            mCastleRights += b_king_castle;
         else if (*it == 'q')
-            castle += b_queen_castle;
+            mCastleRights += b_queen_castle;
         else if (isalpha(*it))
         {
             enpass = 'h' - *it;
@@ -127,108 +122,102 @@ State::State(const std::string & fen)
             enpass += 8 * (*it - '1');
         }
     }
+    mKey ^= Zobrist::key(mCastleRights);
 
     if (enpass > -1)
     {
-        enpass += square_bb[enpass] & Rank_3 ? 8 : -8;
-        ep = square_bb[enpass];
+        //enpass += square_bb[enpass] & Rank_3 ? 8 : -8;
+        mEnPassant = square_bb[enpass];
+        mKey ^= Zobrist::key(get_file(mEnPassant));
     }
 
-    // Initialize zobrist keys.
-    Zobrist::init_pieces(this);
-    Zobrist::init_pawn_key(this);
-
     // Initialize pins.
-    pinned[white] = get_pins(white);
-    pinned[black] = get_pins(black);
+    mPinned[white] = getPins(white);
+    mPinned[black] = getPins(black);
 
     // Initialize checkers.
-    checkers = getCheckers();
+    mCheckers = getCheckers();
+}
+
+void State::init()
+{
+    mUs = white;
+    mThem = black;
+    mFiftyMoveRule = 0;
+    mCastleRights = 0;
+    mKey = 0;
+    mPawnKey = 0;
+    mCheckers = 0;
+    mEnPassant = 0;
+    mPinned.fill({});
+    mOccupancy.fill({});
+    mPieceIndex.fill({});
+    mBoard.fill(none);
+    mPieces.fill({});
+    mPieceCount.fill({});
+    mPstScore.fill({});
+    for (auto i = mPieceList.begin(); i != mPieceList.end(); ++i)
+        for (auto j = i->begin(); j != i->end(); ++j)
+            j->fill(no_sq);
 }
 
 // ----------------------------------------------------------------------------
 // Function to return a bitboard of all pinned pieces for the current player.
 // ----------------------------------------------------------------------------
 
-U64 State::get_pins(Color c) const
+U64 State::getPins(Color c) const
 {
     U64 pinners, ray, pin = 0;
-    Square kingSq = king_sq(c);
+    Square kingSq = getKingSquare(c);
 
-    pinners = bishopMoves[kingSq] & (piece_bb<bishop>(!c) | piece_bb<queen>(!c));
+    pinners = bishopMoves[kingSq] & (getPieceBB<bishop>(!c) | getPieceBB<queen>(!c));
 
     while (pinners)
     {
-        ray = between_dia[pop_lsb(pinners)][kingSq] & occ();
+        ray = between_dia[pop_lsb(pinners)][kingSq] & getOccupancyBB();
         if (pop_count(ray) == 1)
-            pin |= ray & occ(c);
+            pin |= ray & getOccupancyBB(c);
     }
 
-    pinners = rookMoves[kingSq] & (piece_bb<rook>(!c) | piece_bb<queen>(!c));
+    pinners = rookMoves[kingSq] & (getPieceBB<rook>(!c) | getPieceBB<queen>(!c));
 
     while (pinners)
     {
-        ray = between_hor[pop_lsb(pinners)][kingSq] & occ();
+        ray = between_hor[pop_lsb(pinners)][kingSq] & getOccupancyBB();
         if (pop_count(ray) == 1)
-            pin |= ray & occ(c);
+            pin |= ray & getOccupancyBB(c);
     }
 
     return pin;
 }
 
-U64 State::get_pins() const
+U64 State::getDiscoveredChecks(Color c) const
 {
-    int i;
-    U64 ray, pin = 0;
-    for (i = 0; i < piece_count[them][bishop]; ++i)
+    U64 pinners, ray, discover = 0;
+    Square kingSq = getKingSquare(!c);
+
+    pinners = bishopMoves[kingSq] & (getPieceBB<bishop>(c) | getPieceBB<queen>(c));
+
+    while (pinners)
     {
-        ray = between_dia[piece_list[them][bishop][i]][king_sq(us)];
-        if (pop_count(ray & occ()) == 1 && ray & occ(us))
-            pin |= ray & occ(us);
+        ray = between_dia[pop_lsb(pinners)][kingSq] & getOccupancyBB();
+        if (pop_count(ray) == 1)
+            discover |= ray & getOccupancyBB(c);
     }
-    for (i = 0; i < piece_count[them][rook]; ++i)
+
+    pinners = rookMoves[kingSq] & (getPieceBB<rook>(c) | getPieceBB<queen>(!c));
+
+    while (pinners)
     {
-        ray = between_hor[piece_list[them][rook][i]][king_sq(us)];
-        if (pop_count(ray & occ()) == 1 && ray & occ(us))
-            pin |= ray & occ(us);
+        ray = between_hor[pop_lsb(pinners)][kingSq] & getOccupancyBB();
+        if (pop_count(ray) == 1)
+            discover |= ray & getOccupancyBB(c);
     }
-    for (i = 0; i < piece_count[them][queen]; ++i)
-    {
-        ray = between_dia[piece_list[them][queen][i]][king_sq(us)]
-            | between_hor[piece_list[them][queen][i]][king_sq(us)];
-        if (pop_count(ray & occ()) == 1 && ray & occ(us))
-            pin |= ray & occ(us);
-    }
-    return pin;
+
+    return discover;
 }
 
-U64 State::get_discovered_checks() const
-{
-    int i;
-    U64 ray, dc = 0;
-    for (i = 0; i < piece_count[us][bishop]; ++i)
-    {
-        ray = between_dia[piece_list[us][bishop][i]][king_sq(them)];
-        if (pop_count(ray & occ()) == 1 && ray & occ(us))
-            dc |= ray & occ(us);
-    }
-    for (i = 0; i < piece_count[us][rook]; ++i)
-    {
-        ray = between_hor[piece_list[us][rook][i]][king_sq(them)];
-        if (pop_count(ray & occ()) == 1 && ray & occ(us))
-            dc |= ray & occ(us);
-    }
-    for (i = 0; i < piece_count[us][queen]; ++i)
-    {
-        ray = between_dia[piece_list[us][queen][i]][king_sq(them)]
-            | between_hor[piece_list[us][queen][i]][king_sq(them)];
-        if (pop_count(ray & occ()) == 1 && ray & occ(us))
-            dc |= ray & occ(us);
-    }
-    return dc;
-}
-
-int State::see(Move m) const
+int State::see(Move_t m) const
 {
     Prop prop;
     Color color;
@@ -238,19 +227,18 @@ int State::see(Move m) const
     int gain[32] = { 0 };
     int d = 0;
 
-    color = us;
-    src = get_src(m);
-    dst = get_dst(m);
-    prop = get_prop(m);
+    color = mUs;
+    src = getSrc(m);
+    dst = getDst(m);
     from = square_bb[src];
     // Check if the move is en passant.
-    if (prop == en_passant)
+    if (onSquare(src) == pawn && square_bb[dst] & mEnPassant)
         gain[d] = getPieceValue(pawn);
-    else if (prop == queen_promo)
+    else if (getPiecePromo(m) == queen)
         gain[d] = Queen_wt - Pawn_wt;
     else
-        gain[d] = getPieceValue(on_square(dst));
-    occupancy = occ();
+        gain[d] = getPieceValue(onSquare(dst));
+    occupancy = getOccupancyBB();
     attackers = allAttackers(dst);
     // Get X ray attacks and add in pawns from attackers.
     xRay = getXRayAttacks(dst);
@@ -260,7 +248,7 @@ int State::see(Move m) const
     {
         // Update the target piece and the square it came from.
         src = get_lsb(from);
-        target = on_square(src);
+        target = onSquare(src);
 
         // Break if the target is a king.
         if (target == king)
@@ -280,7 +268,7 @@ int State::see(Move m) const
         attackers ^= from;
         occupancy ^= from;
 
-        // If the target is not a night, piece movement could cause a discovered
+        // If the target is not a night, piece movement could camUse a discovered
         // attacker.
         if (target != knight)
         {
@@ -302,21 +290,21 @@ int State::see(Move m) const
 
         // Get the next piece for the opposing player.
         color = !color;
-        if (!(attackers & occ(color)))
+        if (!(attackers & getOccupancyBB(color)))
             break;
 
-        if (attackers & piece_bb<pawn>(color))
-            from = get_lsb_bb(attackers & piece_bb<pawn>(color));
-        else if (attackers & piece_bb<knight>(color))
-            from = get_lsb_bb(attackers & piece_bb<knight>(color));
-        else if (attackers & piece_bb<bishop>(color))
-            from = get_lsb_bb(attackers & piece_bb<bishop>(color));
-        else if (attackers & piece_bb<rook>(color))
-            from = get_lsb_bb(attackers & piece_bb<rook>(color));
-        else if (attackers & piece_bb<queen>(color))
-            from = get_lsb_bb(attackers & piece_bb<queen>(color));
+        if (attackers & getPieceBB<pawn>(color))
+            from = get_lsb_bb(attackers & getPieceBB<pawn>(color));
+        else if (attackers & getPieceBB<knight>(color))
+            from = get_lsb_bb(attackers & getPieceBB<knight>(color));
+        else if (attackers & getPieceBB<bishop>(color))
+            from = get_lsb_bb(attackers & getPieceBB<bishop>(color));
+        else if (attackers & getPieceBB<rook>(color))
+            from = get_lsb_bb(attackers & getPieceBB<rook>(color));
+        else if (attackers & getPieceBB<queen>(color))
+            from = get_lsb_bb(attackers & getPieceBB<queen>(color));
         else
-            from = get_lsb_bb(attackers & piece_bb<king>(color));
+            from = get_lsb_bb(attackers & getPieceBB<king>(color));
     }
 
     // Negamax the gain array to determine the final SEE value.
@@ -331,21 +319,107 @@ int State::see(Move m) const
 // destination, and type of move.
 // ----------------------------------------------------------------------------
 
+void State::make_t(Move_t pMove)
+{
+    Square src, dst;
+    PieceType moved, captured;
+    bool epFlag = false;
+
+
+    src = getSrc(pMove);
+    dst = getDst(pMove);
+    moved = onSquare(src);
+    captured = onSquare(dst);
+
+    // Update the Fifty Move Rule
+    mFiftyMoveRule++;
+
+    // Remove the ep file and castle rights from the zobrist key.
+    if (mEnPassant)
+        mKey ^= Zobrist::key(get_file(mEnPassant));
+
+    mKey ^= Zobrist::key(mCastleRights);
+
+    if (captured != none && !isCastle(pMove))
+    {
+        mFiftyMoveRule = 0;
+        removePiece(mThem, captured, dst);
+    }
+
+    if (isCastle(pMove))
+    {
+        // Kingside Castle
+        if (dst < src)
+        {
+            movePiece(mUs, rook, src-3, dst+1);
+            movePiece(mUs, king, src, dst);
+        }
+        // Queenside Castle
+        else
+        {
+            movePiece(mUs, rook, src+4, dst-1);
+            movePiece(mUs, king, src, dst);
+        }
+    }
+    else
+        movePiece(mUs, moved, src, dst);
+
+    if (moved == pawn)
+    {
+        mFiftyMoveRule = 0;
+        mPawnKey ^= Zobrist::key(mUs, pawn, src, dst);
+
+        // Check for double pawn push.
+        if (int(std::max(src, dst)) - int(std::min(src, dst)) == 16)
+        {
+            mEnPassant = mUs == white ? square_bb[dst - 8]
+                               : square_bb[dst + 8];
+
+            mKey ^= Zobrist::key(get_file(dst));
+            epFlag = true;
+        }
+        else if (getPiecePromo(pMove))
+        {
+            removePiece(mUs, pawn, dst);
+            addPiece(mUs, getPiecePromo(pMove), dst);
+        }
+        else if (mEnPassant & square_bb[dst])
+        {
+            Square epCapture = mUs == white ? dst - 8 : dst + 8;
+            mPawnKey ^= Zobrist::key(mUs, pawn, epCapture);
+            removePiece(mThem, pawn, epCapture);
+        }
+    }
+
+    if (!epFlag)
+        mEnPassant = 0;
+
+    // Update castle rights.
+    mCastleRights &= Castle_rights[src];
+    mCastleRights &= Castle_rights[dst];
+
+    mKey ^= Zobrist::key(mCastleRights);
+    mKey ^= Zobrist::key();
+
+    assert(!check());
+    swap_turn();
+}
+/*
 void State::make(Move m)
 {
     const Square src  = get_src(m);
     const Square dst  = get_dst(m);
-    const PieceType attacker = on_square(src, us);
-    const PieceType defender = on_square(dst, them);
+    const PieceType attacker = onSquare(src);
+    const PieceType defender = onSquare(dst);
 
     // Update the 50 move rule.
     attacker == pawn || defender != none ? 
-        fmr = 0 : fmr++;    
+        mFiftyMoveRule = 0 : mFiftyMoveRule++;    
 
     // Remove the ep file and castle rights from the zobrist key.
-    if (ep)
-        key ^= Zobrist::key(get_file(ep));
-    key ^= Zobrist::key(castle);
+    if (mEnPassant)
+        mKey ^= Zobrist::key(get_file(mEnPassant));
+    mKey ^= Zobrist::key(mCastleRights);
 
     switch (get_prop(m))
     {
@@ -353,145 +427,146 @@ void State::make(Move m)
         case quiet:
         {
             if (attacker == pawn)
-                pawn_key ^= Zobrist::key(us, pawn, src, dst);
-            key ^= Zobrist::key(us, attacker, src, dst);
+                mPawnKey ^= Zobrist::key(mUs, pawn, src, dst);
+            mKey ^= Zobrist::key(mUs, attacker, src, dst);
             move_piece(src, dst);
-            ep = 0;
+            mEnPassant = 0;
             break;
         }
         // Attacking moves.
         case attack:
         {
             if (attacker == pawn)
-                pawn_key ^= Zobrist::key(us, pawn, src, dst);
+                mPawnKey ^= Zobrist::key(mUs, pawn, src, dst);
             if (defender == pawn)
-                pawn_key ^= Zobrist::key(them, pawn, dst);
-            key ^= Zobrist::key(us, attacker, src, dst);
-            key ^= Zobrist::key(them, defender, dst);
-            del_piece(them, dst);
+                mPawnKey ^= Zobrist::key(mThem, pawn, dst);
+            mKey ^= Zobrist::key(mUs, attacker, src, dst);
+            mKey ^= Zobrist::key(mThem, defender, dst);
+            del_piece(mThem, dst);
             move_piece(src, dst);
-            ep = 0;
+            mEnPassant = 0;
             break;
         }
-        // Double pawn push.
+        // Double pawn pmUsh.
         case dbl_push:
         {
-            pawn_key ^= Zobrist::key(us, pawn, src, dst);
-            key ^= Zobrist::key(us, pawn, src, dst);
+            mPawnKey ^= Zobrist::key(mUs, pawn, src, dst);
+            mKey ^= Zobrist::key(mUs, pawn, src, dst);
             move_piece(src, dst);
-            ep = square_bb[dst];
-            key ^= Zobrist::key(get_file(ep));
+            mEnPassant = square_bb[mUs == white ? dst - 8 : dst + 8];
+            mKey ^= Zobrist::key(get_file(mEnPassant));
             break;
         }
         // King castle.
         case king_cast:
         {
-            key ^= Zobrist::key(us, rook, src-3, dst+1);
-            key ^= Zobrist::key(us, king, src, dst);
+            mKey ^= Zobrist::key(mUs, rook, src-3, dst+1);
+            mKey ^= Zobrist::key(mUs, king, src, dst);
             move_piece(src-3, dst+1);
             move_piece(src, dst);
-            ep = 0;
+            mEnPassant = 0;
             break;
         }
         // Queen castle.
         case queen_cast:
         {
-            key ^= Zobrist::key(us, rook, src+4, dst-1);
-            key ^= Zobrist::key(us, king, src, dst);
+            mKey ^= Zobrist::key(mUs, rook, src+4, dst-1);
+            mKey ^= Zobrist::key(mUs, king, src, dst);
             move_piece(src+4, dst-1);
             move_piece(src, dst);
-            ep = 0;
+            mEnPassant = 0;
             break;
         }
         // Queen promotion.
         case queen_promo:
         {
-            pawn_key ^= Zobrist::key(us, pawn, src);
+            mPawnKey ^= Zobrist::key(mUs, pawn, src);
             if (defender == pawn)
-                pawn_key ^= Zobrist::key(them, pawn, dst);
-            key ^= Zobrist::key(us, pawn, src);
-            key ^= Zobrist::key(us, queen, dst);
+                mPawnKey ^= Zobrist::key(mThem, pawn, dst);
+            mKey ^= Zobrist::key(mUs, pawn, src);
+            mKey ^= Zobrist::key(mUs, queen, dst);
             if (defender != none)
-                key ^= Zobrist::key(them, defender, dst);
-            del_piece(us, src);
+                mKey ^= Zobrist::key(mThem, defender, dst);
+            del_piece(mUs, src);
             add_piece(dst, queen);
-            ep = 0;
+            mEnPassant = 0;
             break;
         }
         // Knight underpromotion.
         case knight_promo:
         {
-            pawn_key ^= Zobrist::key(us, pawn, src);
+            mPawnKey ^= Zobrist::key(mUs, pawn, src);
             if (defender == pawn)
-                pawn_key ^= Zobrist::key(them, pawn, dst);
-            key ^= Zobrist::key(us, pawn, src);
-            key ^= Zobrist::key(us, knight, dst);
+                mPawnKey ^= Zobrist::key(mThem, pawn, dst);
+            mKey ^= Zobrist::key(mUs, pawn, src);
+            mKey ^= Zobrist::key(mUs, knight, dst);
             if (defender != none)
-                key ^= Zobrist::key(them, defender, dst);
-            del_piece(us, src);
+                mKey ^= Zobrist::key(mThem, defender, dst);
+            del_piece(mUs, src);
             add_piece(dst, knight);
-            ep = 0;
+            mEnPassant = 0;
             break;
         }
         // Rook underpromotion.
         case rook_promo:
         {
-            pawn_key ^= Zobrist::key(us, pawn, src);
+            mPawnKey ^= Zobrist::key(mUs, pawn, src);
             if (defender == pawn)
-                pawn_key ^= Zobrist::key(them, pawn, dst);
-            key ^= Zobrist::key(us, pawn, src);
-            key ^= Zobrist::key(us, rook, dst);
+                mPawnKey ^= Zobrist::key(mThem, pawn, dst);
+            mKey ^= Zobrist::key(mUs, pawn, src);
+            mKey ^= Zobrist::key(mUs, rook, dst);
             if (defender != none)
-                key ^= Zobrist::key(them, defender, dst);
-            del_piece(us, src);
+                mKey ^= Zobrist::key(mThem, defender, dst);
+            del_piece(mUs, src);
             add_piece(dst, rook);
-            ep = 0;
+            mEnPassant = 0;
             break;
         }
         // Bishop underpromotion.
         case bishop_promo:
         {
-            pawn_key ^= Zobrist::key(us, pawn, src);
+            mPawnKey ^= Zobrist::key(mUs, pawn, src);
             if (defender == pawn)
-                pawn_key ^= Zobrist::key(them, pawn, dst);
-            key ^= Zobrist::key(us, pawn, src);
-            key ^= Zobrist::key(us, bishop, dst);
-            if (on_square(dst, them) != none)
-                key ^= Zobrist::key(them, defender, dst);
-            del_piece(us, src);
+                mPawnKey ^= Zobrist::key(mThem, pawn, dst);
+            mKey ^= Zobrist::key(mUs, pawn, src);
+            mKey ^= Zobrist::key(mUs, bishop, dst);
+            if (onSquare(dst) != none)
+                mKey ^= Zobrist::key(mThem, defender, dst);
+            del_piece(mUs, src);
             add_piece(dst, bishop);
-            ep = 0;
+            mEnPassant = 0;
             break;
         }
         // En-Passant.
         case en_passant:
         {
-            pawn_key ^= Zobrist::key(us, pawn, src, dst);
-            pawn_key ^= Zobrist::key(them, pawn, get_lsb(ep));
-            key ^= Zobrist::key(us, pawn, src, dst);
-            key ^= Zobrist::key(them, pawn, get_lsb(ep));
-            key ^= Zobrist::key(get_file(ep));
+            Square epAttacked = dst + (mUs == white ? -8 : 8);
+            mPawnKey ^= Zobrist::key(mUs, pawn, src, dst);
+            mPawnKey ^= Zobrist::key(mThem, pawn, epAttacked);
+            mKey ^= Zobrist::key(mUs, pawn, src, dst);
+            mKey ^= Zobrist::key(mThem, pawn, epAttacked);
+            mKey ^= Zobrist::key(get_file(mEnPassant));
             move_piece(src, dst);
-            del_piece(them, get_lsb(ep));
-            ep = 0;
+            del_piece(mThem, epAttacked);
+            mEnPassant = 0;
             break;
         }
     }
     // Update castle rights.
-    castle &= Castle_rights[src];
-    castle &= Castle_rights[dst];
+    mCastleRights &= Castle_rights[src];
+    mCastleRights &= Castle_rights[dst];
 
     // Add updated castle rights back into the zobrist key, and swap
     // turns.
-    key ^= Zobrist::key(castle);
-    key ^= Zobrist::key();
+    mKey ^= Zobrist::key(mCastleRights);
+    mKey ^= Zobrist::key();
     /*
-    if (occupancy[us] & occupancy[them])
+    if (occupancy[mUs] & occupancy[mThem])
     {
         std::cout << "piece: " << piece << '\n';
         std::cout << to_string(m) << '\n';
         std::cout << *this << '\n';
-        assert(!(occupancy[us] & occupancy[them]));
+        assert(!(occupancy[mUs] & occupancy[mThem]));
     }
     if (check())
     {
@@ -500,9 +575,10 @@ void State::make(Move m)
         std::cout << *this << '\n';
     }
     */
+/*
     assert(!check());
     swap_turn();
-}
+}*/
 
 // ----------------------------------------------------------------------------
 // Function to return a bitboard of all valid king moves for the current 
@@ -511,45 +587,60 @@ void State::make(Move m)
 U64 State::valid_king_moves() const
 {
     U64 m;
-    const Square * s;
 
-    const Dir L   = us == white ? SW : NW;
-    const Dir R   = us == white ? SE : NE;
+    const Dir L   = mUs == white ? SW : NW;
+    const Dir R   = mUs == white ? SE : NE;
 
     // Remove king from occupancy to check squares attacked behind the king.
-    const U64 o = occ() ^ piece_bb<king>(us);
+    const U64 o = getOccupancyBB() ^ getPieceBB<king>(mUs);
 
-    m = King_moves[king_sq(us)];
-    m &= ~(shift_e(piece_bb<pawn>(them), R) | shift_w(piece_bb<pawn>(them), L));
+    m = King_moves[getKingSquare(mUs)];
+    m &= ~(shift_e(getPieceBB<pawn>(mThem), R) | shift_w(getPieceBB<pawn>(mThem), L));
 
-    for (s = piece<knight>(them); *s != no_sq; ++s)
-        m &= ~(Knight_moves[*s]);
+    for (Square s : getPieceList<knight>(mThem))
+    {
+        if (s == no_sq)
+            break;
+        m &= ~(Knight_moves[s]);
+    }
 
-    for (s = piece<bishop>(them); *s != no_sq; ++s)
-        m &= ~(Bmagic(*s, o));
+    for (Square s : getPieceList<bishop>(mThem))
+    {
+        if (s == no_sq)
+            break;
+        m &= ~(Bmagic(s, o));
+    }
 
-    for (s = piece<rook>(them); *s != no_sq; ++s)
-        m &= ~(Rmagic(*s, o));
+    for (Square s : getPieceList<rook>(mThem))
+    {
+        if (s == no_sq)
+            break;
+        m &= ~(Rmagic(s, o));
+    }
 
-    for (s = piece<queen>(them); *s != no_sq; ++s)
-        m &= ~(Qmagic(*s, o));
+    for (Square s : getPieceList<queen>(mThem))
+    {
+        if (s == no_sq)
+            break;
+        m &= ~(Qmagic(s, o));
+    }
 
-    m &= ~(King_moves[king_sq(them)]);
-    m &= ~(occ(us));
+    m &= ~(King_moves[getKingSquare(mThem)]);
+    m &= ~(getOccupancyBB(mUs));
 
     return m;
 }
 
 
 // ----------------------------------------------------------------------------
-// Function to check whether the current player's king is in check. Used 
+// Function to check whether the current player's king is in check. mUsed 
 // mostly for debugging.
 // ----------------------------------------------------------------------------
 /*
 bool State::in_check()
 {
-    const Square k = piece_list[us][king][0];
-    return (pawn_attacks[us][k] & e_pawn())
+    const Square k = mPieceList[mUs][king][0];
+    return (pawn_attacks[mUs][k] & e_pawn())
          | (Knight_moves[k] & e_knight())
          | (Bmagic(k, occ()) & (e_bishop() | e_queen()))
          | (Rmagic(k, occ()) & (e_rook() | e_queen()));
@@ -557,121 +648,7 @@ bool State::in_check()
 */
 
 // ----------------------------------------------------------------------------
-// Function to return the EPD string of the current position, used to query 
-// the opening database.
-// ----------------------------------------------------------------------------
-
-const char * State::get_EPD() const
-{
-    std::string EPD = "";
-    int empty = 0;
-    for (int i = 63; i >= 0; --i)
-    {
-        if (empty == 8)
-        {
-            empty = 0;
-            EPD.append("8");
-        }
-        if ((i + 1) % 8 == 0 && i != 63)
-        {
-            if (empty > 0) EPD.append(std::to_string(empty));
-            empty = 0;
-            EPD.append("/");
-        }
-        switch (board[white][i])
-        {
-            case pawn:
-                if (empty > 0) EPD.append(std::to_string(empty));
-                empty = 0;
-                EPD.append("P");
-                break;
-            case knight:
-                if (empty > 0) EPD.append(std::to_string(empty));
-                empty = 0;
-                EPD.append("N");
-                break;
-            case bishop:
-                if (empty > 0) EPD.append(std::to_string(empty));
-                empty = 0;
-                EPD.append("B");
-                break;
-            case rook:
-                if (empty > 0) EPD.append(std::to_string(empty));
-                empty = 0;
-                EPD.append("R");
-                break;
-            case queen:
-                if (empty > 0) EPD.append(std::to_string(empty));
-                empty = 0;
-                EPD.append("Q");
-                break;
-            case king:
-                if (empty > 0) EPD.append(std::to_string(empty));
-                empty = 0;
-                EPD.append("K");
-                break;
-        }
-        switch (board[black][i])
-        {
-            case none:
-                empty++;
-                break;
-            case pawn:
-                if (empty > 0) EPD.append(std::to_string(empty));
-                empty = 0;
-                EPD.append("p");
-                break; 
-            case knight:
-                if (empty > 0) EPD.append(std::to_string(empty));
-                empty = 0;
-                EPD.append("n");
-                break;     
-            case bishop:
-                if (empty > 0) EPD.append(std::to_string(empty));
-                empty = 0;
-                EPD.append("b");
-                break;      
-            case rook:
-                if (empty > 0) EPD.append(std::to_string(empty));
-                empty = 0;
-                EPD.append("r");
-                break;
-            case queen:
-                if (empty > 0) EPD.append(std::to_string(empty));
-                empty = 0;
-                EPD.append("q");
-                break;
-            case king:
-                if (empty > 0) EPD.append(std::to_string(empty));
-                empty = 0;
-                EPD.append("k");
-                break;
-        }
-        if (i == 0 && empty > 0) EPD.append(std::to_string(empty));
-    }
-    EPD.append(" ");
-    us ? EPD.append("b") : EPD.append("w");
-    EPD.append(" ");
-    if (castle & w_king_castle)  EPD.append("K");
-    if (castle & w_queen_castle) EPD.append("Q");
-    if (castle & b_king_castle)  EPD.append("k");
-    if (castle & b_queen_castle) EPD.append("q");
-    EPD.append(" ");
-    if (ep != 0)
-    {
-        int ep_sq = get_lsb(ep);
-        ep_sq / 8 == 3 ? ep_sq -= 8 : ep_sq += 8;
-        EPD.append(SQ[ep_sq]);
-    }
-    else
-    {
-        EPD.append("-");
-    }
-    return EPD.c_str();
-}
-
-// ----------------------------------------------------------------------------
-// Function to print the board on the screen. Used for debugging.
+// Function to print the board on the screen. mUsed for debugging.
 // ----------------------------------------------------------------------------
 
 std::ostream & operator << (std::ostream & o, const State & s)
@@ -696,21 +673,22 @@ std::ostream & operator << (std::ostream & o, const State & s)
     o << bar << std::endl;
     for (int i = 63; i >= 0; --i)
     {
+        U64 bit = square_bb[i];
         if (i % 8 == 7)
             o << nums[i / 8] << "|";
 
-        o << (s.board[white][i] == pawn   ? W_pawn
-            : s.board[white][i] == knight ? W_knight
-            : s.board[white][i] == bishop ? W_bishop
-            : s.board[white][i] == rook   ? W_rook
-            : s.board[white][i] == queen  ? W_queen
-            : s.board[white][i] == king   ? W_king
-            : s.board[black][i] == pawn   ? B_pawn
-            : s.board[black][i] == knight ? B_knight
-            : s.board[black][i] == bishop ? B_bishop
-            : s.board[black][i] == rook   ? B_rook
-            : s.board[black][i] == queen  ? B_queen
-            : s.board[black][i] == king   ? B_king
+        o << (bit & s.getPieceBB<pawn>(white)   ? W_pawn
+            : bit & s.getPieceBB<knight>(white) ? W_knight
+            : bit & s.getPieceBB<bishop>(white) ? W_bishop
+            : bit & s.getPieceBB<rook>(white)   ? W_rook
+            : bit & s.getPieceBB<queen>(white)  ? W_queen
+            : bit & s.getPieceBB<king>(white)   ? W_king
+            : bit & s.getPieceBB<pawn>(black)   ? B_pawn
+            : bit & s.getPieceBB<knight>(black) ? B_knight
+            : bit & s.getPieceBB<bishop>(black) ? B_bishop
+            : bit & s.getPieceBB<rook>(black)   ? B_rook
+            : bit & s.getPieceBB<queen>(black)  ? B_queen
+            : bit & s.getPieceBB<king>(black)   ? B_king
             : Empty) << "|";
 
         if (i % 8 == 0)
@@ -720,8 +698,8 @@ std::ostream & operator << (std::ostream & o, const State & s)
     o << "  A B C D E F G H\n";
 
     /*
-    o << "Color(us)" << s.us << '\n';
-    o << "Color(them)" << s.them << '\n';
+    o << "Color(mUs)" << s.mUs << '\n';
+    o << "Color(mThem)" << s.mThem << '\n';
 
     print_bb(s.occ(white));
     print_bb(s.occ(black));

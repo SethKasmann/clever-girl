@@ -6,8 +6,6 @@
 #include "bitboard.h"
 #include "types.h"
 
-class State;
-
 namespace Zobrist
 {
 	extern U64 piece_rand[Player_size][Types_size][Board_size];
@@ -16,8 +14,6 @@ namespace Zobrist
 	extern U64 side_to_move_rand;
 
 	void init();
-	void init_pieces(State *);
-	void init_pawn_key(State * s);
 
 	// Side to move.
 	inline U64 key()

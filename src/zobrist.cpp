@@ -1,5 +1,4 @@
 #include "zobrist.h"
-#include "state.h"
 
 namespace Zobrist
 {
@@ -33,35 +32,5 @@ namespace Zobrist
 			castle_rand[i] = rand_64();
 		}
 		side_to_move_rand = rand_64();
-	}
-
-	void init_pieces(State * s)
-	{
-		for (Square sq = first_sq; sq <= last_sq; ++sq)
-		{
-			if (s->on_square(sq, s->us) != none)
-				s->key ^= piece_rand[s->us][s->on_square(sq, s->us)][sq];
-			else if (s->on_square(sq, s->them) != none)
-				s->key ^= piece_rand[s->them][s->on_square(sq, s->them)][sq];
-		}
-
-		if (s->us == white) 
-			s->key ^= side_to_move_rand;
-
-		if (s->ep) 
-			s->key ^= ep_file_rand[get_file(s->ep)]; 
-
-		s->key ^= castle_rand[s->castle];
-	}
-
-	void init_pawn_key(State * s)
-	{
-		for (Square sq = first_sq; sq <= last_sq; ++sq)
-		{
-			if (s->on_square(sq, s->us) == pawn)
-				s->pawn_key ^= piece_rand[s->us][pawn][sq];
-			else if (s->on_square(sq, s->them) == pawn)
-				s->pawn_key ^= piece_rand[s->them][pawn][sq];
-		}
 	}
 };

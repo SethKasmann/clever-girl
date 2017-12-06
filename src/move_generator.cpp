@@ -1,3 +1,4 @@
+
 #include "move_generator.h"
 
 // ----------------------------------------------------------------------------
@@ -21,53 +22,56 @@ void push_pawn_moves(State & s, MoveList * mlist, Check & ch)
     const U64 Promo = C == white ? Rank_8 : Rank_1;
     const int dir   = C == white ? 8      : -8;
 
-    const Square* sq;
-    Square src, dst;
+    //const Square* sq;
+    Square dst;
 
-    for (sq = s.piece<pawn>(C); *sq != no_sq; ++sq)
+    //for (sq = s.piece<pawn>(C); *sq != no_sq; ++sq)
+    for (Square src : s.getPieceList<pawn>(C))
     {
-        src = *sq;
+        if (src == no_sq)
+            break;
+
         dst = src + dir;
         if (dst & Promo)
         {
-            if (dst & Not_a_file && s.board[s.them][dst+1] != none)
+            if (dst & Not_a_file && square_bb[dst+1] & s.getOccupancyBB(s.getTheirColor()))
             {
-                mlist->push(src, dst+1, queen_promo,  QP);
-                mlist->push(src, dst+1, knight_promo, NP);
-                mlist->push(src, dst+1, rook_promo,   RP);
-                mlist->push(src, dst+1, bishop_promo, BP);
+                mlist->push(makeMove(src, dst+1, queen));
+                mlist->push(makeMove(src, dst+1, knight));
+                mlist->push(makeMove(src, dst+1, rook));
+                mlist->push(makeMove(src, dst+1, bishop));
             }
-            if (dst & Not_h_file && s.board[s.them][dst-1] != none)
+            if (dst & Not_h_file && square_bb[dst-1] & s.getOccupancyBB(s.getTheirColor()))
             {
-                mlist->push(src, dst-1, queen_promo,  QP);
-                mlist->push(src, dst-1, knight_promo, NP);
-                mlist->push(src, dst-1, rook_promo,   RP);
-                mlist->push(src, dst-1, bishop_promo, BP);
+                mlist->push(makeMove(src, dst-1, queen));
+                mlist->push(makeMove(src, dst-1, knight));
+                mlist->push(makeMove(src, dst-1, rook));
+                mlist->push(makeMove(src, dst-1, bishop));
             }
-            if (dst & s.empty())
+            if (dst & s.getEmptyBB())
             {
-                mlist->push(src, dst, queen_promo,  QP);
-                mlist->push(src, dst, knight_promo, NP);
-                mlist->push(src, dst, rook_promo,   RP);
-                mlist->push(src, dst, bishop_promo, BP);
+                mlist->push(makeMove(src, dst, queen));
+                mlist->push(makeMove(src, dst, knight));
+                mlist->push(makeMove(src, dst, rook));
+                mlist->push(makeMove(src, dst, bishop));
             }
         }
         else
         {
-            if (s.board[s.them][dst+1] != none && dst & Not_a_file)
+            if (square_bb[dst+1] & s.getOccupancyBB(s.getTheirColor()) && square_bb[dst] & Not_a_file)
             {
-                mlist->push(src, dst+1, attack, Score[pawn][s.board[s.them][dst+1]]);
+                mlist->push(makeMove(src, dst+1));
             }
-            if (s.board[s.them][dst-1] != none && dst & Not_h_file)
+            if (square_bb[dst-1] & s.getOccupancyBB(s.getTheirColor()) && square_bb[dst] & Not_h_file)
             {
-                mlist->push(src, dst-1, attack, Score[pawn][s.board[s.them][dst-1]]);
+                mlist->push(makeMove(src, dst-1));
             }
-            if (dst & s.empty())
+            if (square_bb[dst] & s.getEmptyBB())
             {
-                mlist->push(src, dst, quiet, Q);
-                if (pawn_dbl_push[C][src] && (dst+dir) & s.empty())
+                mlist->push(makeMove(src, dst));
+                if (pawn_dbl_push[C][src] && (dst+dir) & s.getEmptyBB())
                 {
-                    mlist->push(src, dst+dir, dbl_push, Q);
+                    mlist->push(makeMove(src, dst+dir));
                 }
             }
         }
@@ -76,9 +80,9 @@ void push_pawn_moves(State & s, MoveList * mlist, Check & ch)
     
     if (ch.checks)
     {
-        for (Move m = *mlist->c; mlist->c < mlist->e; m = *mlist->c)
+        for (Move_t m = *mlist->c; mlist->c < mlist->e; m = *mlist->c)
         {
-            if (!(get_dst(m)&ch.ray||get_dst(m)&ch.checker))
+            if (!(getDst(m)&ch.ray||getDst(m)&ch.checker))
                 *mlist->c = *(--mlist->e);
             else
                 mlist->c++;
@@ -88,6 +92,19 @@ void push_pawn_moves(State & s, MoveList * mlist, Check & ch)
 
     U64 a, en_pass;
     // En passant.
+
+    if (s.getEnPassantBB() && ch.checker & pawn_push[!C][get_lsb(s.getEnPassantBB())])
+    {
+        dst = get_lsb(s.getEnPassantBB());
+        a = pawn_attacks[!C][dst] & s.getPieceBB<pawn>(C);
+        while (a)
+        {
+            if (s.check(pawn_push[!C][dst] | get_lsb_bb(a)))
+                return;
+            mlist->push(makeMove(pop_lsb(a), dst));
+        }
+    }
+    /*
     if (s.ep & ch.checker)
     {
         assert(s.ep & ch.checker);
@@ -105,7 +122,7 @@ void push_pawn_moves(State & s, MoveList * mlist, Check & ch)
                 mlist->push(pop_lsb(a), dst, en_passant, EP);
             }
         }
-    }
+    }*/
 }
 
 // ----------------------------------------------------------------------------
@@ -117,17 +134,19 @@ template <PieceType P>
 void push_moves(State & s, MoveList * mlist, Check & ch)
 {
     U64 m, a;
-    const Square* src;
     int score;
-    for (src = s.piece<P>(s.us); *src != no_sq; ++src)
+    //for (src = s.piece<P>(s.getOurColor()); *src != no_sq; ++src)
+    for (Square src : s.getPieceList<P>(s.getOurColor()))
     {
-        m  = s.attack_bb<P>(*src) & (ch.ray | ch.checker);
-        a  = m & s.occ(s.them);
-        m &= s.empty();
+        if (src == no_sq)
+            break;
+        m  = s.getAttackBB<P>(src) & (ch.ray | ch.checker);
+        a  = m & s.getOccupancyBB(s.getTheirColor());
+        m &= s.getEmptyBB();
         while (a)
         {
-            score = Score[P][s.on_square(get_lsb(a), s.them)];
-            mlist -> push(*src, pop_lsb(a), attack, score);
+            score = Score[P][s.onSquare(get_lsb(a))];
+            mlist -> push(makeMove(src, pop_lsb(a)));
         }
         while (m)
         {
@@ -135,30 +154,30 @@ void push_moves(State & s, MoveList * mlist, Check & ch)
             bool gives_check = false;
             Square dst = pop_lsb(m);
             if (P == knight)
-                gives_check = Knight_moves[dst] & s.piece_bb<king>(s.them);
+                gives_check = Knight_moves[dst] & s.getPieceBB<king>(s.getTheirColor());
             else if (P == bishop)
             {
-                ray = between_dia[dst][s.king_sq(s.them)];
-                if (ray && pop_count(ray & s.occ()) == 0)
+                ray = between_dia[dst][s.getKingSquare(s.getTheirColor())];
+                if (ray && pop_count(ray & s.getOccupancyBB()) == 0)
                     gives_check = true;
             }
             else if (P == rook)
             {
-                ray = between_hor[dst][s.king_sq(s.them)];
-                if (ray && pop_count(ray & s.occ()) == 0)
+                ray = between_hor[dst][s.getKingSquare(s.getTheirColor())];
+                if (ray && pop_count(ray & s.getOccupancyBB()) == 0)
                     gives_check = true;
             }
             else
             {
-                ray = between_dia[dst][s.king_sq(s.them)] | between_hor[dst][s.king_sq(s.them)];
-                if (ray && pop_count(ray & s.occ()) == 0)
+                ray = between_dia[dst][s.getKingSquare(s.getTheirColor())] | between_hor[dst][s.getKingSquare(s.getTheirColor())];
+                if (ray && pop_count(ray & s.getOccupancyBB()) == 0)
                     gives_check = true;
             }
 
             if (gives_check)
-                mlist -> push(*src, dst, quiet, QC);
+                mlist -> push(makeMove(src, dst));
             else
-                mlist -> push(*src, dst, quiet, Q);
+                mlist -> push(makeMove(src, dst));
         }
     }
 }
@@ -173,34 +192,34 @@ void push_king_moves(State & s, MoveList * mlist, Check & ch)
     int score;
     Square k, dst;
 
-    k = s.king_sq(s.us);
+    k = s.getKingSquare(s.getOurColor());
 
     m = s.valid_king_moves();
-    a = m & s.occ(s.them);
+    a = m & s.getOccupancyBB(s.getTheirColor());
     m ^= a;
 
     while (m) 
-        mlist -> push(k, pop_lsb(m), quiet, Q);
+        mlist -> push(makeMove(k, pop_lsb(m)));
 
     while (a)
     {
-        score = Score[king][s.on_square(get_lsb(a), s.them)];
-        mlist -> push(k, pop_lsb(a), attack, score);
+        score = Score[king][s.onSquare(get_lsb(a))];
+        mlist -> push(makeMove(k, pop_lsb(a)));
     }
 
     if (ch.checks) return;
 
-    if (s.k_castle() 
-        && !(between_hor[k][k-3] & s.occ())
+    if (s.canCastleKingside() 
+        && !(between_hor[k][k-3] & s.getOccupancyBB())
         && !s.attacked(k-1) 
         && !s.attacked(k-2))
-        mlist->push(k, k-2, king_cast, C);
+        mlist->push(makeCastle(k, k-2));
 
-    if (s.q_castle()
-        && !(between_hor[k][k+4] & s.occ())
+    if (s.canCastleQueenside()
+        && !(between_hor[k][k+4] & s.getOccupancyBB())
         && !s.attacked(k+1)
         && !s.attacked(k+2))
-        mlist->push(k, k+2, queen_cast, C);
+        mlist->push(makeCastle(k, k+2));
 }
 
 // ----------------------------------------------------------------------------
@@ -213,29 +232,31 @@ void check_legal(State & s, MoveList * mlist)
     U64 pin, dc;
 
     // Set pinned pieces and discovered check pieces.
-    pin = s.get_pins(s.us);//s.get_pins();
-    dc = s.get_discovered_checks();
+    pin = s.getPins(s.getOurColor());//s.get_pins();
+    dc = s.getDiscoveredChecks(s.getOurColor());
 
     if (!pin && !dc) return;
     
     // Run through the move list. Remove any moves where the source location
     // is a pinned piece and the king square is not on the line formed by the
     // source and destination locations.
-    for (Move m = *mlist->c; mlist->c < mlist->e; m = *mlist->c)
+    for (Move_t m = *mlist->c; mlist->c < mlist->e; m = *mlist->c)
     {
         // Check for pins.
-        if (square_bb[get_src(m)] & pin ? 
-            !(coplanar[get_src(m)][get_dst(m)] & s.piece_bb<king>(s.us)) : false)
+        if (square_bb[getSrc(m)] & pin ? 
+            !(coplanar[getSrc(m)][getDst(m)] & s.getPieceBB<king>(s.getOurColor())) : false)
         {
             *mlist->c = *(--mlist->e);
             continue;
         }
 
         // Check for discovered checks.
-        if ((square_bb[get_src(m)] & dc) && get_score(m) < QC && !(coplanar[get_src(m)][get_dst(m)] & s.piece_bb<king>(s.them)))
+        /*
+        if ((square_bb[get_src(m)] & dc) && get_score(m) < QC && !(coplanar[get_src(m)][get_dst(m)] & s.getPieceBB<king>(s.getTheirColor())))
         {
             set_score(mlist->c, QC);
         }
+        */
         mlist->c++;
     }
 }
@@ -274,7 +295,7 @@ void push_moves(State & s, MoveList * mlist)
     }
     else
     {
-        s.us == white ? push<white>(s, mlist, ch)
+        s.getOurColor() == white ? push<white>(s, mlist, ch)
                       : push<black>(s, mlist, ch);
     }
 
@@ -282,14 +303,15 @@ void push_moves(State & s, MoveList * mlist)
     mlist->set();
 }
 
+/*
 std::ostream & operator << (std::ostream & o, const MoveList & mlist)
 {
-    const Move * i;
+    const Move_t * i;
     o << "MoveList size=" << mlist.size() << '\n'
       << "{\n";
     for (i = mlist._m; i < mlist.e; ++i)
     {
-        o << "  " << to_string(*i) << " " << get_score(*i) << " " << get_prop(*i) << '\n';
+        o << "  " << toString(*i) << '\n';
     }
     o << "}\n";
-}
+}*/

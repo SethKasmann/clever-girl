@@ -9,6 +9,7 @@
 #include "bitboard.h"
 #include "MagicMoves.hpp"
 #include "types.h"
+#include "move.h"
 
 const U64 Full = 0xFFFFFFFFFFFFFFFF;
 const int Max_size = 256;
@@ -17,8 +18,8 @@ struct Check
 {
     Check(State & s) : checker(s.getCheckers()), checks(pop_count(checker))
     {
-        checks == 1 ? ray = between_dia[s.king_sq(s.us)][get_lsb(checker)] 
-                          | between_hor[s.king_sq(s.us)][get_lsb(checker)]
+        checks == 1 ? ray = between_dia[s.getKingSquare(s.getOurColor())][get_lsb(checker)] 
+                          | between_hor[s.getKingSquare(s.getOurColor())][get_lsb(checker)]
                     : ray = checker = Full;
     }
     U64 checker;
@@ -35,30 +36,30 @@ public:
     { 
         return e - _m; 
     }
-    void push(int src, int dst, int p, int s)
+    void push(Move_t m)
     {
-        assert(src + dst != 0);
-        *(e++) = src | dst << 6 | p << 12 | s << 16;
+        *(e++) = m;
     }
-    bool contains(Move move)
+    bool contains(Move_t move)
     {
         return std::find(_m, e, move) != e;
     }
-    void extract(Move move)
+    void extract(Move_t move)
     {
-        if (move == No_move)
+        if (move == nullMove)
             return;
-        Move* pv = std::find(_m, c, move);
+        Move_t* pv = std::find(_m, c, move);
         //assert(std::find(_m, c, move) != c);
         std::swap(*pv, *(--c));
     }
-    Move pop() 
+    Move_t pop() 
     { 
         return *(--e);
     }
     void sort(const State& s)
     {
-        for (Move* move = _m; move < c; ++move)
+        /*
+        for (Move_t* move = _m; move < c; ++move)
         {
             if (!is_quiet(*move))
             {
@@ -67,6 +68,7 @@ public:
             }
         }
         std::stable_sort(_m, c);
+        */
     }
     void set()
     {
@@ -77,9 +79,10 @@ public:
         c = _m;
         e = _m;
     }
-    void order_killer(Move* killers)
+    void order_killer(Move_t* killers)
     {
-        Move* k;
+        /*
+        Move_t* k;
         int offset, i;
 
         offset = 1;
@@ -92,11 +95,12 @@ public:
                 offset++;
             }
         }
+        */
     }
 
-    Move _m[Max_size];
-    Move * c;
-    Move * e;
+    Move_t _m[Max_size];
+    Move_t * c;
+    Move_t * e;
 
     friend std::ostream & operator << (std::ostream & o, const MoveList & mlist);
 };

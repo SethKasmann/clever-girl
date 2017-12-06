@@ -1,7 +1,7 @@
 #include "search.h"
 #include <fstream>
 
-static Move killers[Max_ply][Killer_size];
+static Move_t killers[Max_ply][Killer_size];
 cgirl::line_manager lineManager;
 GameList glist;
 
@@ -48,7 +48,7 @@ int qsearch(State& s, SearchInfo& si, int d, int alpha, int beta)
     mlist.sort(s);
 
     int val;
-    Move m;
+    Move_t m;
     State c;
 
     while (mlist.size() > 0)
@@ -58,7 +58,7 @@ int qsearch(State& s, SearchInfo& si, int d, int alpha, int beta)
         if (get_score(m) <= C)                   // Break if a quiet move is found.
             break;
         std::memmove(&c, &s, sizeof s);          // Copy current state.
-        c.make(m);                               // Make move.
+        c.make_t(m);                               // Make move.
         val = -qsearch(c, si, d - 1, -beta, -alpha); // Recursive call to qsearch.
         if (val >= beta)                         // Alpha-Beta pruning.
             return beta;
@@ -69,14 +69,14 @@ int qsearch(State& s, SearchInfo& si, int d, int alpha, int beta)
 
 int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int beta)
 {
-    Move best_move = No_move;
+    Move_t best_move = nullMove;
 
     if (si.quit || (si.nodes % 3000 == 0 && interrupt(si)))
         return 0;
 
     si.nodes++;
     // Check for draw.
-    if (glist.repeat() || s.fmr > 99)
+    if (glist.repeat() || s.getFiftyMoveRule() > 99)
         return Draw;
 
     // Evaluate leaf nodes.
@@ -84,10 +84,10 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
         return qsearch(s, si, depth, alpha, beta);
 
     // Get a pointer to the correction transposition table location.
-    const TableEntry* table_entry = ttable.probe(s.key);
+    const TableEntry* table_entry = ttable.probe(s.getKey());
 
     // Check if table entry is valid and matches the position key.
-    if (table_entry->key == s.key && table_entry->depth >= depth)
+    if (table_entry->key == s.getKey() && table_entry->depth >= depth)
     {
         if (table_entry->type == pv)             // PV Node, return the score.
             return table_entry->score;
@@ -114,20 +114,20 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
         return s.check() ? -Checkmate : Stalemate;
 
     // Check if we are at the PV line.
-    if (lineManager.get_pv_key(ply) == s.key)
+    if (lineManager.get_pv_key(ply) == s.getKey())
     {
         best_move = lineManager.get_pv_move(ply);
     }
 
     // Internal Iterative Deepening. If no best move was found, do a small
     // search to determine which move to search first.
-    if (best_move == No_move && depth > 5)
+    if (best_move == nullMove && depth > 5)
     {
         // Using depth calculation from Stockfish.
         int d = 3 * depth / 4 - 2;
         scout_search(s, si, d, ply, alpha, beta);
-        table_entry = ttable.probe(s.key);
-        if (table_entry->key == s.key)
+        table_entry = ttable.probe(s.getKey());
+        if (table_entry->key == s.getKey())
             best_move = table_entry->best;
     }
 
@@ -136,13 +136,13 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
     mlist.sort(s);
 
     // Confirm a killer move has been stored at this ply.
-    if (killers[ply][0] != No_move && mlist.size() > Killer_size) 
+    if (killers[ply][0] != nullMove && mlist.size() > Killer_size) 
         mlist.order_killer(killers[ply]);
 
     int a = alpha;
     int b = beta;
     int val;
-    Move m;
+    Move_t m;
     State c;
     bool first = true;
 
@@ -150,8 +150,8 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
     {
         std::memmove(&c, &s, sizeof s);    // Copy current state.
         m = mlist.pop();                   // Get the next move.
-        c.make(m);                         // Make move.
-        glist.push(m, c.key);              // Add move to gamelist.
+        c.make_t(m);                         // Make move.
+        glist.push(m, c.getKey());              // Add move to gamelist.
 
         // Scout alrogithm. Search the first node with a full window.
         if (first)
@@ -196,11 +196,11 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
 
     if (a > alpha && a < b && !si.quit)
     {
-        lineManager.push_to_pv(best_move, s.key, ply, a);
+        lineManager.push_to_pv(best_move, s.getKey(), ply, a);
     }
 
     // Store in transposition table, using depth first replacement.
-    ttable.store(s.key, best_move, a <= alpha ? all : a >= b ? cut : pv, depth, a);
+    ttable.store(s.getKey(), best_move, a <= alpha ? all : a >= b ? cut : pv, depth, a);
 
     // Fail-Hard alpha beta score.
     return a;
@@ -216,7 +216,7 @@ void iterative_deepening(State& s, SearchInfo& si)
     {
         score = scout_search(s, si, d, 0, Neg_inf, Pos_inf);
 
-        if (lineManager.get_pv_move() == No_move)
+        if (lineManager.get_pv_move() == nullMove)
         {
             std::cout << "bestmove 0000" << std::endl;
             return;
@@ -252,9 +252,9 @@ void iterative_deepening(State& s, SearchInfo& si)
         si.nodes = 0;
     }
 
-    s.make(lineManager.get_pv_move());
-    glist.push_root(lineManager.get_pv_move(), s.key);
-    std::cout << "bestmove " << to_string(lineManager.get_pv_move()) << std::endl;
+    s.make_t(lineManager.get_pv_move());
+    glist.push_root(lineManager.get_pv_move(), s.getKey());
+    std::cout << "bestmove " << toString(lineManager.get_pv_move()) << std::endl;
 }
 
 void setup_search(State& s, SearchInfo& si)
@@ -273,7 +273,7 @@ void search_init()
     {
         for (j = 0; j < Killer_size; ++j)
         {
-            killers[i][j] = No_move;
+            killers[i][j] = nullMove;
         }
     }
 }

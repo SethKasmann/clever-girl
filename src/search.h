@@ -14,6 +14,7 @@
 #include "timer.h"
 #include "misc.h"
 #include "line_manager.h"
+#include "move.h"
 
 enum SearchType
 {
@@ -23,7 +24,7 @@ enum SearchType
 
 struct History
 {
-    Move move;
+    Move_t move;
     U64 key;
 };
 
@@ -32,14 +33,14 @@ class GameList
 public:
     GameList() : e(history), r(history)
     {}
-    void push_root(Move m, U64 k)
+    void push_root(Move_t m, U64 k)
     {
         e->move = m;
         e->key  = k;
         ++e;
         ++r;
     }
-    void push(Move m, U64 k)
+    void push(Move_t m, U64 k)
     {
         e->move = m;
         e->key  = k;
@@ -49,7 +50,7 @@ public:
     {
         --e;
     }
-    Move operator*() const
+    Move_t operator*() const
     {
         return e->move;
     }

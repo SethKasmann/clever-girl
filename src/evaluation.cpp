@@ -13,11 +13,11 @@ float getGamePhase(const State& s)
     float phase;
 
     phase = totalPhase 
-          - s.get_piece_count<pawn>()   * pawnPhase
-          - s.get_piece_count<knight>() * knightPhase
-          - s.get_piece_count<bishop>() * bishopPhase
-          - s.get_piece_count<rook>()   * rookPhase
-          - s.get_piece_count<queen>()  * queenPhase;
+          - s.getPieceCount<pawn>()   * pawnPhase
+          - s.getPieceCount<knight>() * knightPhase
+          - s.getPieceCount<bishop>() * bishopPhase
+          - s.getPieceCount<rook>()   * rookPhase
+          - s.getPieceCount<queen>()  * queenPhase;
 
     return (phase * 256 + (totalPhase / 2)) / totalPhase;
 }
@@ -37,15 +37,15 @@ int outpost(const State & s, Square p, Color c)
     // To be an outpost, the piece must be supported by a friendly pawn
     // and unable to be attacked by an opponents pawn.
     if (   !(p & outpost_area[c])
-        || !(pawn_attacks[!c][p] & s.piece_bb<pawn>(c))
-        || in_front[c][p] & adj_files[p] & s.piece_bb<pawn>(!c))
+        || !(pawn_attacks[!c][p] & s.getPieceBB<pawn>(c))
+        || in_front[c][p] & adj_files[p] & s.getPieceBB<pawn>(!c))
         return 0;
 
     score = PieceSquareTable::outpost[PT == bishop][c][p];
 
     // Extra bonus if the outpost cannot be captured by a minor piece.
-    if (   !s.piece_bb<knight>(!c)
-        && !(s.piece_bb<bishop>(!c) & squares_of_color(p)))
+    if (   !s.getPieceBB<knight>(!c)
+        && !(s.getPieceBB<bishop>(!c) & squares_of_color(p)))
         score *= 2;
 
     return score;
@@ -63,9 +63,9 @@ bool pawn_fork(const State & s, Square p, Color c)
     // Check to see if the push square is not occupied, if the pawn is not on
     // the edge of the board, and if the push would fork two enemy non-pawn 
     // pieces.
-    if (   push & s.occ()
+    if (   push & s.getOccupancyBB()
         || !(push & Center_files)
-        || pawn_attacks[c][push] & (s.piece_bb<pawn>(!c) | s.empty() | s.occ(c)))
+        || pawn_attacks[c][push] & (s.getPieceBB<pawn>(!c) | s.getEmptyBB() | s.getOccupancyBB(c)))
         return false;
 
     // Check to see if the pawn is pinned.
@@ -78,41 +78,42 @@ bool pawn_fork(const State & s, Square p, Color c)
 
 int eval_pawns(const State & s, const Color c)
 {
-    const Square * p;
     const int dir = c == white ? 8 : -8;
     int score = Draw;
 
     // Pawn evaluation.
-    for (p = s.piece_list[c][pawn]; *p != no_sq; ++p)
+    for (Square p : s.getPieceList<pawn>(c))
     {
+        if (p == no_sq)
+            break;
         score += Pawn_wt;
         // Check if the pawn is a passed pawn.
-        if (!((file_bb[*p] | adj_files[*p]) & in_front[c][*p] & s.piece_bb<pawn>(!c)))
+        if (!((file_bb[p] | adj_files[p]) & in_front[c][p] & s.getPieceBB<pawn>(!c)))
             score += Passed;
         // Look for candidate and backwards pawns since the logic is related.
         // First check for a half open file.
-        else if (!(file_bb[*p] & in_front[c][*p] & s.piece_bb<pawn>(!c)))
+        else if (!(file_bb[p] & in_front[c][p] & s.getPieceBB<pawn>(!c)))
         {
             int sentries, helpers;
-            assert(*p < 56 && *p > 7);
+            assert(p < 56 && p > 7);
             // Check, if this pawn were to push, if there are any enemy pawns
             // defending that square.
-            sentries = pop_count(pawn_attacks[c][*p + dir] & s.piece_bb<pawn>(!c));
+            sentries = pop_count(pawn_attacks[c][p + dir] & s.getPieceBB<pawn>(!c));
             if (sentries > 0)
             {
                 // If the enemy has defenders, check if we helper pawns defending
                 // that square.
-                helpers = pop_count(pawn_attacks[!c][*p + dir] & s.piece_bb<pawn>(c));
+                helpers = pop_count(pawn_attacks[!c][p + dir] & s.getPieceBB<pawn>(c));
                 // If there are more helpers then sentries, we have a candidate
                 // passer.
                 if (helpers >= sentries)
                     score += Candidate;
                 // If there are less helpers then sentries, check for a backwards
                 // pawn. First, see if there are no pawns eligible to defend it.
-                else if (!(~in_front[c][*p] & adj_files[*p] & s.piece_bb<pawn>(c)))
+                else if (!(~in_front[c][p] & adj_files[p] & s.getPieceBB<pawn>(c)))
                 {
                     // Make sure the backwards pawn is defending at least 1 pawn.
-                    if (pawn_attacks[c][*p] & s.piece_bb<pawn>(c))
+                    if (pawn_attacks[c][p] & s.getPieceBB<pawn>(c))
                     {
                         // If there are two sentries, this backwards pawn is
                         // nearly imposible to push.
@@ -126,14 +127,14 @@ int eval_pawns(const State & s, const Color c)
         }
 
         // Check if the pawn is isolated
-        if (!(adj_files[*p] & s.piece_bb<pawn>(c)))
+        if (!(adj_files[p] & s.getPieceBB<pawn>(c)))
             score += Isolated;
         // Check if the pawn is connected
-        else if (rank_bb[*p - dir] & s.piece_bb<pawn>(c) & adj_files[*p])
+        else if (rank_bb[p - dir] & s.getPieceBB<pawn>(c) & adj_files[p])
             score += Connected;
 
         // Check if the pawn is doubled.
-        if (pop_count(file_bb[*p] & s.piece_bb<pawn>(c)) > 1)
+        if (pop_count(file_bb[p] & s.getPieceBB<pawn>(c)) > 1)
             score += Doubled;
     }
     return score;
@@ -141,85 +142,92 @@ int eval_pawns(const State & s, const Color c)
 
 int eval(const State & s, const Color c)
 {
-    const Square * p;
     U64 moves, pins;
     U64 mobilityNet;
     int score = Draw;
     int king_threats = 0;
-    Square kingSq = s.king_sq(c);
+    Square kingSq = s.getKingSquare(c);
 
     // The moveNet is all empty squares not attacked by enemy pawns.
-    mobilityNet = s.empty();
+    mobilityNet = s.getEmptyBB();
     if (c == white)
-        mobilityNet &= ~((s.piece_bb<pawn>(black) & Not_a_file) >> 7
-                       | (s.piece_bb<pawn>(black) & Not_h_file) >> 9);
+        mobilityNet &= ~((s.getPieceBB<pawn>(black) & Not_a_file) >> 7
+                       | (s.getPieceBB<pawn>(black) & Not_h_file) >> 9);
     else
-        mobilityNet &= ~((s.piece_bb<pawn>(white) & Not_a_file) << 9
-                       | (s.piece_bb<pawn>(white) & Not_h_file) << 7);
+        mobilityNet &= ~((s.getPieceBB<pawn>(white) & Not_a_file) << 9
+                       | (s.getPieceBB<pawn>(white) & Not_h_file) << 7);
 
     // Get the pinned pieces for the current player.
-    pins = s.get_pins(c);
+    pins = s.getPins(c);
 
     // Knight evaluation.
-    for (p = s.piece<knight>(c); *p != no_sq; ++p)
+    for (Square p : s.getPieceList<knight>(c))
     {
+        if (p == no_sq)
+            break;
         score += Knight_wt;
-        if (s.attack_bb<knight>(*p) & king_net_bb[!c][s.king_sq(!c)])
+        if (s.getAttackBB<knight>(p) & king_net_bb[!c][s.getKingSquare(!c)])
             king_threats += Knight_th;
-        score += outpost<knight>(s, *p, c);
+        score += outpost<knight>(s, p, c);
 
         // Calculate knight mobility.
-        if (square_bb[*p] & pins)
+        if (square_bb[p] & pins)
             score += knightMobility[0];
         else
         {
-            moves = s.attack_bb<knight>(*p) & mobilityNet;
+            moves = s.getAttackBB<knight>(p) & mobilityNet;
             score += knightMobility[pop_count(moves)];
         }
     }
 
     // Bishop evaluation.
-    for (p = s.piece<bishop>(c); *p != no_sq; ++p)
+    for (Square p : s.getPieceList<bishop>(c))
     {
+        if (p == no_sq)
+            break;
         score += Bishop_wt;
-        if (s.attack_bb<bishop>(*p) & king_net_bb[!c][s.king_sq(!c)])
+        if (s.getAttackBB<bishop>(p) & king_net_bb[!c][s.getKingSquare(!c)])
             king_threats += Bishop_th;
-        score += outpost<bishop>(s, *p, c);
+        score += outpost<bishop>(s, p, c);
 
         // Calculate bishop mobility
-        moves = s.attack_bb<bishop>(*p) & mobilityNet;
-        if (square_bb[*p] & pins)
-            moves &= between_dia[*p][kingSq];
+        moves = s.getAttackBB<bishop>(p) & mobilityNet;
+        if (square_bb[p] & pins)
+            moves &= between_dia[p][kingSq];
         score += bishopMobility[pop_count(moves)];
     }
 
     // Rook evaluation.
-    for (p = s.piece<rook>(c); *p != no_sq; ++p)
+    for (Square p : s.getPieceList<rook>(c))
     {
+        if (p == no_sq)
+            break;
         score += Rook_wt;
-        if (s.attack_bb<rook>(*p) & king_net_bb[!c][s.king_sq(!c)])
+        if (s.getAttackBB<rook>(p) & king_net_bb[!c][s.getKingSquare(!c)])
             king_threats += Rook_th;
 
         // Calculate rook mobility.
-        moves = s.attack_bb<rook>(*p) & mobilityNet;
-        if (square_bb[*p] & pins)
-            moves &= between_hor[*p][kingSq];
+        moves = s.getAttackBB<rook>(p) & mobilityNet;
+        if (square_bb[p] & pins)
+            moves &= between_hor[p][kingSq];
         score += rookMobility[pop_count(moves)];
     }
 
     // Queen evaluation.
-    for (p = s.piece<queen>(c); *p != no_sq; ++p)
+    for (Square p : s.getPieceList<queen>(c))
     {
+        if (p == no_sq)
+            break;
         score += Queen_wt;
-        if (s.attack_bb<queen>(*p) & king_net_bb[!c][s.king_sq(!c)])
+        if (s.getAttackBB<queen>(p) & king_net_bb[!c][s.getKingSquare(!c)])
             king_threats += Queen_th;
 
         // Calculate queen mobility.
-        moves = s.attack_bb<queen>(*p) & mobilityNet;
-        if (square_bb[*p] & pins)
+        moves = s.getAttackBB<queen>(p) & mobilityNet;
+        if (square_bb[p] & pins)
         {
-            moves &= between_hor[*p][kingSq] ? between_hor[*p][kingSq]
-                                             : between_dia[*p][kingSq];
+            moves &= between_hor[p][kingSq] ? between_hor[p][kingSq]
+                                            : between_dia[p][kingSq];
         }
         score += queenMobility[pop_count(moves)];
     }
@@ -239,24 +247,24 @@ int evaluate(const State & s)
     finalScore = scaledPstScore(s);
 
     // Pawn Evaluation
-    if (s.piece_count[s.us][pawn] + s.piece_count[s.them][pawn] != 0)
+    if (s.getPieceCount<pawn>(s.getOurColor()) + s.getPieceCount<pawn>(s.getTheirColor()))
     {
         //Probe the pawn hash.
-        pawnEntry = probe(s.pawn_key);
-        if (pawnEntry && pawnEntry->mKey == s.pawn_key)
+        pawnEntry = probe(s.getPawnKey());
+        if (pawnEntry && pawnEntry->mKey == s.getPawnKey())
         {
-            pawnScore = (pawnEntry->mColor == s.us) ?  pawnEntry->mScore 
+            pawnScore = (pawnEntry->mColor == s.getOurColor()) ?  pawnEntry->mScore 
                                                     : -pawnEntry->mScore;
         }
         else
         {
-            pawnScore = eval_pawns(s, s.us) - eval_pawns(s, s.them);
-            store(s.pawn_key, pawnScore, s.us);
+            pawnScore = eval_pawns(s, s.getOurColor()) - eval_pawns(s, s.getTheirColor());
+            store(s.getPawnKey(), pawnScore, s.getOurColor());
         }
     }
     finalScore += pawnScore;
 
-    finalScore += eval(s, s.us) - eval(s, s.them) + tempo;
+    finalScore += eval(s, s.getOurColor()) - eval(s, s.getTheirColor()) + tempo;
 
 	return finalScore;
 }
