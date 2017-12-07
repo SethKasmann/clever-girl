@@ -33,6 +33,7 @@ public:
     U64 getPawnKey() const;
     U64 getEnPassantBB() const;
     int getCastleRights() const;
+    U64 getCheckersBB() const;
     template<PieceType P> const std::array<Square, Piece_max>& getPieceList(Color pColor) const;
 
     // Access piece bitboards.
@@ -63,7 +64,9 @@ public:
 
     // Valid king moves and pins.
     U64 valid_king_moves() const;
-    U64 getPins(Color c) const;
+    void setCheckers();
+    void setPins(Color c);
+    U64 getPinsBB(Color c) const;
     U64 getDiscoveredChecks(Color c) const;
 
     // Check and attack information.
@@ -72,9 +75,8 @@ public:
     bool check() const;
     bool check(U64 change) const;
     bool check(U64 change, Color c) const;
-    U64 attackers(Square s) const;
+    U64 getAttackersBB(Square s, Color c) const;
     U64 allAttackers(Square s) const;
-    U64 getCheckers() const;
     template<PieceType> U64 getAttackBB(Square s, Color c=white) const;
     int see(Move_t m) const;
     U64 getXRayAttacks(Square square) const;
@@ -134,6 +136,11 @@ inline U64 State::getEnPassantBB() const
 inline int State::getCastleRights() const
 {
     return mCastleRights;
+}
+
+inline U64 State::getPinsBB(Color c) const
+{
+    return mPinned[c];
 }
 
 template<PieceType P>
@@ -262,6 +269,12 @@ U64 State::getEmptyBB() const
     return ~(mOccupancy[white] | mOccupancy[black]);
 }
 
+inline
+U64 State::getCheckersBB() const
+{
+    return mCheckers;
+}
+
 inline 
 bool State::canCastleKingside() const
 {
@@ -311,6 +324,12 @@ inline U64 State::getAttackBB<king>(Square s, Color c) const
 }
 
 inline
+void State::setCheckers()
+{
+    mCheckers = getAttackersBB(getKingSquare(mUs), mThem);
+}
+
+inline
 bool State::defended(Square s, Color c) const
 {
     return getAttackBB<pawn>(s, !c)  &  getPieceBB< pawn >(c)
@@ -335,12 +354,12 @@ bool State::check() const
 }
 
 inline
-U64 State::attackers(Square s) const
+U64 State::getAttackersBB(Square s, Color c) const
 {
-    return (getAttackBB< pawn >(s, mUs) &  getPieceBB< pawn >(mThem)
-         | getAttackBB<knight>(s) &  getPieceBB<knight>(mThem)
-         | getAttackBB<bishop>(s) & (getPieceBB<bishop>(mThem) | getPieceBB<queen>(mThem))
-         | getAttackBB< rook >(s) & (getPieceBB< rook >(mThem) | getPieceBB<queen>(mThem)));
+    return (getAttackBB<pawn>(s, !c) &  getPieceBB< pawn >(c))
+         | (getAttackBB<knight>(s)   &  getPieceBB<knight>(c))
+         | (getAttackBB<bishop>(s)   & (getPieceBB<bishop>(c) | getPieceBB<queen>(c)))
+         | (getAttackBB< rook >(s)   & (getPieceBB< rook >(c) | getPieceBB<queen>(c)));
 }
 
 inline
@@ -352,12 +371,6 @@ U64 State::allAttackers(Square s) const
          | (getAttackBB<bishop>(s) & (getPieceBB<bishop>() | getPieceBB<queen>()))
          | (getAttackBB<rook>(s) & (getPieceBB<rook>() | getPieceBB<queen>()))
          | (getAttackBB<king>(s) & getPieceBB<king>());
-}
-
-inline
-U64 State::getCheckers() const
-{
-    return attackers(getKingSquare(mUs));
 }
 
 inline

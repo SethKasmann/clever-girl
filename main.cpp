@@ -60,7 +60,7 @@ int main(int argc, char* argv[])
 {
     init();
     perftTestDebug();
-    //perftTest();
+    perftTest();
     //ccrTest();
     uci();
     return 0;

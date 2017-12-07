@@ -9,7 +9,7 @@ Move_t get_uci_move(std::string & token, State & s)
 
     token.erase(std::remove(token.begin(), token.end(), ','),
                     token.end());
-    push_moves(s, &mlist);
+    mlist.push_moves(s);
     while (mlist.size() > 0)
     {
         m = mlist.pop();

@@ -132,11 +132,11 @@ State::State(const std::string & fen)
     }
 
     // Initialize pins.
-    mPinned[white] = getPins(white);
-    mPinned[black] = getPins(black);
+    setPins(white);
+    setPins(black);
 
     // Initialize checkers.
-    mCheckers = getCheckers();
+    setCheckers();
 }
 
 void State::init()
@@ -165,10 +165,11 @@ void State::init()
 // Function to return a bitboard of all pinned pieces for the current player.
 // ----------------------------------------------------------------------------
 
-U64 State::getPins(Color c) const
+void State::setPins(Color c)
 {
-    U64 pinners, ray, pin = 0;
+    U64 pinners, ray;
     Square kingSq = getKingSquare(c);
+    mPinned[c] = 0;
 
     pinners = bishopMoves[kingSq] & (getPieceBB<bishop>(!c) | getPieceBB<queen>(!c));
 
@@ -176,7 +177,7 @@ U64 State::getPins(Color c) const
     {
         ray = between_dia[pop_lsb(pinners)][kingSq] & getOccupancyBB();
         if (pop_count(ray) == 1)
-            pin |= ray & getOccupancyBB(c);
+            mPinned[c] |= ray & getOccupancyBB(c);
     }
 
     pinners = rookMoves[kingSq] & (getPieceBB<rook>(!c) | getPieceBB<queen>(!c));
@@ -185,10 +186,8 @@ U64 State::getPins(Color c) const
     {
         ray = between_hor[pop_lsb(pinners)][kingSq] & getOccupancyBB();
         if (pop_count(ray) == 1)
-            pin |= ray & getOccupancyBB(c);
+            mPinned[c] |= ray & getOccupancyBB(c);
     }
-
-    return pin;
 }
 
 U64 State::getDiscoveredChecks(Color c) const
@@ -403,182 +402,11 @@ void State::make_t(Move_t pMove)
 
     assert(!check());
     swap_turn();
+
+    setPins(white);
+    setPins(black);
+    setCheckers();
 }
-/*
-void State::make(Move m)
-{
-    const Square src  = get_src(m);
-    const Square dst  = get_dst(m);
-    const PieceType attacker = onSquare(src);
-    const PieceType defender = onSquare(dst);
-
-    // Update the 50 move rule.
-    attacker == pawn || defender != none ? 
-        mFiftyMoveRule = 0 : mFiftyMoveRule++;    
-
-    // Remove the ep file and castle rights from the zobrist key.
-    if (mEnPassant)
-        mKey ^= Zobrist::key(get_file(mEnPassant));
-    mKey ^= Zobrist::key(mCastleRights);
-
-    switch (get_prop(m))
-    {
-        // Quiet moves.
-        case quiet:
-        {
-            if (attacker == pawn)
-                mPawnKey ^= Zobrist::key(mUs, pawn, src, dst);
-            mKey ^= Zobrist::key(mUs, attacker, src, dst);
-            move_piece(src, dst);
-            mEnPassant = 0;
-            break;
-        }
-        // Attacking moves.
-        case attack:
-        {
-            if (attacker == pawn)
-                mPawnKey ^= Zobrist::key(mUs, pawn, src, dst);
-            if (defender == pawn)
-                mPawnKey ^= Zobrist::key(mThem, pawn, dst);
-            mKey ^= Zobrist::key(mUs, attacker, src, dst);
-            mKey ^= Zobrist::key(mThem, defender, dst);
-            del_piece(mThem, dst);
-            move_piece(src, dst);
-            mEnPassant = 0;
-            break;
-        }
-        // Double pawn pmUsh.
-        case dbl_push:
-        {
-            mPawnKey ^= Zobrist::key(mUs, pawn, src, dst);
-            mKey ^= Zobrist::key(mUs, pawn, src, dst);
-            move_piece(src, dst);
-            mEnPassant = square_bb[mUs == white ? dst - 8 : dst + 8];
-            mKey ^= Zobrist::key(get_file(mEnPassant));
-            break;
-        }
-        // King castle.
-        case king_cast:
-        {
-            mKey ^= Zobrist::key(mUs, rook, src-3, dst+1);
-            mKey ^= Zobrist::key(mUs, king, src, dst);
-            move_piece(src-3, dst+1);
-            move_piece(src, dst);
-            mEnPassant = 0;
-            break;
-        }
-        // Queen castle.
-        case queen_cast:
-        {
-            mKey ^= Zobrist::key(mUs, rook, src+4, dst-1);
-            mKey ^= Zobrist::key(mUs, king, src, dst);
-            move_piece(src+4, dst-1);
-            move_piece(src, dst);
-            mEnPassant = 0;
-            break;
-        }
-        // Queen promotion.
-        case queen_promo:
-        {
-            mPawnKey ^= Zobrist::key(mUs, pawn, src);
-            if (defender == pawn)
-                mPawnKey ^= Zobrist::key(mThem, pawn, dst);
-            mKey ^= Zobrist::key(mUs, pawn, src);
-            mKey ^= Zobrist::key(mUs, queen, dst);
-            if (defender != none)
-                mKey ^= Zobrist::key(mThem, defender, dst);
-            del_piece(mUs, src);
-            add_piece(dst, queen);
-            mEnPassant = 0;
-            break;
-        }
-        // Knight underpromotion.
-        case knight_promo:
-        {
-            mPawnKey ^= Zobrist::key(mUs, pawn, src);
-            if (defender == pawn)
-                mPawnKey ^= Zobrist::key(mThem, pawn, dst);
-            mKey ^= Zobrist::key(mUs, pawn, src);
-            mKey ^= Zobrist::key(mUs, knight, dst);
-            if (defender != none)
-                mKey ^= Zobrist::key(mThem, defender, dst);
-            del_piece(mUs, src);
-            add_piece(dst, knight);
-            mEnPassant = 0;
-            break;
-        }
-        // Rook underpromotion.
-        case rook_promo:
-        {
-            mPawnKey ^= Zobrist::key(mUs, pawn, src);
-            if (defender == pawn)
-                mPawnKey ^= Zobrist::key(mThem, pawn, dst);
-            mKey ^= Zobrist::key(mUs, pawn, src);
-            mKey ^= Zobrist::key(mUs, rook, dst);
-            if (defender != none)
-                mKey ^= Zobrist::key(mThem, defender, dst);
-            del_piece(mUs, src);
-            add_piece(dst, rook);
-            mEnPassant = 0;
-            break;
-        }
-        // Bishop underpromotion.
-        case bishop_promo:
-        {
-            mPawnKey ^= Zobrist::key(mUs, pawn, src);
-            if (defender == pawn)
-                mPawnKey ^= Zobrist::key(mThem, pawn, dst);
-            mKey ^= Zobrist::key(mUs, pawn, src);
-            mKey ^= Zobrist::key(mUs, bishop, dst);
-            if (onSquare(dst) != none)
-                mKey ^= Zobrist::key(mThem, defender, dst);
-            del_piece(mUs, src);
-            add_piece(dst, bishop);
-            mEnPassant = 0;
-            break;
-        }
-        // En-Passant.
-        case en_passant:
-        {
-            Square epAttacked = dst + (mUs == white ? -8 : 8);
-            mPawnKey ^= Zobrist::key(mUs, pawn, src, dst);
-            mPawnKey ^= Zobrist::key(mThem, pawn, epAttacked);
-            mKey ^= Zobrist::key(mUs, pawn, src, dst);
-            mKey ^= Zobrist::key(mThem, pawn, epAttacked);
-            mKey ^= Zobrist::key(get_file(mEnPassant));
-            move_piece(src, dst);
-            del_piece(mThem, epAttacked);
-            mEnPassant = 0;
-            break;
-        }
-    }
-    // Update castle rights.
-    mCastleRights &= Castle_rights[src];
-    mCastleRights &= Castle_rights[dst];
-
-    // Add updated castle rights back into the zobrist key, and swap
-    // turns.
-    mKey ^= Zobrist::key(mCastleRights);
-    mKey ^= Zobrist::key();
-    /*
-    if (occupancy[mUs] & occupancy[mThem])
-    {
-        std::cout << "piece: " << piece << '\n';
-        std::cout << to_string(m) << '\n';
-        std::cout << *this << '\n';
-        assert(!(occupancy[mUs] & occupancy[mThem]));
-    }
-    if (check())
-    {
-        std::cout << "piece: " << piece << '\n';
-        std::cout << to_string(m) << '\n';
-        std::cout << *this << '\n';
-    }
-    */
-/*
-    assert(!check());
-    swap_turn();
-}*/
 
 // ----------------------------------------------------------------------------
 // Function to return a bitboard of all valid king moves for the current 

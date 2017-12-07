@@ -80,7 +80,7 @@ public:
 			}
 			// Push moves to the move list.
 			moveList.clear();
-			push_moves(c, &moveList);
+			moveList.push_moves(c);
 
 			// If the next pv move is in the move list, make the move.
 			if (moveList.contains(nextMove))

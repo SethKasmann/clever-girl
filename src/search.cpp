@@ -44,7 +44,7 @@ int qsearch(State& s, SearchInfo& si, int d, int alpha, int beta)
 
     // Generate moves and create the movelist.
     MoveList mlist;
-    push_moves(s, &mlist);
+    mlist.push_moves(s);
     mlist.sort(s);
 
     int val;
@@ -107,7 +107,7 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
 
     // Generate moves and create the movelist.
     MoveList mlist;
-    push_moves(s, &mlist);
+    mlist.push_moves(s);
 
     // Check if the position is checkmate/stalemate.
     if (mlist.size() == 0)

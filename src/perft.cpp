@@ -54,7 +54,7 @@ int perft(State & s, int depth)
 		return nodes;
 
 	MoveList mlist;
-	push_moves(s, &mlist);
+	mlist.push_moves(s);
 
 	if (mlist.size() == 0)
 		return nodes;

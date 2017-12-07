@@ -158,7 +158,7 @@ int eval(const State & s, const Color c)
                        | (s.getPieceBB<pawn>(white) & Not_h_file) << 7);
 
     // Get the pinned pieces for the current player.
-    pins = s.getPins(c);
+    pins = s.getPinsBB(c);
 
     // Knight evaluation.
     for (Square p : s.getPieceList<knight>(c))
