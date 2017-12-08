@@ -67,7 +67,6 @@ public:
 	void check_pv(State& pState)
 	{
 		State c;
-		MoveList moveList;
 		Move_t nextMove;
 		std::memmove(&c, &pState, sizeof(pState));
 		for (int i = 0; i < Max_ply; ++i)
@@ -79,8 +78,7 @@ public:
 				break;
 			}
 			// Push moves to the move list.
-			moveList.clear();
-			moveList.push_moves(c);
+			MoveList moveList(c);
 
 			// If the next pv move is in the move list, make the move.
 			if (moveList.contains(nextMove))

@@ -204,7 +204,7 @@ U64 State::getDiscoveredChecks(Color c) const
             discover |= ray & getOccupancyBB(c);
     }
 
-    pinners = rookMoves[kingSq] & (getPieceBB<rook>(c) | getPieceBB<queen>(!c));
+    pinners = rookMoves[kingSq] & (getPieceBB<rook>(c) | getPieceBB<queen>(c));
 
     while (pinners)
     {
@@ -214,6 +214,21 @@ U64 State::getDiscoveredChecks(Color c) const
     }
 
     return discover;
+}
+
+bool State::isLegal(Move_t pMove) const
+{
+    if (!mPinned[mUs])
+        return true;
+
+    Square src = getSrc(pMove);
+    Square dst = getDst(pMove);
+
+    if (square_bb[src] & mPinned[mUs]
+     && !(coplanar[src][dst] & getPieceBB<king>(mUs)))
+        return false;
+
+    return true;
 }
 
 int State::see(Move_t m) const

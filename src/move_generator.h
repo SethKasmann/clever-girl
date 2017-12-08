@@ -14,35 +14,26 @@
 const U64 Full = 0xFFFFFFFFFFFFFFFF;
 const int Max_size = 256;
 
-struct Check
-{
-    Check(State & s) : checker(s.getCheckersBB()), checks(pop_count(checker))
-    {
-        checks == 1 ? ray = between_dia[s.getKingSquare(s.getOurColor())][get_lsb(checker)] 
-                          | between_hor[s.getKingSquare(s.getOurColor())][get_lsb(checker)]
-                    : ray = checker = Full;
-        validKingMoves = s.valid_king_moves();
-    }
-    U64 checker;
-    U64 ray;
-    U64 validKingMoves;
-    int checks;
-};
-
 class MoveList
 {
 public:
-    MoveList() 
+    MoveList(const State& pState, bool pQSearch=false)
+    : mState(pState), mValid(Full), mQSearch(pQSearch)
     {
         mSize = 0;
         mStage = 0;
-    }
-    MoveList(State& s, Move_t& pBest, Move_t& pKiller1, Move_t& pKiller2)
-    : mBest(pBest)
-    , mKiller1(pKiller1)
-    , mKiller2(pKiller2)
-    {
-        push_moves(s);
+        if (pop_count(mState.getCheckersBB()) == 1)
+        {
+            Square checker = get_lsb(mState.getCheckersBB());
+            Square king = mState.getKingSquare(mState.getOurColor());
+            mValid = between_dia[king][checker] | between_hor[king][checker]
+                   | mState.getCheckersBB();
+        }
+        mValidKingMoves = mState.valid_king_moves();
+        if (pop_count(mState.getCheckersBB()) == 2)
+            mStage = mQSearch ? 11 : 13;
+        else
+            mStage = mQSearch ? 7 : 1;
     }
     ~MoveList() {}
     std::size_t size() const
@@ -51,17 +42,14 @@ public:
     }
     void push(Move_t m)
     {
-        mList[mSize++] = m;
+        mList[mSize++].move = m;
     }
     bool contains(Move_t move)
     {
         return std::find(mList.begin(), mList.begin() + mSize, move)
             != mList.begin() + mSize;
     }
-    Move_t getBestMove()
-    {
-
-    }
+    Move_t getBestMove();
     void extract(Move_t move)
     {
         //if (move == nullMove)
@@ -72,28 +60,16 @@ public:
     }
     Move_t pop() 
     { 
-        return mList[--mSize];
+        return mList[--mSize].move;
     }
-    template<Color C>
-    void pushPawnMoves(State& s, Check& ch);
-    template<Color C>
-    void pushPawnAttacks(State& s, Check& ch);
-    template<Color C>
-    void push_pawn_moves(State& s, Check& ch);
-    template<PieceType P>
-    void push_moves(State& s, Check& ch);
-    void push_king_moves(State& s, Check& ch);
-    void check_legal(State& s);
-    template<Color C>
-    void push_all(State& s, Check& ch);
-    template<PieceType P>
-    void pushMoves(State& s, Check& ch);
-    template<PieceType P>
-    void pushAttackMoves(State& s, Check& ch);
-    void pushKingAttacks(State& s, Check& ch);
-    void pushKingMoves(State& s, Check& ch);
-    void push_moves(State& s);
-    void pushQuietChecks(State& s, Check ch);
+    void checkLegal();
+    void generateAttacks();
+    void generateQuiets();
+    void generateQuietChecks();
+    template<PieceType P> void pushQuietMoves();
+    template<PieceType P> void pushAttackMoves();
+    void push_moves();
+    void pushQuietChecks();
     void sort(const State& s)
     {
         /*
@@ -132,8 +108,11 @@ public:
         }
         */
     }
+    bool mQSearch;
+    U64 mValid, mValidKingMoves;
+    const State& mState;
     int mStage;
-    std::array<Move_t, Max_size> mList;
+    std::array<MoveEntry, Max_size> mList;
     std::size_t mSize;
     Move_t mBest;
     Move_t mKiller1;
@@ -143,6 +122,5 @@ public:
 };
 
 void mg_init();
-void push_moves(State &, MoveList *);
 
 #endif

@@ -2,7 +2,7 @@
 #include "move_generator.h"
 
 // ----------------------------------------------------------------------------
-// Initialize magics.
+// Initialize magicmState.
 // ----------------------------------------------------------------------------
 
 void mg_init()
@@ -15,28 +15,47 @@ void mg_init()
 // double pawn pushes, and en-passant.
 // ----------------------------------------------------------------------------
 
-void MoveList::pushQuietChecks(State& s, Check ch)
+void MoveList::pushQuietChecks()
 {
     Square dst;
     U64 m, ray, promo, pawnChecks, discovered;
     int dir;
+    Color us, them;
 
-    discovered = s.getDiscoveredChecks(s.getOurColor());
+    discovered = mState.getDiscoveredChecks(mState.getOurColor());
 
-    if (s.getOurColor() == white)
+    if (mState.getOurColor() == white)
     {
+        us = white;
+        them = black;
         promo = Rank_8;
         dir = 8;
     }
     else
     {
+        us = black;
+        them = white;
         promo = Rank_1;
         dir = -8;
     }
 
-    pawnChecks = s.getAttackBB<pawn>(s.getKingSquare(s.getTheirColor()), s.getTheirColor());
+    pawnChecks = mState.getAttackBB<pawn>(mState.getKingSquare(them), them);
 
-    for (Square src : s.getPieceList<pawn>(s.getOurColor()))
+// ---------------------------------------------------------------------------//
+// Iterate through the pawn piece list. We're looking for three cases:        //
+//   1. Pawn pushes that attack the enemy king.                               //
+//   2. Pawn knight promotions that check the enemy king.                     //
+//   3. Pawn pushes that cause discovered check from a slider.                //
+//                                                                            //
+// The third scenario is the most tricky. Since we already have a bitboard    //
+// containing the pieces which could give a discovered check, all we need to  //
+// do is bitwise AND the source square with the discovered check bitboard.    //
+// If the result is not zero, then check to see if the pawn is moving         //
+// towards the enemy king. To do this, bitwise AND coplanar[src][dst] with    //
+// the location of the enemy king. If the result is zero then the pawn did    //
+// not move towards the enemy king and there was a discovered check.          //
+// -------------------------------------------------------------------------- //
+    for (Square src : mState.getPieceList<pawn>(us))
     {
         if (src == no_sq)
             break;
@@ -44,35 +63,35 @@ void MoveList::pushQuietChecks(State& s, Check ch)
         dst = src + dir;
         if (dst & promo)
         {
-            if (square_bb[dst+1] & s.getOccupancyBB(s.getTheirColor()) & ch.checker & Not_h_file 
-              & s.getAttackBB<knight>(s.getKingSquare(s.getTheirColor())))
+            if (square_bb[dst+1] & mState.getOccupancyBB(them) & mValid & Not_h_file 
+              & mState.getAttackBB<knight>(mState.getKingSquare(them)))
                 push(makeMove(src, dst+1, knight));
-            if (square_bb[dst-1] & s.getOccupancyBB(s.getTheirColor()) & ch.checker & Not_a_file
-              & s.getAttackBB<knight>(s.getKingSquare(s.getTheirColor())))
+            if (square_bb[dst-1] & mState.getOccupancyBB(them) & mValid & Not_a_file
+              & mState.getAttackBB<knight>(mState.getKingSquare(them)))
                 push(makeMove(src, dst-1, knight));
-            if (dst & s.getEmptyBB() & ch.ray & s.getAttackBB<knight>(s.getKingSquare(s.getTheirColor())))
+            if (dst & mState.getEmptyBB() & mValid & mState.getAttackBB<knight>(mState.getKingSquare(them)))
                 push(makeMove(src, dst, knight));
         }
         else
         {
-            if (square_bb[dst] & s.getEmptyBB())
+            if (square_bb[dst] & mState.getEmptyBB())
             {
-                if (square_bb[dst] & ch.ray)
+                if (square_bb[dst] & mValid)
                 {
                     if (square_bb[dst] & pawnChecks)
                         push(makeMove(src, dst));
                     else if (square_bb[src] & discovered 
-                          && !(coplanar[src][dst] & s.getPieceBB<king>(s.getTheirColor())))
+                          && !(coplanar[src][dst] & mState.getPieceBB<king>(them)))
                         push(makeMove(src, dst));
                 }
-                if (pawn_dbl_push[s.getOurColor()][src] & square_bb[dst+dir] & s.getEmptyBB())
+                if (pawn_dbl_push[us][src] & square_bb[dst+dir] & mState.getEmptyBB())
                 {
-                    if (square_bb[dst+dir] & ch.ray)
+                    if (square_bb[dst+dir] & mValid)
                     {
                         if (square_bb[dst+dir] & pawnChecks)
                             push(makeMove(src, dst+dir));
                         else if (square_bb[src] & discovered 
-                              && !(coplanar[src][dst+dir] & s.getPieceBB<king>(s.getTheirColor())))
+                              && !(coplanar[src][dst+dir] & mState.getPieceBB<king>(them)))
                             push(makeMove(src, dst+dir));
                     }
                 }
@@ -80,389 +99,271 @@ void MoveList::pushQuietChecks(State& s, Check ch)
         }
     }
 
-    for (Square src : s.getPieceList<knight>(s.getOurColor()))
+    for (Square src : mState.getPieceList<knight>(us))
     {
         if (src == no_sq)
             break;
-        m  = s.getAttackBB<knight>(src) & ch.ray & s.getEmptyBB();
+        m  = mState.getAttackBB<knight>(src) & mValid & mState.getEmptyBB();
         while (m)
         {
             dst = pop_lsb(m);
-            if (s.getAttackBB<knight>(dst) & s.getPieceBB<king>(s.getTheirColor()))
+            if (mState.getAttackBB<knight>(dst) & mState.getPieceBB<king>(them))
                 push(makeMove(src, dst));
             else if (square_bb[src] & discovered)
                 push(makeMove(src, dst));
         }
     }
-    for (Square src : s.getPieceList<bishop>(s.getOurColor()))
+    for (Square src : mState.getPieceList<bishop>(us))
     {
         if (src == no_sq)
             break;
-        m  = s.getAttackBB<bishop>(src) & ch.ray & s.getEmptyBB();
+        m  = mState.getAttackBB<bishop>(src) & mValid & mState.getEmptyBB();
         while (m)
         {
             dst = pop_lsb(m);
-            ray = between_dia[dst][s.getKingSquare(s.getTheirColor())];
-            if (ray && pop_count(ray & s.getOccupancyBB()) == 0)
+            ray = between_dia[dst][mState.getKingSquare(them)];
+            if (bishopMoves[dst] & mState.getPieceBB<king>(them)
+             && pop_count(ray & mState.getOccupancyBB()) == 0)
                 push(makeMove(src, dst));
             else if (square_bb[src] & discovered 
-                  && !(coplanar[src][dst] & s.getPieceBB<king>(s.getTheirColor())))
+                  && !(coplanar[src][dst] & mState.getPieceBB<king>(them)))
                 push(makeMove(src, dst));
         }
     }
-    for (Square src : s.getPieceList<rook>(s.getOurColor()))
+    for (Square src : mState.getPieceList<rook>(us))
     {
         if (src == no_sq)
             break;
-        m  = s.getAttackBB<rook>(src) & ch.ray & s.getEmptyBB();
+        m  = mState.getAttackBB<rook>(src) & mValid & mState.getEmptyBB();
         while (m)
         {
             dst = pop_lsb(m);
-            ray = between_hor[dst][s.getKingSquare(s.getTheirColor())];
-            if (ray && pop_count(ray & s.getOccupancyBB()) == 0)
+            ray = between_hor[dst][mState.getKingSquare(them)];
+            if (rookMoves[dst] & mState.getPieceBB<king>(them)
+             && pop_count(ray & mState.getOccupancyBB()) == 0)
                 push(makeMove(src, dst));
             else if (square_bb[src] & discovered 
-                  && !(coplanar[src][dst] & s.getPieceBB<king>(s.getTheirColor())))
+                  && !(coplanar[src][dst] & mState.getPieceBB<king>(them)))
                 push(makeMove(src, dst));
         }
     }
-    for (Square src : s.getPieceList<queen>(s.getOurColor()))
+    for (Square src : mState.getPieceList<queen>(us))
     {
         if (src == no_sq)
             break;
-        m  = s.getAttackBB<queen>(src) & ch.ray & s.getEmptyBB();
+        m  = mState.getAttackBB<queen>(src) & mValid & mState.getEmptyBB();
         while (m)
         {
             dst = pop_lsb(m);
-            ray = between_hor[dst][s.getKingSquare(s.getTheirColor())]
-                | between_dia[dst][s.getKingSquare(s.getTheirColor())];
-            if (ray && pop_count(ray & s.getOccupancyBB()) == 0)
+            ray = between_hor[dst][mState.getKingSquare(them)]
+                | between_dia[dst][mState.getKingSquare(them)];
+            if ((rookMoves[dst]|bishopMoves[dst]) & mState.getPieceBB<king>(them)
+             && pop_count(ray & mState.getOccupancyBB()) == 0)
                 push(makeMove(src, dst));
             else if (square_bb[src] & discovered 
-                  && !(coplanar[src][dst] & s.getPieceBB<king>(s.getTheirColor())))
+                  && !(coplanar[src][dst] & mState.getPieceBB<king>(them)))
                 push(makeMove(src, dst));
-        }
-    }
-}
-
-template<Color C>
-void MoveList::pushPawnAttacks(State& s, Check & ch)
-{
-    const U64 Promo = C == white ? Rank_8 : Rank_1;
-    const int dir   = C == white ? 8      : -8;
-
-    Square dst;
-    int start = mSize;
-
-    for (Square src : s.getPieceList<pawn>(C))
-    {
-        if (src == no_sq)
-            break;
-
-        dst = src + dir;
-        if (dst & Promo)
-        {
-            if (square_bb[dst+1] & s.getOccupancyBB(s.getTheirColor()) & ch.checker & Not_h_file)
-                push(makeMove(src, dst+1, queen));
-            if (square_bb[dst-1] & s.getOccupancyBB(s.getTheirColor()) & ch.checker & Not_a_file)
-                push(makeMove(src, dst-1, queen));
-            if (dst & s.getEmptyBB() & ch.ray)
-                push(makeMove(src, dst, queen));
-        }
-        else
-        {
-            if (square_bb[dst+1] & s.getOccupancyBB(s.getTheirColor()) & ch.checker & Not_h_file)
-                push(makeMove(src, dst+1));
-            if (square_bb[dst-1] & s.getOccupancyBB(s.getTheirColor()) & ch.checker & Not_a_file)
-                push(makeMove(src, dst-1));
-        }
-    }
-
-    U64 a, en_pass;
-    // En passant.
-    if (s.getEnPassantBB() && ch.checker & pawn_push[!C][get_lsb(s.getEnPassantBB())])
-    {
-        dst = get_lsb(s.getEnPassantBB());
-        a = pawn_attacks[!C][dst] & s.getPieceBB<pawn>(C);
-        while (a)
-        {
-            if (s.check(pawn_push[!C][dst] | get_lsb_bb(a)))
-                return;
-            push(makeMove(pop_lsb(a), dst));
-        }
-    }
-}
-
-template<Color C>
-void MoveList::pushPawnMoves(State& s, Check & ch)
-{
-    const U64 Promo = C == white ? Rank_8 : Rank_1;
-    const int dir   = C == white ? 8      : -8;
-
-    Square dst;
-    int start = mSize;
-
-    for (Square src : s.getPieceList<pawn>(C))
-    {
-        if (src == no_sq)
-            break;
-
-        dst = src + dir;
-        if (dst & Promo)
-        {
-            if (square_bb[dst+1] & s.getOccupancyBB(s.getTheirColor()) & ch.checker & Not_h_file)
-            {
-                push(makeMove(src, dst+1, knight));
-                push(makeMove(src, dst+1, rook));
-                push(makeMove(src, dst+1, bishop));
-            }
-            if (square_bb[dst-1] & s.getOccupancyBB(s.getTheirColor()) & ch.checker & Not_a_file)
-            {
-                push(makeMove(src, dst-1, knight));
-                push(makeMove(src, dst-1, rook));
-                push(makeMove(src, dst-1, bishop));
-            }
-            if (dst & s.getEmptyBB() & ch.ray)
-            {
-                push(makeMove(src, dst, knight));
-                push(makeMove(src, dst, rook));
-                push(makeMove(src, dst, bishop));
-            }
-        }
-        else
-        {
-            if (square_bb[dst] & s.getEmptyBB())
-            {
-                if (square_bb[dst] & ch.ray)
-                    push(makeMove(src, dst));
-                if (pawn_dbl_push[C][src] & square_bb[dst+dir] & s.getEmptyBB() & ch.ray)
-                    push(makeMove(src, dst+dir));
-            }
-        }
-    }
-}
-
-template<Color C>
-void MoveList::push_pawn_moves(State & s, Check & ch)
-{
-    const U64 Promo = C == white ? Rank_8 : Rank_1;
-    const int dir   = C == white ? 8      : -8;
-
-    Square dst;
-
-    for (Square src : s.getPieceList<pawn>(C))
-    {
-        if (src == no_sq)
-            break;
-
-        dst = src + dir;
-        if (dst & Promo)
-        {
-            if (dst & Not_a_file && square_bb[dst+1] & s.getOccupancyBB(s.getTheirColor()))
-            {
-                push(makeMove(src, dst+1, queen));
-                push(makeMove(src, dst+1, knight));
-                push(makeMove(src, dst+1, rook));
-                push(makeMove(src, dst+1, bishop));
-            }
-            if (dst & Not_h_file && square_bb[dst-1] & s.getOccupancyBB(s.getTheirColor()))
-            {
-                push(makeMove(src, dst-1, queen));
-                push(makeMove(src, dst-1, knight));
-                push(makeMove(src, dst-1, rook));
-                push(makeMove(src, dst-1, bishop));
-            }
-            if (dst & s.getEmptyBB())
-            {
-                push(makeMove(src, dst, queen));
-                push(makeMove(src, dst, knight));
-                push(makeMove(src, dst, rook));
-                push(makeMove(src, dst, bishop));
-            }
-        }
-        else
-        {
-            if (square_bb[dst+1] & s.getOccupancyBB(s.getTheirColor()) && square_bb[dst] & Not_a_file)
-            {
-                push(makeMove(src, dst+1));
-            }
-            if (square_bb[dst-1] & s.getOccupancyBB(s.getTheirColor()) && square_bb[dst] & Not_h_file)
-            {
-                push(makeMove(src, dst-1));
-            }
-            if (square_bb[dst] & s.getEmptyBB())
-            {
-                push(makeMove(src, dst));
-                if (pawn_dbl_push[C][src] && (dst+dir) & s.getEmptyBB())
-                {
-                    push(makeMove(src, dst+dir));
-                }
-            }
-        }
-    }
-
-    if (ch.checks)
-    {
-        for (int i = 0; i < mSize; ++i)
-        {
-            if (!(getDst(mList[i])&ch.ray||getDst(mList[i])&ch.checker))
-                mList[i--] = mList[--mSize];
-        }
-    }
-    /*
-    if (ch.checks)
-    {
-        for (Move_t m = *c; c < e; m = *c)
-        {
-            if (!(getDst(m)&ch.ray||getDst(m)&ch.checker))
-                *c = *(--e);
-            else
-                c++;
-        }
-        c = _m;
-    }*/
-
-    U64 a, en_pass;
-    // En passant.
-
-    if (s.getEnPassantBB() && ch.checker & pawn_push[!C][get_lsb(s.getEnPassantBB())])
-    {
-        dst = get_lsb(s.getEnPassantBB());
-        a = pawn_attacks[!C][dst] & s.getPieceBB<pawn>(C);
-        while (a)
-        {
-            if (s.check(pawn_push[!C][dst] | get_lsb_bb(a)))
-                return;
-            push(makeMove(pop_lsb(a), dst));
         }
     }
 }
 
 // ----------------------------------------------------------------------------
 // Push all pseudo-legal moves and attacks for Knights, Bishops, Rooks, and 
-// Queens.
+// QueenmState.
 // ----------------------------------------------------------------------------
 
 template <PieceType P>
-void MoveList::pushAttackMoves(State & s, Check & ch)
+void MoveList::pushAttackMoves()
 {
     U64 m;
-    for (Square src : s.getPieceList<P>(s.getOurColor()))
+    for (Square src : mState.getPieceList<P>(mState.getOurColor()))
     {
         if (src == no_sq)
             break;
-        m  = s.getAttackBB<P>(src) & ch.checker & s.getOccupancyBB(s.getTheirColor());;
+        m  = mState.getAttackBB<P>(src) & mValid & mState.getOccupancyBB(mState.getTheirColor());;
         while (m)
             push(makeMove(src, pop_lsb(m)));
     }
 }
 
-template <PieceType P>
-void MoveList::pushMoves(State & s, Check & ch)
+template<>
+void MoveList::pushAttackMoves<pawn>()
 {
-    U64 m;
-    for (Square src : s.getPieceList<P>(s.getOurColor()))
+    U64 promo, attack;
+    Square dst;
+    int dir;
+    Color us, them;
+
+    if (mState.getOurColor() == white)
+    {
+        us = white;
+        them = black;
+        promo = Rank_8;
+        dir = 8;
+    }
+    else
+    {
+        us = black;
+        them = white;
+        promo = Rank_1;
+        dir = -8;
+    }
+
+    for (Square src : mState.getPieceList<pawn>(us))
     {
         if (src == no_sq)
             break;
-        m  = s.getAttackBB<P>(src) & ch.ray & s.getEmptyBB();
-        while (m)
-            push(makeMove(src, pop_lsb(m)));
-    }
-}
 
-template <PieceType P>
-void MoveList::push_moves(State & s, Check & ch)
-{
-    U64 m, a;
-    for (Square src : s.getPieceList<P>(s.getOurColor()))
+        dst = src + dir;
+        if (dst & promo)
+        {
+            if (square_bb[dst+1] & mState.getOccupancyBB(them) & mValid & Not_h_file)
+                push(makeMove(src, dst+1, queen));
+            if (square_bb[dst-1] & mState.getOccupancyBB(them) & mValid & Not_a_file)
+                push(makeMove(src, dst-1, queen));
+            if (dst & mState.getEmptyBB() & mValid)
+                push(makeMove(src, dst, queen));
+        }
+        else
+        {
+            if (square_bb[dst+1] & mState.getOccupancyBB(them) & mValid & Not_h_file)
+                push(makeMove(src, dst+1));
+            if (square_bb[dst-1] & mState.getOccupancyBB(them) & mValid & Not_a_file)
+                push(makeMove(src, dst-1));
+        }
+    }
+
+    // En passant.
+    if (mState.getEnPassantBB() && mValid & pawn_push[them][get_lsb(mState.getEnPassantBB())])
     {
-        if (src == no_sq)
-            break;
-        m  = s.getAttackBB<P>(src) & (ch.ray | ch.checker);
-        a  = m & s.getOccupancyBB(s.getTheirColor());
-        m &= s.getEmptyBB();
-        while (a)
-            push(makeMove(src, pop_lsb(a)));
-        while (m)
-            push(makeMove(src, pop_lsb(m)));
+        dst = get_lsb(mState.getEnPassantBB());
+        attack = pawn_attacks[them][dst] & mState.getPieceBB<pawn>(us);
+        while (attack)
+        {
+            if (mState.check(pawn_push[them][dst] | get_lsb_bb(attack)))
+                return;
+            push(makeMove(pop_lsb(attack), dst));
+        }
     }
 }
 
-// ----------------------------------------------------------------------------
-// Push all legal King moves and attacks. This also handles castling moves.
-// ----------------------------------------------------------------------------
-
-void MoveList::pushKingAttacks(State& s, Check& ch)
+template<>
+void MoveList::pushAttackMoves<king>()
 {
     U64 m;
     Square k, dst;
 
-    k = s.getKingSquare(s.getOurColor());
+    k = mState.getKingSquare(mState.getOurColor());
 
-    m = ch.validKingMoves & s.getOccupancyBB(s.getTheirColor());
+    m = mValidKingMoves & mState.getOccupancyBB(mState.getTheirColor());
 
     while (m) 
         push(makeMove(k, pop_lsb(m)));
 }
 
-void MoveList::pushKingMoves(State& s, Check& ch)
+template <PieceType P>
+void MoveList::pushQuietMoves()
+{
+    U64 m;
+    for (Square src : mState.getPieceList<P>(mState.getOurColor()))
+    {
+        if (src == no_sq)
+            break;
+        m  = mState.getAttackBB<P>(src) & mValid & mState.getEmptyBB();
+        while (m)
+            push(makeMove(src, pop_lsb(m)));
+    }
+}
+
+template<>
+void MoveList::pushQuietMoves<pawn>()
+{
+    U64 promo;
+    Square dst;
+    int dir;
+    Color us, them;
+
+    if (mState.getOurColor() == white)
+    {
+        us = white;
+        them = black;
+        promo = Rank_8;
+        dir = 8;
+    }
+    else
+    {
+        us = black;
+        them = white;
+        promo = Rank_1;
+        dir = -8;
+    }
+
+    for (Square src : mState.getPieceList<pawn>(us))
+    {
+        if (src == no_sq)
+            break;
+
+        dst = src + dir;
+        if (dst & promo)
+        {
+            if (square_bb[dst+1] & mState.getOccupancyBB(them) & mValid & Not_h_file)
+            {
+                push(makeMove(src, dst+1, knight));
+                push(makeMove(src, dst+1, rook));
+                push(makeMove(src, dst+1, bishop));
+            }
+            if (square_bb[dst-1] & mState.getOccupancyBB(them) & mValid & Not_a_file)
+            {
+                push(makeMove(src, dst-1, knight));
+                push(makeMove(src, dst-1, rook));
+                push(makeMove(src, dst-1, bishop));
+            }
+            if (dst & mState.getEmptyBB() & mValid)
+            {
+                push(makeMove(src, dst, knight));
+                push(makeMove(src, dst, rook));
+                push(makeMove(src, dst, bishop));
+            }
+        }
+        else
+        {
+            if (square_bb[dst] & mState.getEmptyBB())
+            {
+                if (square_bb[dst] & mValid)
+                    push(makeMove(src, dst));
+                if (pawn_dbl_push[mState.getOurColor()][src] & square_bb[dst+dir] & mState.getEmptyBB() & mValid)
+                    push(makeMove(src, dst+dir));
+            }
+        }
+    }
+}
+
+template<>
+void MoveList::pushQuietMoves<king>()
 {
     U64 m;
     Square k, dst;
 
-    k = s.getKingSquare(s.getOurColor());
+    k = mState.getKingSquare(mState.getOurColor());
 
-    m = ch.validKingMoves & s.getEmptyBB();
+    m = mValidKingMoves & mState.getEmptyBB();
 
     while (m) 
         push(makeMove(k, pop_lsb(m)));
 
-    if (ch.checks) return;
+    if (mState.getCheckersBB()) return;
 
-    if (s.canCastleKingside() 
-        && !(between_hor[k][k-3] & s.getOccupancyBB())
-        && !s.attacked(k-1) 
-        && !s.attacked(k-2))
+    if (mState.canCastleKingside() 
+        && !(between_hor[k][k-3] & mState.getOccupancyBB())
+        && !mState.attacked(k-1) 
+        && !mState.attacked(k-2))
         push(makeCastle(k, k-2));
 
-    if (s.canCastleQueenside()
-        && !(between_hor[k][k+4] & s.getOccupancyBB())
-        && !s.attacked(k+1)
-        && !s.attacked(k+2))
+    if (mState.canCastleQueenside()
+        && !(between_hor[k][k+4] & mState.getOccupancyBB())
+        && !mState.attacked(k+1)
+        && !mState.attacked(k+2))
         push(makeCastle(k, k+2));    
-}
-
-void MoveList::push_king_moves(State & s, Check & ch)
-{
-    U64 m, a;
-    Square k, dst;
-
-    k = s.getKingSquare(s.getOurColor());
-
-    m = ch.validKingMoves;
-    a = m & s.getOccupancyBB(s.getTheirColor());
-    m ^= a;
-
-    while (m) 
-        push(makeMove(k, pop_lsb(m)));
-
-    while (a)
-        push(makeMove(k, pop_lsb(a)));
-
-    if (ch.checks) return;
-
-    if (s.canCastleKingside() 
-        && !(between_hor[k][k-3] & s.getOccupancyBB())
-        && !s.attacked(k-1) 
-        && !s.attacked(k-2))
-        push(makeCastle(k, k-2));
-
-    if (s.canCastleQueenside()
-        && !(between_hor[k][k+4] & s.getOccupancyBB())
-        && !s.attacked(k+1)
-        && !s.attacked(k+2))
-        push(makeCastle(k, k+2));
 }
 
 // ----------------------------------------------------------------------------
@@ -470,120 +371,222 @@ void MoveList::push_king_moves(State & s, Check & ch)
 // where a pinned piece moves off it's pin ray.
 // ----------------------------------------------------------------------------
 
-void MoveList::check_legal(State & s)
+void MoveList::checkLegal()
 {
-    U64 pin, dc;
-
-    // Set pinned pieces and discovered check pieces.
-    pin = s.getPinsBB(s.getOurColor());//s.get_pins();
-    dc = s.getDiscoveredChecks(s.getOurColor());
-
-    if (!pin && !dc) return;
-    
     // Run through the move list. Remove any moves where the source location
     // is a pinned piece and the king square is not on the line formed by the
-    // source and destination locations.
+    // source and destination locationmState.
     for (int i = 0; i < mSize; ++i)
     {
-        if (square_bb[getSrc(mList[i])] & pin ? 
-            !(coplanar[getSrc(mList[i])][getDst(mList[i])] & s.getPieceBB<king>(s.getOurColor())) : false)
+        if (!mState.isLegal(mList[i].move))
             mList[i--] = mList[--mSize];
     }
-    /*
-    for (Move_t m = *c; c < e; m = *c)
-    {
-        // Check for pins.
-        if (square_bb[getSrc(m)] & pin ? 
-            !(coplanar[getSrc(m)][getDst(m)] & s.getPieceBB<king>(s.getOurColor())) : false)
-        {
-            *c = *(--e);
-            continue;
-        }*/
-
-        // Check for discovered checks.
-        /*
-        if ((square_bb[get_src(m)] & dc) && get_score(m) < QC && !(coplanar[get_src(m)][get_dst(m)] & s.getPieceBB<king>(s.getTheirColor())))
-        {
-            set_score(mlist->c, QC);
-        }
-        */
-        //c++;
-    //}
-}
-
-template<Color C>
-void MoveList::push_all(State & s, Check & ch)
-{
-    //push_pawn_moves<C>(s, ch);
-    /*
-    pushPawnMoves<C>(s, ch);
-    pushAttackMoves<knight>(s, ch);
-    pushAttackMoves<bishop>(s, ch);
-    pushAttackMoves<rook>(s, ch);
-    pushAttackMoves<queen>(s, ch);
-    pushKingMoves(s, ch);*/
-
-    /*
-    pushPawnAttacks<C>(s, ch);
-    pushMoves<knight>(s, ch);
-    pushMoves<bishop>(s, ch);
-    pushMoves<rook>(s, ch);
-    pushMoves<queen>(s, ch);
-    pushKingAttacks(s, ch);
-    */
-    pushQuietChecks(s, ch);
-    std::cout << s;
-    std::cout << mSize << '\n';
-    int z;
-    std::cin >> z;
-
-    /*
-    push_moves<knight>(s, ch);
-    push_moves<bishop>(s, ch);
-    push_moves<rook  >(s, ch);
-    push_moves<queen >(s, ch);
-    */
-    //push_king_moves(s, ch);
 }
 
 // ----------------------------------------------------------------------------
 // Push legal moves onto the moves list. The generation technique is to first 
 // find the number of checks on our king.
-// If checks == 0, add all pseudo-legal moves.
+// If checks == 0, add all pseudo-legal movemState.
 // If checks == 1, add pseudo-legal moves that block or capture the checking
 //     piece.
-// If checks == 0, add only legal king moves.
+// If checks == 0, add only legal king movemState.
 // Lastly, verify all moves made by pinned pieces stay on their pin ray.
 // ----------------------------------------------------------------------------
 
-void MoveList::push_moves(State & s)
+void MoveList::push_moves()
 {
-
-    Check ch(s);
-
-    if (ch.checks == 2)
+    if (pop_count(mState.getCheckersBB()) == 2)
     {
-        push_king_moves(s, ch);
+        pushAttackMoves<king>();
+        pushQuietMoves<king>();
         return;
     }
     else
     {
-        s.getOurColor() == white ? push_all<white>(s, ch)
-                                 : push_all<black>(s, ch);
+        pushAttackMoves<pawn>();
+        pushAttackMoves<knight>();
+        pushAttackMoves<bishop>();
+        pushAttackMoves<rook>();
+        pushAttackMoves<queen>();
+        pushAttackMoves<king>();
+
+        pushQuietMoves<pawn>();
+        pushQuietMoves<knight>();
+        pushQuietMoves<bishop>();
+        pushQuietMoves<rook>();
+        pushQuietMoves<queen>();
+        pushQuietMoves<king>();
     }
 
-    check_legal(s);
+    checkLegal();
 }
 
-/*
-std::ostream & operator << (std::ostream & o, const MoveList & mlist)
+void MoveList::generateQuietChecks()
 {
-    const Move_t * i;
-    o << "MoveList size=" << mlist.size() << '\n'
-      << "{\n";
-    for (i = mlist._m; i < mlist.e; ++i)
+    pushQuietChecks();
+    checkLegal();
+}
+
+void MoveList::generateQuiets()
+{
+    pushQuietMoves<pawn>();
+    pushQuietMoves<knight>();
+    pushQuietMoves<bishop>();
+    pushQuietMoves<rook>();
+    pushQuietMoves<queen>();
+    pushQuietMoves<king>();
+    checkLegal();
+}
+
+void MoveList::generateAttacks()
+{
+    pushAttackMoves<pawn>();
+    pushAttackMoves<knight>();
+    pushAttackMoves<bishop>();
+    pushAttackMoves<rook>();
+    pushAttackMoves<queen>();
+    pushAttackMoves<king>();
+    checkLegal();
+}
+
+Move_t MoveList::getBestMove()
+{
+    Move_t move;
+
+    switch (mStage)
     {
-        o << "  " << toString(*i) << '\n';
+        case 0:
+        case 1:
+            //std::cout << "generate attacks...\n";
+            generateAttacks();
+            //std::cout << "attacks generated..\n";
+            // MVV - LVA Algorithm.
+            for (int i = 0; i < mSize; ++i)
+            {
+                mList[i].score = mState.onSquare(getDst(mList[i].move))
+                               - mState.onSquare(getSrc(mList[i].move));
+            }
+            mStage++;
+        case 2:
+            while (mSize)
+            {
+                //std::cout << "attacks begin...\n";
+                std::iter_swap(std::max_element(mList.begin(), mList.begin() + mSize), 
+                               mList.begin() + mSize - 1);
+                move = pop();
+                //std::cout << "attacks end...\n";
+                //if (move != mBest)
+                return move;
+            }
+            mStage++;
+        case 3:
+            //std::cout << "gen quiets...\n";
+            generateQuiets();
+            for (int i = 0; i < mSize; ++i)
+            {
+
+            }
+            mStage++;
+        case 4:
+        {
+            std::array<MoveEntry, Max_size>::iterator k1 = 
+                std::find(mList.begin(), mList.begin() + mSize, mKiller1);
+            if (k1 != mList.begin() + mSize)
+            {
+                std::iter_swap(k1, mList.begin() + mSize);
+                mStage++;
+                move = pop();
+                // if (move != mBest)
+                return move;
+            }
+            mStage++;
+        }
+        case 5:
+        {
+            std::array<MoveEntry, Max_size>::iterator k2 = 
+                std::find(mList.begin(), mList.begin() + mSize, mKiller2);
+            if (k2 != mList.begin() + mSize)
+            {
+                std::iter_swap(k2, mList.begin() + mSize);
+                mStage++;
+                move = pop();
+                // if (move != mBest)
+                return move;
+            }
+            mStage++;
+            //std::cout << "sort\n";
+            //std::stable_sort(mList.begin(), mList.begin() + mSize);
+            //std::cout << "end sort\n";
+        }
+        case 6:
+            while (mSize)
+            {
+                //std::cout << "quiets...\n";
+                move = pop();
+                //std::cout << "returning " << getSrc(move) << " " << getDst(move) << '\n';
+                // if (move != mBest)
+                return move;
+            }
+            break;
+        case 7:
+            generateAttacks();
+            // MVV - LVA Algorithm.
+            for (int i = 0; i < mSize; ++i)
+            {
+                mList[i].score = mState.onSquare(getDst(mList[i].move))
+                               - mState.onSquare(getSrc(mList[i].move));
+            }
+            mStage++;
+        case 8:
+            while (mSize)
+            {
+                std::iter_swap(std::max_element(mList.begin(), mList.begin() + mSize), 
+                               mList.begin() + mSize - 1);
+                move = pop();
+                //if (move != mBest)
+                return move;
+            }
+            mStage++;
+        case 9:
+            generateQuietChecks();
+            for (int i = 0; i < mSize; ++i)
+            {
+
+            }
+            mStage++;
+        case 10:
+            while (mSize)
+            {
+                move = pop();
+                // if (move != mBest)
+                return move;
+            }
+            break;
+        case 11:
+            pushAttackMoves<king>();
+            mStage++;
+        case 12:
+            while (mSize)
+            {
+                move = pop();
+                // if (move != mBest)
+                return move;
+            }
+            break;
+        case 13:
+            //std::cout << "king evasions begin..\n";
+            pushQuietMoves<king>();
+            pushAttackMoves<king>();
+            //std::cout << "king evasions end..\n";
+            mStage++;
+        case 14:
+            while (mSize)
+            {
+                move = pop();
+                // if (move != mBest)
+                return move;
+            }
+            break;
     }
-    o << "}\n";
-}*/
+    return nullMove;
+}

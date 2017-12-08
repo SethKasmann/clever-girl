@@ -6,6 +6,22 @@
 
 typedef uint16_t Move_t;
 
+struct MoveEntry
+{
+	Move_t move;
+	int score;
+};
+
+inline bool operator==(const MoveEntry& pEntry, const Move_t pMove)
+{
+	return pEntry.move == pMove;
+}
+
+inline bool operator<(const MoveEntry& pEntry1, const MoveEntry& pEntry2)
+{
+	return pEntry1.score < pEntry2.score;
+}
+
 static const Move_t nullMove = 0;
 static const Move_t srcMask           = 0x003F;
 static const Move_t dstMask           = 0x0FC0;

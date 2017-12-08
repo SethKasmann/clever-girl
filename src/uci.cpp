@@ -4,12 +4,11 @@
 // Check if a move given by the uci is valid.
 Move_t get_uci_move(std::string & token, State & s)
 {
-    MoveList mlist;
     Move_t m;
 
     token.erase(std::remove(token.begin(), token.end(), ','),
                     token.end());
-    mlist.push_moves(s);
+    MoveList mlist(s);
     while (mlist.size() > 0)
     {
         m = mlist.pop();

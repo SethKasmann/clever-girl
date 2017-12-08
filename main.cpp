@@ -55,7 +55,7 @@ void choose(State & s)
     }
 }
 */
-
+#include <array>
 int main(int argc, char* argv[])
 {
     init();

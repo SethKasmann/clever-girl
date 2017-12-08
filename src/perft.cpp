@@ -53,26 +53,39 @@ int perft(State & s, int depth)
 	if (s.getFiftyMoveRule() == 100)
 		return nodes;
 
-	MoveList mlist;
-	mlist.push_moves(s);
+	//std::cout << "create mlist...\n";
+	MoveList mlist(s);
+	//std::cout << "created mlist...\n";
 
-	if (mlist.size() == 0)
-		return nodes;
+	//if (mlist.size() == 0)
+		//return nodes;
 
-	if (depth == 1)
-	{
-		nodes += mlist.size();
-		return nodes;
-	}
+	//if (depth == 1)
+	//{
+		//nodes += mlist.size();
+		//return nodes;
+	//}
 
 	State c;
+	Move_t m;
 
-	while (mlist.size() > 0)
+	while (1)
 	{
-		Move_t m = mlist.pop();
+		m = mlist.getBestMove();
+		if (m == nullMove)
+			break;
+		//std::cout << "lets copy\n";
 		std::memmove(&c, &s, sizeof s);
+		//std::cout << "begin make...\n";
 		c.make_t(m);
-		nodes += perft(c, depth-1);
+		//std::cout << c;
+		//int z;
+		//std::cin >> z;
+		//std::cout << "end make..\n";
+		if (depth == 1)
+			nodes++;
+		else
+			nodes += perft(c, depth-1);
 	}
 
 	return nodes;

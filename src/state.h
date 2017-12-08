@@ -53,6 +53,7 @@ public:
     // Castle rights.
     bool canCastleKingside() const;
     bool canCastleQueenside() const;
+    bool isQuiet(Move_t pMove) const;
 
     // Functions involved in making a move.
     void make(Move m);
@@ -70,6 +71,7 @@ public:
     U64 getDiscoveredChecks(Color c) const;
 
     // Check and attack information.
+    bool isLegal(Move_t pMove) const;
     bool attacked(Square s) const;
     bool defended(Square s, Color c) const;
     bool check() const;
