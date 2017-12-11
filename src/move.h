@@ -12,6 +12,11 @@ struct MoveEntry
 	int score;
 };
 
+inline bool noScore(const MoveEntry & entry)
+{
+	return entry.score == 0;
+}
+
 inline bool operator==(const MoveEntry& pEntry, const Move_t pMove)
 {
 	return pEntry.move == pMove;

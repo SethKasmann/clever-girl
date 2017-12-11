@@ -63,13 +63,13 @@ void MoveList::pushQuietChecks()
         dst = src + dir;
         if (dst & promo)
         {
-            if (square_bb[dst+1] & mState.getOccupancyBB(them) & mValid & Not_h_file 
+            if (square_bb[dst] & Not_a_file && square_bb[dst+1] & mState.getOccupancyBB(them) & mValid 
               & mState.getAttackBB<knight>(mState.getKingSquare(them)))
                 push(makeMove(src, dst+1, knight));
-            if (square_bb[dst-1] & mState.getOccupancyBB(them) & mValid & Not_a_file
+            if (square_bb[dst] & Not_h_file && square_bb[dst-1] & mState.getOccupancyBB(them) & mValid
               & mState.getAttackBB<knight>(mState.getKingSquare(them)))
                 push(makeMove(src, dst-1, knight));
-            if (dst & mState.getEmptyBB() & mValid & mState.getAttackBB<knight>(mState.getKingSquare(them)))
+            if (square_bb[dst] & mState.getEmptyBB() & mValid & mState.getAttackBB<knight>(mState.getKingSquare(them)))
                 push(makeMove(src, dst, knight));
         }
         else
@@ -217,18 +217,18 @@ void MoveList::pushAttackMoves<pawn>()
         dst = src + dir;
         if (dst & promo)
         {
-            if (square_bb[dst+1] & mState.getOccupancyBB(them) & mValid & Not_h_file)
+            if (square_bb[dst] & Not_a_file && square_bb[dst+1] & mState.getOccupancyBB(them) & mValid)
                 push(makeMove(src, dst+1, queen));
-            if (square_bb[dst-1] & mState.getOccupancyBB(them) & mValid & Not_a_file)
+            if (square_bb[dst] & Not_h_file && square_bb[dst-1] & mState.getOccupancyBB(them) & mValid)
                 push(makeMove(src, dst-1, queen));
             if (dst & mState.getEmptyBB() & mValid)
                 push(makeMove(src, dst, queen));
         }
         else
         {
-            if (square_bb[dst+1] & mState.getOccupancyBB(them) & mValid & Not_h_file)
+            if (square_bb[dst] & Not_a_file && square_bb[dst+1] & mState.getOccupancyBB(them) & mValid)
                 push(makeMove(src, dst+1));
-            if (square_bb[dst-1] & mState.getOccupancyBB(them) & mValid & Not_a_file)
+            if (square_bb[dst] & Not_h_file && square_bb[dst-1] & mState.getOccupancyBB(them) & mValid)
                 push(makeMove(src, dst-1));
         }
     }
@@ -306,13 +306,13 @@ void MoveList::pushQuietMoves<pawn>()
         dst = src + dir;
         if (dst & promo)
         {
-            if (square_bb[dst+1] & mState.getOccupancyBB(them) & mValid & Not_h_file)
+            if (square_bb[dst] & Not_a_file && square_bb[dst+1] & mState.getOccupancyBB(them) & mValid)
             {
                 push(makeMove(src, dst+1, knight));
                 push(makeMove(src, dst+1, rook));
                 push(makeMove(src, dst+1, bishop));
             }
-            if (square_bb[dst-1] & mState.getOccupancyBB(them) & mValid & Not_a_file)
+            if (square_bb[dst] & Not_h_file && square_bb[dst-1] & mState.getOccupancyBB(them) & mValid)
             {
                 push(makeMove(src, dst-1, knight));
                 push(makeMove(src, dst-1, rook));
@@ -353,7 +353,7 @@ void MoveList::pushQuietMoves<king>()
 
     if (mState.getCheckersBB()) return;
 
-    if (mState.canCastleKingside() 
+    if (mState.canCastleKingside()
         && !(between_hor[k][k-3] & mState.getOccupancyBB())
         && !mState.attacked(k-1) 
         && !mState.attacked(k-2))
@@ -393,7 +393,7 @@ void MoveList::checkLegal()
 // Lastly, verify all moves made by pinned pieces stay on their pin ray.
 // ----------------------------------------------------------------------------
 
-void MoveList::push_moves()
+void MoveList::pushAllLegal()
 {
     if (pop_count(mState.getCheckersBB()) == 2)
     {
@@ -455,138 +455,154 @@ Move_t MoveList::getBestMove()
 
     switch (mStage)
     {
-        case 0:
-        case 1:
-            //std::cout << "generate attacks...\n";
+        case nBestMove:
+            mStage++;
+            if (mState.isValid(mBest, mValidKingMoves, mValid))
+                return mBest;
+        case nAttacksGen:
             generateAttacks();
-            //std::cout << "attacks generated..\n";
             // MVV - LVA Algorithm.
             for (int i = 0; i < mSize; ++i)
             {
-                mList[i].score = mState.onSquare(getDst(mList[i].move))
-                               - mState.onSquare(getSrc(mList[i].move));
+                int see = mState.see(mList[i].move);
+                if (see > 0)
+                    mList[i].score = mState.onSquare(getDst(mList[i].move))
+                                   - mState.onSquare(getSrc(mList[i].move));
+                else
+                    mList[i].score = see;
             }
             mStage++;
-        case 2:
+        case nAttacks:
             while (mSize)
             {
-                //std::cout << "attacks begin...\n";
                 std::iter_swap(std::max_element(mList.begin(), mList.begin() + mSize), 
                                mList.begin() + mSize - 1);
                 move = pop();
-                //std::cout << "attacks end...\n";
-                //if (move != mBest)
-                return move;
+                if (move != mBest)
+                    return move;
             }
             mStage++;
-        case 3:
-            //std::cout << "gen quiets...\n";
+        case nKiller1:
+            mStage++;
+            if ((mState.isValid(mKiller1, mValidKingMoves, mValid))
+                && mKiller1 != mBest)
+                return mKiller1;
+        case nKiller2:
+            mStage++;
+            if ((mState.isValid(mKiller2, mValidKingMoves, mValid))
+                && mKiller2 != mBest
+                && mKiller2 != mKiller1)
+                return mKiller2;
+        case nQuietsGen:
+        {
             generateQuiets();
             for (int i = 0; i < mSize; ++i)
+                mList[i].score = mHistory->getHistoryScore(mList[i].move);
+            std::array<MoveEntry, Max_size>::iterator it2 = 
+                std::partition(mList.begin(), mList.begin() + mSize, noScore);
+            std::stable_sort(it2, mList.begin() + mSize);
+            std::array<MoveEntry, Max_size>::iterator it1 = mList.begin();
+            for (std::array<MoveEntry, Max_size>::iterator it1 = mList.begin(); it1 != it2; ++it1)
             {
-
+                Square src = getSrc(it1->move);
+                Square dst = getDst(it1->move);
+                PieceType toMove = mState.onSquare(src);
+                it1->score = PieceSquareTable::pst[toMove][middle][mState.getOurColor()][dst]
+                           - PieceSquareTable::pst[toMove][middle][mState.getOurColor()][src]
+                           + PieceSquareTable::pst[toMove][late][mState.getOurColor()][dst]
+                           - PieceSquareTable::pst[toMove][late][mState.getOurColor()][src];
             }
-            mStage++;
-        case 4:
-        {
-            std::array<MoveEntry, Max_size>::iterator k1 = 
-                std::find(mList.begin(), mList.begin() + mSize, mKiller1);
-            if (k1 != mList.begin() + mSize)
-            {
-                std::iter_swap(k1, mList.begin() + mSize);
-                mStage++;
-                move = pop();
-                // if (move != mBest)
-                return move;
-            }
+            std::stable_sort(mList.begin(), it2);
+            /*
+            for (int i = 0; i < mSize; ++i)
+                std::cout << mList[i].score << " ";
+            std::cout << std::endl;
+            */
             mStage++;
         }
-        case 5:
-        {
-            std::array<MoveEntry, Max_size>::iterator k2 = 
-                std::find(mList.begin(), mList.begin() + mSize, mKiller2);
-            if (k2 != mList.begin() + mSize)
-            {
-                std::iter_swap(k2, mList.begin() + mSize);
-                mStage++;
-                move = pop();
-                // if (move != mBest)
-                return move;
-            }
-            mStage++;
-            //std::cout << "sort\n";
-            //std::stable_sort(mList.begin(), mList.begin() + mSize);
-            //std::cout << "end sort\n";
-        }
-        case 6:
+        case nQuiets:
             while (mSize)
             {
-                //std::cout << "quiets...\n";
                 move = pop();
-                //std::cout << "returning " << getSrc(move) << " " << getDst(move) << '\n';
-                // if (move != mBest)
-                return move;
+                if (move != mBest
+                    && move != mKiller1
+                    && move != mKiller2)
+                    return move;
             }
             break;
-        case 7:
+        case qBestMove:
+            mStage++;
+            if (mState.isValid(mBest, mValidKingMoves, mValid))
+                return mBest;
+        case qAttacksGen:
+            mStage++;
             generateAttacks();
             // MVV - LVA Algorithm.
             for (int i = 0; i < mSize; ++i)
-            {
                 mList[i].score = mState.onSquare(getDst(mList[i].move))
                                - mState.onSquare(getSrc(mList[i].move));
-            }
-            mStage++;
-        case 8:
+        case qAttacks: 
             while (mSize)
             {
                 std::iter_swap(std::max_element(mList.begin(), mList.begin() + mSize), 
                                mList.begin() + mSize - 1);
                 move = pop();
-                //if (move != mBest)
-                return move;
+                if (move != mBest)
+                    return move;
             }
             mStage++;
-        case 9:
+        case qQuietChecksGen:
             generateQuietChecks();
             for (int i = 0; i < mSize; ++i)
-            {
-
-            }
+                mList[i].score = mHistory->getHistoryScore(mList[i].move);
             mStage++;
-        case 10:
+        case qQuietChecks:
             while (mSize)
             {
+                std::iter_swap(std::max_element(mList.begin(), mList.begin() + mSize), 
+                               mList.begin() + mSize - 1);
                 move = pop();
-                // if (move != mBest)
-                return move;
+                if (move != mBest)
+                    return move;
             }
             break;
-        case 11:
+        case qKingEvadeBestMove:
+            mStage++;
+            if (mState.isValid(mBest, mValidKingMoves, mValid))
+                return mBest;
+        case qKingEvadeAttacksGen:
             pushAttackMoves<king>();
             mStage++;
-        case 12:
+        case qKingEvadeAttacks:
             while (mSize)
             {
                 move = pop();
-                // if (move != mBest)
-                return move;
+                if (move != mBest)
+                    return move;
             }
             break;
-        case 13:
-            //std::cout << "king evasions begin..\n";
+        case nKingEvadeBestMove:
+            mStage++;
+            if (mState.isValid(mBest, mValidKingMoves, mValid))
+                return mBest;
+        case nKingEvadeMovesGen:
             pushQuietMoves<king>();
             pushAttackMoves<king>();
-            //std::cout << "king evasions end..\n";
             mStage++;
-        case 14:
+        case nKingEvadeMoves:
             while (mSize)
             {
                 move = pop();
-                // if (move != mBest)
-                return move;
+                if (move != mBest)
+                    return move;
             }
             break;
+        case allLegal:
+            while (mSize)
+            {
+                move = pop();
+                return move;
+            }
     }
     return nullMove;
 }

@@ -10,18 +10,64 @@
 #include "MagicMoves.hpp"
 #include "types.h"
 #include "move.h"
+#include "history.h"
 
 const U64 Full = 0xFFFFFFFFFFFFFFFF;
 const int Max_size = 256;
 
+enum MoveStage
+{
+    nBestMove,
+    nAttacksGen,
+    nAttacks,
+    nKiller1,
+    nKiller2,
+    nQuietsGen,
+    nQuiets,
+    qBestMove,
+    qAttacksGen,
+    qAttacks,
+    qQuietChecksGen,
+    qQuietChecks,
+    qKingEvadeBestMove,
+    qKingEvadeAttacksGen,
+    qKingEvadeAttacks,
+    nKingEvadeBestMove,
+    nKingEvadeMovesGen,
+    nKingEvadeMoves,
+    allLegal
+};
+
 class MoveList
 {
 public:
-    MoveList(const State& pState, bool pQSearch=false)
-    : mState(pState), mValid(Full), mQSearch(pQSearch)
+    MoveList(const State& pState, Move_t pBest, History* pHistory, int pPly, bool pQSearch=false)
+    : mState(pState), mValid(Full), mBest(pBest), mQSearch(pQSearch), mKiller1(nullMove), mKiller2(nullMove)
+    , mSize(0), mHistory(pHistory), mPly(pPly)
     {
-        mSize = 0;
-        mStage = 0;
+        if (pHistory)
+        {
+            mKiller1 = mHistory->getKiller(pPly).first;
+            mKiller2 = mHistory->getKiller(pPly).second;
+        }
+        if (pop_count(mState.getCheckersBB()) == 1)
+        {
+            Square checker = get_lsb(mState.getCheckersBB());
+            Square king = mState.getKingSquare(mState.getOurColor());
+            mValid = between_dia[king][checker] | between_hor[king][checker]
+                   | mState.getCheckersBB();
+            mStage = nBestMove;
+        }
+        else
+            mStage = mQSearch ? qBestMove : nBestMove;
+        mValidKingMoves = mState.valid_king_moves();
+        if (pop_count(mState.getCheckersBB()) == 2)
+            mStage = mQSearch ? qKingEvadeBestMove : nKingEvadeBestMove;
+    }
+    MoveList(const State& pState)
+    : mState(pState), mValid(Full), mQSearch(false), mBest(nullMove)
+    , mSize(0), mHistory(nullptr), mPly(0)
+    {
         if (pop_count(mState.getCheckersBB()) == 1)
         {
             Square checker = get_lsb(mState.getCheckersBB());
@@ -30,10 +76,8 @@ public:
                    | mState.getCheckersBB();
         }
         mValidKingMoves = mState.valid_king_moves();
-        if (pop_count(mState.getCheckersBB()) == 2)
-            mStage = mQSearch ? 11 : 13;
-        else
-            mStage = mQSearch ? 7 : 1;
+        pushAllLegal();
+        mStage = allLegal;
     }
     ~MoveList() {}
     std::size_t size() const
@@ -68,7 +112,7 @@ public:
     void generateQuietChecks();
     template<PieceType P> void pushQuietMoves();
     template<PieceType P> void pushAttackMoves();
-    void push_moves();
+    void pushAllLegal();
     void pushQuietChecks();
     void sort(const State& s)
     {
@@ -111,6 +155,8 @@ public:
     bool mQSearch;
     U64 mValid, mValidKingMoves;
     const State& mState;
+    const History* mHistory;
+    int mPly;
     int mStage;
     std::array<MoveEntry, Max_size> mList;
     std::size_t mSize;

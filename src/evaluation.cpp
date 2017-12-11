@@ -89,7 +89,12 @@ int eval_pawns(const State & s, const Color c)
         score += Pawn_wt;
         // Check if the pawn is a passed pawn.
         if (!((file_bb[p] | adj_files[p]) & in_front[c][p] & s.getPieceBB<pawn>(!c)))
+        {
             score += Passed;
+            // Check if the pawn is connected
+            if (rank_bb[p - dir] & s.getPieceBB<pawn>(c) & adj_files[p])
+                score += Connected;
+        }
         // Look for candidate and backwards pawns since the logic is related.
         // First check for a half open file.
         else if (!(file_bb[p] & in_front[c][p] & s.getPieceBB<pawn>(!c)))
@@ -129,9 +134,6 @@ int eval_pawns(const State & s, const Color c)
         // Check if the pawn is isolated
         if (!(adj_files[p] & s.getPieceBB<pawn>(c)))
             score += Isolated;
-        // Check if the pawn is connected
-        else if (rank_bb[p - dir] & s.getPieceBB<pawn>(c) & adj_files[p])
-            score += Connected;
 
         // Check if the pawn is doubled.
         if (pop_count(file_bb[p] & s.getPieceBB<pawn>(c)) > 1)
@@ -148,7 +150,7 @@ int eval(const State & s, const Color c)
     int king_threats = 0;
     Square kingSq = s.getKingSquare(c);
 
-    // The moveNet is all empty squares not attacked by enemy pawns.
+    // The mobilityNet is all empty squares not attacked by enemy pawns.
     mobilityNet = s.getEmptyBB();
     if (c == white)
         mobilityNet &= ~((s.getPieceBB<pawn>(black) & Not_a_file) >> 7
@@ -244,7 +246,7 @@ int evaluate(const State & s)
     int pawnScore = 0;
     PawnEntry* pawnEntry;
 
-    finalScore = scaledPstScore(s);
+    scaledPstScore(s);
 
     // Pawn Evaluation
     if (s.getPieceCount<pawn>(s.getOurColor()) + s.getPieceCount<pawn>(s.getTheirColor()))

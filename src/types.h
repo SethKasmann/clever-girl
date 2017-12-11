@@ -235,26 +235,6 @@ enum NodeType
 // ----------------------------------------------------------------------------
 // Operators
 // ----------------------------------------------------------------------------
-/*
-template<typename T>
-inline T & operator++(T & t) { return t = T(int(t) + 1); }
-template<typename T>
-inline T & operator--(T & t) { return t = T(int(t) - 1); }
-template<typename T>
-inline T operator+(const T t0, const T t1) { return T(int(t0) + int(t1)); }
-template<typename T>
-inline T operator+(const T t0, const int i) { return T(int(t0) + i); }
-template<typename T>
-inline T operator-(const T t0, const T t1) { return T(int(t0) - int(t1)); }
-template<typename T>
-inline T operator-(const T t0, const int i) { return T(int(t0) - i); }
-template<typename T>
-inline T & operator +=(T & t0, const T t1) { return t0 = t0 + t1; }
-template<typename T>
-inline T & operator -=(T & t0, const T t1) { return t0 = t0 - t1; }
-template<typename T>
-inline T operator!(const T t) { return T(!bool(t)); }
-*/
 
 inline Square& operator++(Square& s) { return s = static_cast<Square>(static_cast<int>(s) + 1); }
 inline PieceType& operator++(PieceType& p) { return p = static_cast<PieceType>(static_cast<int>(p) + 1); }
@@ -262,6 +242,10 @@ inline File& operator++(File& f) { return f = static_cast<File>(static_cast<int>
 inline Color operator!(const Color c) { return static_cast<Color>(!static_cast<bool>(c)); }
 inline Square operator+(const Square s, const int i) { return static_cast<Square>(static_cast<int>(s) + i); }
 inline Square operator-(const Square s, const int i) { return static_cast<Square>(static_cast<int>(s) - i); }
+inline Square operator-(const Square s1, const Square s2)
+{
+    return static_cast<Square>(static_cast<int>(s1) - static_cast<int>(s2));
+}
 
 inline std::string to_string(File f)
 {

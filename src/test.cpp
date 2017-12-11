@@ -65,6 +65,8 @@ void ccrTest()
 	for (int i = 0; i < ccrTotalTests; ++i)
 	{
 		State s(ccrFen[i]);
+		history.clear();
+		history.push(std::make_pair(nullMove, s.getKey()));
 		SearchInfo si;
 		si.move_time = allocate_time(100000, 0, 40);
 		si.start_time = system_time();
@@ -74,7 +76,7 @@ void ccrTest()
 		search_init();
 
 		int score;
-		for (int d = 1; !si.quit; ++d)
+		for (int d = 1; d < 6/*!si.quit*/; ++d)
 		{
 			score = scout_search(s, si, d, 0, Neg_inf, Pos_inf);
 			if (si.quit)

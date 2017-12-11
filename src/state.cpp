@@ -1,5 +1,6 @@
 #include "state.h"
 #include "zobrist.h"
+#include <utility>
 
 // ----------------------------------------------------------------------------
 // Copy constructor.
@@ -231,6 +232,184 @@ bool State::isLegal(Move_t pMove) const
     return true;
 }
 
+// -------------------------------------------------------------------------- //
+//                                                                            //
+// isValid checks if a move is a valid move in the current state. This is     //
+// used to check if a best move from the transposition table or a killer move //
+// is valid before trying it. The key here is if the move is valid, we can    //
+// try the move before generating the move list. If the move causes a beta    //
+// cutoff in the search routine, we may not need to generate moves at all.    //
+//                                                                            //
+// -------------------------------------------------------------------------- //
+bool State::isValid(Move_t pMove, U64 pValidKingMoves, U64 pValidMoves) const
+{
+    assert(getSrc(pMove) < no_sq);
+    assert(getDst(pMove) < no_sq);
+
+    Square src, dst;
+    U64 ray;
+    src = getSrc(pMove);
+    dst = getDst(pMove);
+
+// -------------------------------------------------------------------------- //
+//                                                                            //
+// The first line of defense is to simply check if the move is a null move.   //
+// Killer moves are initialized as null moves, so this can occur if no killer //
+// has been stored yet.                                                       //
+//                                                                            //
+// -------------------------------------------------------------------------- //
+    if (pMove == nullMove)
+        return false;
+
+// -------------------------------------------------------------------------- //
+//                                                                            //
+// Check for a bad promotion. If the move is a promotion then the piece to be //
+// moved must be a pawn.                                                      //
+//                                                                            //
+// -------------------------------------------------------------------------- //
+    if (getPiecePromo(pMove) && (onSquare(src) != pawn))
+        return false;
+
+// -------------------------------------------------------------------------- //
+//                                                                            //
+// Confirm that if a move is a castle we are actually moving the king.        //
+//                                                                            //
+// -------------------------------------------------------------------------- //
+    if (isCastle(pMove) && onSquare(src) != king)
+        return false;
+
+
+// -------------------------------------------------------------------------- //
+//                                                                            //
+// Three of the more obvious checks a move has to pass:                       //
+//   1. We occupy the source square.                                          //
+//   2. We do not occupy the destination square.                              //
+//   3. We are not capturing the enemy king.                                  //
+//                                                                            //
+// -------------------------------------------------------------------------- //
+    if (!(square_bb[src] & getOccupancyBB(mUs)) || 
+        (square_bb[dst]  & getOccupancyBB(mUs)) ||
+        dst == getKingSquare(mThem))
+        return false;
+
+// -------------------------------------------------------------------------- //
+//                                                                            //
+// Check for pins. If the source square bitwise ANDS with the pinned pieces   //
+// bitboard, check if the line created by the source square and dst square    //
+// intersects with the enemy king. If so, we moved towards the king, and the  //
+// move is still valid.                                                       //
+//                                                                            //
+// -------------------------------------------------------------------------- //
+    if (square_bb[src] & mPinned[mUs]
+        && !(coplanar[src][dst] & getPieceBB<king>(mUs)))
+        return false;
+
+    switch (onSquare(src))
+    {
+
+// -------------------------------------------------------------------------- //
+//                                                                            //
+// Pawns are the trickiest, so there are a number of cases to check.          //
+//   1. If the pawn is promoting, make sure the move is a promotion.          //
+//   2. If the move is en-passant, we need to confirm that the piece we are   //
+//      capturing is a valid move square, and that capturing the enemy pawn   //
+//      does not leave our king in check. This edge case will not be picked   //
+//      up by the pin detection - since both pawns could be on the same       //
+//      horizontal ray as the king.                                           //
+//   3. If the pawn pushed, make sure the destination is empty and valid.     //
+//   4. If the pawn double pushed, confirm the destination square is empty    //
+//      and valid, and that the square between the source and destination is  //
+//      empty.                                                                //
+//   5. If the pawn is attacking, confirm the enemy occupys the destination.  //
+//                                                                            //
+// -------------------------------------------------------------------------- //
+        case pawn:
+        {
+            if ((square_bb[dst] & (Rank_8 | Rank_1)) && !getPiecePromo(pMove))
+                return false;
+            if (square_bb[dst] & mEnPassant)
+            {
+                return pawn_push[mThem][dst] & pValidMoves &&
+                       !check(pawn_push[mThem][dst] | square_bb[src]);
+            }
+            std::pair<Square, Square> advance = std::minmax(src, dst);
+            switch (advance.second - advance.first)
+            {
+                case 8:
+                    return square_bb[dst] & getEmptyBB() & pValidMoves;
+                case 16:
+                    return square_bb[dst] & getEmptyBB() & pValidMoves &&
+                           between_hor[src][dst] & getEmptyBB();
+                case 7:
+                case 9:
+                    return square_bb[dst] & getOccupancyBB(mThem) & pValidMoves;
+                default:
+                    return false;
+            }
+        }
+
+// -------------------------------------------------------------------------- //
+//                                                                            //
+// Knights, bishops, rooks, and queens are simple. Just check if the attack   //
+// bitboard from the source square bitwise ANDs with the destination square   //
+// and the valid moves bitboard.                                              //
+//                                                                            //
+// -------------------------------------------------------------------------- //
+        case knight:
+            return getAttackBB<knight>(src) & square_bb[dst] & pValidMoves;
+        case bishop:
+            return getAttackBB<bishop>(src) & square_bb[dst] & pValidMoves;
+        case rook:
+            return getAttackBB<rook>(src) & square_bb[dst] & pValidMoves;
+        case queen:
+            return getAttackBB<queen>(src) & square_bb[dst] & pValidMoves;
+
+// -------------------------------------------------------------------------- //
+//                                                                            //
+// For king moves we first need to check if the move is a castling move. If   //
+// so, there are four checks to confirm the move is valid in the current      //
+// state:                                                                     //
+//   1. The castle rights are valid.                                          //
+//   2. There are no pieces between the king and rook.                        //
+//   3. Confirm the square next to the king is not attacked (since you cannot //
+//      castle through check).                                                //
+//   4. Confirm the castle will not leave the king in check.                  //
+//                                                                            //
+// If the move is not a castling move, just make sure the destination will    //
+// bitwise AND withe valid king moves bitboard.                               //
+//                                                                            //
+// -------------------------------------------------------------------------- //
+        case king:
+        {
+            Square k = getKingSquare(mUs);
+            if (isCastle(pMove))
+            {
+                if (src > dst)
+                {
+                    return (canCastleKingside() 
+                    && !(between_hor[k][k-3] & getOccupancyBB())
+                    && !attacked(k-1) 
+                    && !attacked(k-2));
+                }
+                else
+                {
+                    return (canCastleQueenside()
+                    && !(between_hor[k][k+4] & getOccupancyBB())
+                    && !attacked(k+1)
+                    && !attacked(k+2));
+                }
+            }
+            return square_bb[dst] & pValidKingMoves;
+        }
+    }
+// -------------------------------------------------------------------------- //
+//                                                                            //
+// If we didn't return inside the switch, something went wrong.               //
+//                                                                            //
+// -------------------------------------------------------------------------- //
+    assert(false);
+}
+
 int State::see(Move_t m) const
 {
     Prop prop;
@@ -335,6 +514,9 @@ int State::see(Move_t m) const
 
 void State::make_t(Move_t pMove)
 {
+    assert(pMove != nullMove);
+    assert(getSrc(pMove) < no_sq);
+    assert(getDst(pMove) < no_sq);
     Square src, dst;
     PieceType moved, captured;
     bool epFlag = false;
@@ -540,13 +722,18 @@ std::ostream & operator << (std::ostream & o, const State & s)
 
     o << "  A B C D E F G H\n";
 
-    /*
-    o << "Color(mUs)" << s.mUs << '\n';
-    o << "Color(mThem)" << s.mThem << '\n';
+    if (s.mUs == white)
+        o << "White to move.\n";
+    else 
+        o << "Black to move.\n";
+    //o << "Color(mUs)" << s.mUs << '\n';
+    //o << "Color(mThem)" << s.mThem << '\n';
 
-    print_bb(s.occ(white));
-    print_bb(s.occ(black));
+    /*
+    print_bb(s.getOccupancyBB(white));
+    print_bb(s.getOccupancyBB(black));
     */
+    //std::cout << s.getKey() << '\n';
 
     return o;
 }

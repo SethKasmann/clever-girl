@@ -12,7 +12,7 @@ Move_t get_uci_move(std::string & token, State & s)
     while (mlist.size() > 0)
     {
         m = mlist.pop();
-        if (to_string(m) == token)
+        if (toString(m) == token)
             return m;
         if (mlist.size() == 0)
             return nullMove;
@@ -69,7 +69,7 @@ void go(std::istringstream & is, State & s)
     search_info.start_time = system_time();
     if (!search_info.move_time)
         search_info.move_time = allocate_time(search_info.time[s.getOurColor()], 
-                                              glist.ply() / 2, 
+                                              history.size() / 2, 
                                               search_info.moves_to_go);
     setup_search(s, search_info);
 }
@@ -81,8 +81,8 @@ void position(std::istringstream & is, State & s)
     bool start_flag = false;
 
     s = State(Start_fen);
-    glist.clear();
-    glist.push(nullMove, s.getKey());
+    history.clear();
+    history.push(std::make_pair(nullMove, s.getKey()));
 
     is >> token;
     if (token == "fen")
@@ -112,7 +112,7 @@ void position(std::istringstream & is, State & s)
         else
         {
             s.make_t(m);
-            glist.push_root(m, s.getKey());
+            history.push(std::make_pair(m, s.getKey()));
         }
     }
     // If start flag is false, initialize board state with fen string.

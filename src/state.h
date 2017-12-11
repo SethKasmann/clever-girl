@@ -54,6 +54,8 @@ public:
     bool canCastleKingside() const;
     bool canCastleQueenside() const;
     bool isQuiet(Move_t pMove) const;
+    bool isCapture(Move_t pMove) const;
+    bool isValid(Move_t pMove, U64 pValidKingMoves, U64 pValid) const;
 
     // Functions involved in making a move.
     void make(Move m);
@@ -143,6 +145,16 @@ inline int State::getCastleRights() const
 inline U64 State::getPinsBB(Color c) const
 {
     return mPinned[c];
+}
+
+inline bool State::isCapture(Move_t pMove) const
+{
+    return square_bb[getDst(pMove)] & (getOccupancyBB(mThem) | mEnPassant);
+}
+
+inline bool State::isQuiet(Move_t m) const
+{
+    return !isCapture(m);
 }
 
 template<PieceType P>

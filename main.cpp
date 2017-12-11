@@ -59,8 +59,10 @@ void choose(State & s)
 int main(int argc, char* argv[])
 {
     init();
-    perftTestDebug();
-    perftTest();
+    //perftTestDebug();
+    //perftTest();
+    //State s("rn1qkb1r/pp1bpppp/8/1B1n4/3P4/4P3/PP3PPP/R1BQK1NR w KQkq -");
+    //std::cout << evaluate(s) << '\n';
     //ccrTest();
     uci();
     return 0;

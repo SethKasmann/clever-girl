@@ -15,6 +15,8 @@
 #include "misc.h"
 #include "line_manager.h"
 #include "move.h"
+#include "butterfly.h"
+#include "history.h"
 
 enum SearchType
 {
@@ -22,7 +24,7 @@ enum SearchType
     scoutSearch
 };
 
-struct History
+struct OldMove
 {
     Move_t move;
     U64 key;
@@ -73,9 +75,9 @@ public:
         r = history;
     }
 private:
-    History history[1024];
-    History* e;
-    History* r;
+    OldMove history[1024];
+    OldMove* e;
+    OldMove* r;
 };
 
 struct SearchInfo
@@ -94,6 +96,7 @@ struct SearchInfo
 
 extern GameList glist;
 extern cgirl::line_manager lineManager;
+extern History history;
 void setup_search(State& s, SearchInfo& si);
 void iterative_deepening(State& s, SearchInfo& si);
 void search_init();

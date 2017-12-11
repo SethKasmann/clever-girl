@@ -46,6 +46,8 @@ const int perftResults[totalTests] =
 	2217, 		567584, 	23527
 };
 
+static History history;
+
 int perft(State & s, int depth)
 {
 	int nodes = 0;
@@ -53,35 +55,15 @@ int perft(State & s, int depth)
 	if (s.getFiftyMoveRule() == 100)
 		return nodes;
 
-	//std::cout << "create mlist...\n";
-	MoveList mlist(s);
-	//std::cout << "created mlist...\n";
-
-	//if (mlist.size() == 0)
-		//return nodes;
-
-	//if (depth == 1)
-	//{
-		//nodes += mlist.size();
-		//return nodes;
-	//}
+	MoveList mlist(s, nullMove, &history, 0);
 
 	State c;
 	Move_t m;
 
-	while (1)
+	while (m = mlist.getBestMove())
 	{
-		m = mlist.getBestMove();
-		if (m == nullMove)
-			break;
-		//std::cout << "lets copy\n";
 		std::memmove(&c, &s, sizeof s);
-		//std::cout << "begin make...\n";
 		c.make_t(m);
-		//std::cout << c;
-		//int z;
-		//std::cin >> z;
-		//std::cout << "end make..\n";
 		if (depth == 1)
 			nodes++;
 		else
@@ -140,7 +122,9 @@ void perftTestDebug()
 	int nodes;
 	for (int i = 0; i < totalTests; ++i)
 	{
+		history.clear();
 		State s(perftFen[i]);
+		history.push(std::make_pair(nullMove, s.getKey()));
 		nodes = perft(s, perftDepth[i]);
 		//std::cout << perftFen[i] << std::endl;
 		std::cout << (nodes == perftResults[i] ? "Success " : "Fail ")
