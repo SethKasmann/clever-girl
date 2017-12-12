@@ -15,7 +15,6 @@
 #include "misc.h"
 #include "line_manager.h"
 #include "move.h"
-#include "butterfly.h"
 #include "history.h"
 
 enum SearchType
@@ -26,7 +25,7 @@ enum SearchType
 
 struct OldMove
 {
-    Move_t move;
+    Move move;
     U64 key;
 };
 
@@ -35,14 +34,14 @@ class GameList
 public:
     GameList() : e(history), r(history)
     {}
-    void push_root(Move_t m, U64 k)
+    void push_root(Move m, U64 k)
     {
         e->move = m;
         e->key  = k;
         ++e;
         ++r;
     }
-    void push(Move_t m, U64 k)
+    void push(Move m, U64 k)
     {
         e->move = m;
         e->key  = k;
@@ -52,7 +51,7 @@ public:
     {
         --e;
     }
-    Move_t operator*() const
+    Move operator*() const
     {
         return e->move;
     }
@@ -82,13 +81,13 @@ private:
 
 struct SearchInfo
 {
-    SearchInfo() : move_time(0), nodes(0), moves_to_go(0), quit(false), infinite(false)
+    SearchInfo() : moveTime(0), nodes(0), moves_to_go(0), quit(false), infinite(false)
     {
         time[white] = 0;
         time[black] = 0;
     }
     int time[Player_size], inc[Player_size];
-    int moves_to_go, depth, max_nodes, nodes, mate, move_time;
+    int moves_to_go, depth, max_nodes, nodes, mate, moveTime;
     int64_t start_time;
     bool infinite, ponder, quit;
     std::vector<Move> sm;

@@ -68,7 +68,7 @@ void ccrTest()
 		history.clear();
 		history.push(std::make_pair(nullMove, s.getKey()));
 		SearchInfo si;
-		si.move_time = allocate_time(100000, 0, 40);
+		si.moveTime = allocate_time(100000, 0, 40);
 		si.start_time = system_time();
 		// Clear the game list.
 		ttable.clear();
@@ -83,10 +83,10 @@ void ccrTest()
 				break;
 		}
 
-		Move_t pv = lineManager.get_pv_move();
+		Move pv = lineManager.get_pv_move();
 
 		std::cout << s;
-		std::cout << "bestmove " << to_string(s.onSquare(get_src(pv))) << toString(pv) << std::endl;
+		std::cout << "bestmove " << toString(s.onSquare(getSrc(pv))) << toString(pv) << std::endl;
 		std::cout << ccrResults[i] << '\n';
 	}
 }

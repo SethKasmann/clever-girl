@@ -10,11 +10,80 @@ void mg_init()
     initmagicmoves();
 }
 
-// ----------------------------------------------------------------------------
-// Push all legal pawn moves and pawn attacks, including promotions,
-// double pawn pushes, and en-passant.
-// ----------------------------------------------------------------------------
+MoveList::MoveList(const State& pState, Move pBest, History* pHistory, int pPly, bool pQSearch)
+: mState(pState), mValid(Full), mBest(pBest), mQSearch(pQSearch), mKiller1(nullMove), mKiller2(nullMove)
+, mSize(0), mHistory(pHistory), mPly(pPly)
+{
+    if (pHistory)
+    {
+        mKiller1 = mHistory->getKiller(pPly).first;
+        mKiller2 = mHistory->getKiller(pPly).second;
+    }
 
+    mValidKingMoves = mState.getValidKingMoves();
+
+    if (mState.inCheck())
+    {
+        if (mState.inDoubleCheck())
+            mStage = mQSearch ? qKingEvadeBestMove : nKingEvadeBestMove;
+        else
+        {
+            Square checker = get_lsb(mState.getCheckersBB());
+            Square king = mState.getKingSquare(mState.getOurColor());
+            mValid = between_dia[king][checker] | between_hor[king][checker]
+                   | mState.getCheckersBB();
+            mStage = nBestMove;
+        }
+    }
+    else
+        mStage = mQSearch ? qBestMove : nBestMove;
+}
+
+MoveList::MoveList(const State& pState)
+: mState(pState), mValid(Full), mQSearch(false), mBest(nullMove)
+, mSize(0), mHistory(nullptr), mPly(0)
+{
+    if (pop_count(mState.getCheckersBB()) == 1)
+    {
+        Square checker = get_lsb(mState.getCheckersBB());
+        Square king = mState.getKingSquare(mState.getOurColor());
+        mValid = between_dia[king][checker] | between_hor[king][checker]
+               | mState.getCheckersBB();
+    }
+    mValidKingMoves = mState.getValidKingMoves();
+    generateAllMoves();
+    mStage = allLegal;
+}
+
+std::size_t MoveList::size() const
+{
+    return mSize;
+}
+
+void MoveList::push(Move pMove)
+{
+    mList[mSize++].move = pMove;
+}
+
+Move MoveList::pop()
+{
+    return mList[--mSize].move;
+}
+
+bool MoveList::contains(Move move) const
+{
+    return std::find(mList.begin(), mList.begin() + mSize, move)
+            != mList.begin() + mSize;
+}
+
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Add quiet checks to the move list, used only in Q-Search. When Q-Search    //
+// is called we only want to evaluate quiet positions, where neither side can //
+// capture or give check. This function only pushes quiet checks to the move  //
+// list - moves that give check but do NOT capture a piece.                   //
+//                                                                            //
+// -------------------------------------------------------------------------- //
 void MoveList::pushQuietChecks()
 {
     Square dst;
@@ -22,6 +91,24 @@ void MoveList::pushQuietChecks()
     int dir;
     Color us, them;
 
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Some initialization. Based on the color to move, store the colors of the   //
+// players, a mask of the promotion rank, and the direction of a pawn push.   //
+// This is only done to make the remaining code more readable.                //
+//                                                                            //
+// More importantly, we initialize discovered checks and pawn checks.         //
+// Discovered checks are pieces which are pinned to the enemy king by their   //
+// own slider. This means if they make a quiet move that is not directly      //
+// towards are away from the king (on the same diagonal/horizontal), then the //
+// move will give discovered check.                                           //
+//                                                                            //
+// Also initialize the bitboard for pawn checks - which is simply where a     //
+// pawn needs to be to give check. We can then attempt to push pawns AND      //
+// bitwise AND them with this bitboard to confirm whether or not they give    //
+// check.                                                                     //
+//                                                                            //
+// -------------------------------------------------------------------------- //    
     discovered = mState.getDiscoveredChecks(mState.getOurColor());
 
     if (mState.getOurColor() == white)
@@ -42,6 +129,7 @@ void MoveList::pushQuietChecks()
     pawnChecks = mState.getAttackBB<pawn>(mState.getKingSquare(them), them);
 
 // ---------------------------------------------------------------------------//
+//                                                                            //
 // Iterate through the pawn piece list. We're looking for three cases:        //
 //   1. Pawn pushes that attack the enemy king.                               //
 //   2. Pawn knight promotions that check the enemy king.                     //
@@ -54,6 +142,7 @@ void MoveList::pushQuietChecks()
 // towards the enemy king. To do this, bitwise AND coplanar[src][dst] with    //
 // the location of the enemy king. If the result is zero then the pawn did    //
 // not move towards the enemy king and there was a discovered check.          //
+//                                                                            //
 // -------------------------------------------------------------------------- //
     for (Square src : mState.getPieceList<pawn>(us))
     {
@@ -99,6 +188,15 @@ void MoveList::pushQuietChecks()
         }
     }
 
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Iterate through the knight piece list. Check for knight moves to empty     //
+// squares that check the enemy king. For each possible knight move, if the   //
+// bitboard of knight moves from the destination will bitwise AND with the    //
+// opponents king, then the move will give check. If a knight is a discovered //
+// candidate, then any move will cause discovered check.                      //
+//                                                                            //
+// -------------------------------------------------------------------------- //
     for (Square src : mState.getPieceList<knight>(us))
     {
         if (src == no_sq)
@@ -113,6 +211,17 @@ void MoveList::pushQuietChecks()
                 push(makeMove(src, dst));
         }
     }
+
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Iterate through the bishop piece list. Generate only moves that move to    //
+// empty squares. If a move forms a diagonal ray with the enemy king, and     //
+// the squares between the destination and the king square are empty, this    //
+// move gives check. If the bishop is a discovered checker, and does not move //
+// directly towards or away from the enemy king (on the same ray), then the   //
+// move gives discovered check.                                               //
+//                                                                            //
+// -------------------------------------------------------------------------- //
     for (Square src : mState.getPieceList<bishop>(us))
     {
         if (src == no_sq)
@@ -130,6 +239,17 @@ void MoveList::pushQuietChecks()
                 push(makeMove(src, dst));
         }
     }
+
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Iterate through the rook piece list. Generate only moves that move to     //
+// empty squares. If a move forms a horizontal ray with the enemy king, and   //
+// the squares between the destination and the king square are empty, this    //
+// move gives check. If the rook is a discovered checker, and does not move   //
+// directly towards or away from the enemy king (on the same ray), then the   //
+// move gives discovered check.                                               //
+//                                                                            //
+// -------------------------------------------------------------------------- //
     for (Square src : mState.getPieceList<rook>(us))
     {
         if (src == no_sq)
@@ -147,6 +267,17 @@ void MoveList::pushQuietChecks()
                 push(makeMove(src, dst));
         }
     }
+
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Iterate through the queen piece list. Generate only moves that move to     //
+// empty squares. If a move forms a horizontal or diagonal ray with the enemy //
+// king, and the squares between the destination and the king square are      //
+// empty, this move gives check. If the rook is a discovered checker, and     //
+// does not move directly towards or away from the enemy king (on the same    //
+// ray), then the move gives discovered check.                                //
+//                                                                            //
+// -------------------------------------------------------------------------- //
     for (Square src : mState.getPieceList<queen>(us))
     {
         if (src == no_sq)
@@ -167,11 +298,21 @@ void MoveList::pushQuietChecks()
     }
 }
 
-// ----------------------------------------------------------------------------
-// Push all pseudo-legal moves and attacks for Knights, Bishops, Rooks, and 
-// QueenmState.
-// ----------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Add only captures to the move list. This function will cover captures      //
+// for:                                                                       //
+//                                                                            //
+//   Knights                                                                  //
+//   Bishop                                                                   //
+//   Rooks                                                                    //
+//   Queens                                                                   //
+//                                                                            //
+// Since king and pawn moves are trickier, they need their own                //
+// specialization.                                                            //
+//                                                                            //
+// -------------------------------------------------------------------------- //
 template <PieceType P>
 void MoveList::pushAttackMoves()
 {
@@ -186,6 +327,13 @@ void MoveList::pushAttackMoves()
     }
 }
 
+
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Specialization to add only pawn capture moves. Moves that promote to a     //
+// queen are generated as well - even if they do not capture a piece.         //
+//                                                                            //
+// -------------------------------------------------------------------------- //
 template<>
 void MoveList::pushAttackMoves<pawn>()
 {
@@ -194,6 +342,13 @@ void MoveList::pushAttackMoves<pawn>()
     int dir;
     Color us, them;
 
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Some initialization to make the code more readable. Store the colors of    //
+// the players, the promotion rank (as a mask), and the direction of a single //
+// pawn push.                                                                 //
+//                                                                            //
+// -------------------------------------------------------------------------- //
     if (mState.getOurColor() == white)
     {
         us = white;
@@ -209,12 +364,34 @@ void MoveList::pushAttackMoves<pawn>()
         dir = -8;
     }
 
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Iterate through the pawn move list. Since we are only generating captures  //
+// and queen promotions, there's only a few cases to cover:                   //
+//   1. Queen promotions that attack diagonally left, diagonally right, or    //
+//      push.                                                                 //
+//   2. Pawn attacks diagonally left, and right.                              //
+//   3. The trickiest - en-passant.                                           //
+//                                                                            //
+// -------------------------------------------------------------------------- //
     for (Square src : mState.getPieceList<pawn>(us))
     {
         if (src == no_sq)
             break;
 
         dst = src + dir;
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Queen promotions:                                                          //
+// If the destination of a pawn push bitwise AND with the promotion mask,     //
+// check for queen promotions. First bitwise AND the destination square with  //
+// the notAFile or notHFile mask (depending on the direction). This mask will //
+// check the pawn can legally capture a direction without sliding off the     //
+// board. If this is true, bitwise AND the destination square (+/- one), the  //
+// occupancy of the opponent, and the bitboard of valid moves. If the         //
+// operation is successful, then the move is legal.                           //
+//                                                                            //
+// -------------------------------------------------------------------------- //
         if (dst & promo)
         {
             if (square_bb[dst] & Not_a_file && square_bb[dst+1] & mState.getOccupancyBB(them) & mValid)
@@ -224,6 +401,18 @@ void MoveList::pushAttackMoves<pawn>()
             if (dst & mState.getEmptyBB() & mValid)
                 push(makeMove(src, dst, queen));
         }
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Pawn captures:                                                             //
+// If the move is not a promotion, then check for normal captures. First,     //
+// bitwise AND the destination square with the notAFile or notHFile mask      //
+// (depending on the direction). This mask will check the pawn can legally    //
+// capture a direction without sliding off the board. If this is true,        //
+// bitwise AND the destination square (+/- one), the occupancy of the         //
+// opponent, and the bitboard of valid moves. If the operation is successful, //
+// then the move is legal.                                                    //
+//                                                                            //
+// -------------------------------------------------------------------------- //
         else
         {
             if (square_bb[dst] & Not_a_file && square_bb[dst+1] & mState.getOccupancyBB(them) & mValid)
@@ -233,7 +422,24 @@ void MoveList::pushAttackMoves<pawn>()
         }
     }
 
-    // En passant.
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// En-passant:                                                                //
+// This is the toughest case. First make sure the en-passant bitboard is not  //
+// zero. If so, make sure the pawn that we want to capture is a valid move    //
+// (for example, if we are in check, make sure capturing this pawn gets us    //
+// out of check).                                                             //
+// Find the possible attackers - since there are two. Bitwise AND this        //
+// bitboard with the bitboard of the side-to-move's pawns. There is a rare    //
+// edge case where both of these pawns are pinned to the enemy king - but     //
+// wouldn't show up in the bitboard of pinned pieces (since there are TWO     //
+// pawns being removed from the same rank).                                   //
+// The check(mask) function handles this case. It will simply remove the bits //
+// from the occupancy and see if it leaves the king in check. Since           //
+// en-passant is so rare I'm not worried about the overhead cost of this      //
+// check.                                                                     //
+//                                                                            //
+// -------------------------------------------------------------------------- //
     if (mState.getEnPassantBB() && mValid & pawn_push[them][get_lsb(mState.getEnPassantBB())])
     {
         dst = get_lsb(mState.getEnPassantBB());
@@ -247,6 +453,13 @@ void MoveList::pushAttackMoves<pawn>()
     }
 }
 
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Specialization to add only king capture moves. Valid king moves are given  //
+// to the move generator on initialization - so simply bitwise AND this       //
+// bitboard with the opponent's pieces.                                       //
+//                                                                            //
+// -------------------------------------------------------------------------- //
 template<>
 void MoveList::pushAttackMoves<king>()
 {
@@ -261,6 +474,20 @@ void MoveList::pushAttackMoves<king>()
         push(makeMove(k, pop_lsb(m)));
 }
 
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Add only quiet moves (non captures) to the move list. This function will   //
+// cover quiet moves for:                                                     //
+//                                                                            //
+//   Knights                                                                  //
+//   Bishop                                                                   //
+//   Rooks                                                                    //
+//   Queens                                                                   //
+//                                                                            //
+// Since king and pawn moves are trickier, they need their own                //
+// specialization.                                                            //
+//                                                                            //
+// -------------------------------------------------------------------------- //
 template <PieceType P>
 void MoveList::pushQuietMoves()
 {
@@ -275,6 +502,12 @@ void MoveList::pushQuietMoves()
     }
 }
 
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Specialization to add only pawn quiet (non capture) moves. This also       //
+// includes under promotions, and underpromotions that capture a piece.       //
+//                                                                            //
+// -------------------------------------------------------------------------- //
 template<>
 void MoveList::pushQuietMoves<pawn>()
 {
@@ -283,6 +516,13 @@ void MoveList::pushQuietMoves<pawn>()
     int dir;
     Color us, them;
 
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Some initialization to make the code more readable. Store the colors of    //
+// the players, the promotion rank (as a mask), and the direction of a single //
+// pawn push.                                                                 //
+//                                                                            //
+// -------------------------------------------------------------------------- //
     if (mState.getOurColor() == white)
     {
         us = white;
@@ -298,12 +538,34 @@ void MoveList::pushQuietMoves<pawn>()
         dir = -8;
     }
 
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Iterate through the pawn move list. Since we are only generating quiets    //
+// and under promotions, there's only a few cases to cover:                   //
+//   1. Under promotions that attack diagonally left, diagonally right, or    //
+//      push.                                                                 //
+//   2. Single pawn pushes.                                                   //
+//   3. Double pawn pushes.                                                   //
+//                                                                            //
+// -------------------------------------------------------------------------- //
     for (Square src : mState.getPieceList<pawn>(us))
     {
         if (src == no_sq)
             break;
 
         dst = src + dir;
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Under promotions:                                                          //
+// If the destination of a pawn push bitwise AND with the promotion mask,     //
+// check for under promotions. First bitwise AND the destination square with  //
+// the notAFile or notHFile mask (depending on the direction). This mask will //
+// check the pawn can legally capture a direction without sliding off the     //
+// board. If this is true, bitwise AND the destination square (+/- one), the  //
+// occupancy of the opponent, and the bitboard of valid moves. If the         //
+// operation is successful, then the move is legal.                           //
+//                                                                            //
+// -------------------------------------------------------------------------- //
         if (dst & promo)
         {
             if (square_bb[dst] & Not_a_file && square_bb[dst+1] & mState.getOccupancyBB(them) & mValid)
@@ -325,6 +587,17 @@ void MoveList::pushQuietMoves<pawn>()
                 push(makeMove(src, dst, bishop));
             }
         }
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Pawn single and double push:                                               //
+// Confirm the square for a single pawn push is empty. This is a condition    //
+// for both a single and double push. If this square is also valid, a single  //
+// pawn push is generated.                                                    //
+// For double pushes, check the source square with the double push mask.      //
+// Bitwise AND This result with the empty squares and the bitboard of valid   //
+// moves. If these conditions are true, generate a pawn double push.          //
+//                                                                            //
+// -------------------------------------------------------------------------- //
         else
         {
             if (square_bb[dst] & mState.getEmptyBB())
@@ -366,16 +639,15 @@ void MoveList::pushQuietMoves<king>()
         push(makeCastle(k, k+2));    
 }
 
-// ----------------------------------------------------------------------------
-// Check if moves are legal by removing any moves from the moves list
-// where a pinned piece moves off it's pin ray.
-// ----------------------------------------------------------------------------
-
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Run through the move list. Remove any moves where the source location      //
+// is a pinned piece and the king square is not on the line formed by the     //
+// source and destination locationmState.                                     //
+//                                                                            //
+// -------------------------------------------------------------------------- //
 void MoveList::checkLegal()
 {
-    // Run through the move list. Remove any moves where the source location
-    // is a pinned piece and the king square is not on the line formed by the
-    // source and destination locationmState.
     for (int i = 0; i < mSize; ++i)
     {
         if (!mState.isLegal(mList[i].move))
@@ -383,19 +655,16 @@ void MoveList::checkLegal()
     }
 }
 
-// ----------------------------------------------------------------------------
-// Push legal moves onto the moves list. The generation technique is to first 
-// find the number of checks on our king.
-// If checks == 0, add all pseudo-legal movemState.
-// If checks == 1, add pseudo-legal moves that block or capture the checking
-//     piece.
-// If checks == 0, add only legal king movemState.
-// Lastly, verify all moves made by pinned pieces stay on their pin ray.
-// ----------------------------------------------------------------------------
-
-void MoveList::pushAllLegal()
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Push legal moves onto the moves list. If the king is in double check, then //
+// only generate king moves. Otherwise, generate all attack and quiet moves.  //
+// This function is only used for testing (such as PERFT testing).            //
+//                                                                            //
+// ---------------------------------------------------------------------------//
+void MoveList::generateAllMoves()
 {
-    if (pop_count(mState.getCheckersBB()) == 2)
+    if (mState.inDoubleCheck())
     {
         pushAttackMoves<king>();
         pushQuietMoves<king>();
@@ -421,12 +690,22 @@ void MoveList::pushAllLegal()
     checkLegal();
 }
 
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Generate only quiet checks - used in Q-Search.                             //
+//                                                                            //
+// ---------------------------------------------------------------------------//
 void MoveList::generateQuietChecks()
 {
     pushQuietChecks();
     checkLegal();
 }
 
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Generate all quiet moves.                                                  //
+//                                                                            //
+// ---------------------------------------------------------------------------//
 void MoveList::generateQuiets()
 {
     pushQuietMoves<pawn>();
@@ -438,6 +717,11 @@ void MoveList::generateQuiets()
     checkLegal();
 }
 
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Generate all captures.                                                     //
+//                                                                            //
+// ---------------------------------------------------------------------------//
 void MoveList::generateAttacks()
 {
     pushAttackMoves<pawn>();
@@ -449,19 +733,49 @@ void MoveList::generateAttacks()
     checkLegal();
 }
 
-Move_t MoveList::getBestMove()
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Return the best move avaliable in the move list. Since not all moves are   //
+// generated at once, mStage keeps track of the stage of move ordering that   //
+// we are in. This way we can use a big switch case for handling move         //
+// generation for both regular and q-search.                                  //
+//                                                                            //
+// If a case begins with the letter n it refers to normal search, and if it   //
+// begins with q it refers to q search.                                       //
+//                                                                            //
+// ---------------------------------------------------------------------------//
+Move MoveList::getBestMove()
 {
-    Move_t move;
+    Move move;
 
     switch (mStage)
     {
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Normal Search - best move.                                                 //
+// Before generating any moves, first check if the move given by the pv list  //
+// or the transposition table is valid. If so, return that move and pray for  //
+// a beta cutoff.                                                             //
+//                                                                            //
+// ---------------------------------------------------------------------------//
         case nBestMove:
             mStage++;
             if (mState.isValid(mBest, mValidKingMoves, mValid))
                 return mBest;
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Normal Search - captures generation.                                       //
+// Since the best move failed, this case handles generating and sorting       //
+// capture moves. After generating all captures, check if each capture has    //
+// a positive SEE (static exchange evaluation) score. If so, score them by    //
+// their LVA-MVV (least valuable attacker, most valuable victim) score. I     //
+// just do Victim - Attacker.                                                 //
+//                                                                            //
+// If the see value is negative, store the see value as the score.            //
+//                                                                            //
+// ---------------------------------------------------------------------------//
         case nAttacksGen:
             generateAttacks();
-            // MVV - LVA Algorithm.
             for (int i = 0; i < mSize; ++i)
             {
                 int see = mState.see(mList[i].move);
@@ -472,6 +786,16 @@ Move_t MoveList::getBestMove()
                     mList[i].score = see;
             }
             mStage++;
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Normal Search - captures.                                                  //
+// Since there are not very many captures there's not need to run a sorting   //
+// algorithm on them. Since we pop off the move from the end of the array,    //
+// swap the max element in the array with the move in the final position.     //
+// Make sure to confirm the move is not the same as the best move we already  //
+// tried.                                                                     //
+//                                                                            //
+// ---------------------------------------------------------------------------//
         case nAttacks:
             while (mSize)
             {
@@ -482,27 +806,65 @@ Move_t MoveList::getBestMove()
                     return move;
             }
             mStage++;
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Normal Seach - first killer.                                               //
+// Check if the first killer stored at this ply is a valid move. If so,       //
+// return it before generating any quiet moves. Confirm it is not the same    //
+// as the best move.                                                          //
+//                                                                            //
+// ---------------------------------------------------------------------------//
         case nKiller1:
             mStage++;
             if ((mState.isValid(mKiller1, mValidKingMoves, mValid))
                 && mKiller1 != mBest)
                 return mKiller1;
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Normal Seach - second killer.                                              //
+// Check if the second killer stored at this ply is a valid move. If so,      //
+// return it before generating any quiet moves. Confirm it is not the same    //
+// as the best move or the first killer.                                      //
+//                                                                            //
+// ---------------------------------------------------------------------------//
         case nKiller2:
             mStage++;
             if ((mState.isValid(mKiller2, mValidKingMoves, mValid))
                 && mKiller2 != mBest
                 && mKiller2 != mKiller1)
                 return mKiller2;
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Normal Seach - quiets generation                                           //
+// Since both killers failed, generate and order quiet moves. Our first pass  //
+// through the quiet moves scores them based on their history score. The      //
+// history score uses the moves increment from the history heuristic and the  //
+// butterfly hueristic.                                                       //
+//                                                                            //
+// score = history / butterfly                                                //
+//                                                                            //
+// The history score is increased by += depth*depth if a quiet move causes a  //
+// beta cutoff. The butterfly score is increased by += depth if a quiet move  //
+// does not improve alpha in search.                                          //
+//                                                                            //
+// Since move moves will not have a history score (thus the result is zero),  //
+// partition the quiet moves so that the ones with the history score are on   //
+// the right side since we want to try these first. Sort the right side.      //
+//                                                                            //
+// The remaining quiets, score based on piece square table values.            //
+// (where I'm going - where I'm at). Sort the left side.                      //
+//                                                                            //
+// ---------------------------------------------------------------------------//
         case nQuietsGen:
         {
             generateQuiets();
             for (int i = 0; i < mSize; ++i)
                 mList[i].score = mHistory->getHistoryScore(mList[i].move);
-            std::array<MoveEntry, Max_size>::iterator it2 = 
+            std::array<MoveEntry, maxSize>::iterator it2 = 
                 std::partition(mList.begin(), mList.begin() + mSize, noScore);
             std::stable_sort(it2, mList.begin() + mSize);
-            std::array<MoveEntry, Max_size>::iterator it1 = mList.begin();
-            for (std::array<MoveEntry, Max_size>::iterator it1 = mList.begin(); it1 != it2; ++it1)
+            std::array<MoveEntry, maxSize>::iterator it1 = mList.begin();
+            for (std::array<MoveEntry, maxSize>::iterator it1 = mList.begin(); it1 != it2; ++it1)
             {
                 Square src = getSrc(it1->move);
                 Square dst = getDst(it1->move);
@@ -513,13 +875,15 @@ Move_t MoveList::getBestMove()
                            - PieceSquareTable::pst[toMove][late][mState.getOurColor()][src];
             }
             std::stable_sort(mList.begin(), it2);
-            /*
-            for (int i = 0; i < mSize; ++i)
-                std::cout << mList[i].score << " ";
-            std::cout << std::endl;
-            */
             mStage++;
         }
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Normal Search - quiets.                                                    //
+// Confirm each move is not the same as the best move, the first killer, or   //
+// the second killer.                                                         //
+//                                                                            //
+// ---------------------------------------------------------------------------//
         case nQuiets:
             while (mSize)
             {
@@ -530,17 +894,52 @@ Move_t MoveList::getBestMove()
                     return move;
             }
             break;
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Q Search - best move.                                                      //
+// Before generating any moves, first check if the move given by the pv list  //
+// or the transposition table is valid. If so, return that move and pray for  //
+// a beta cutoff.                                                             //
+//                                                                            //
+// ---------------------------------------------------------------------------//
         case qBestMove:
             mStage++;
             if (mState.isValid(mBest, mValidKingMoves, mValid))
                 return mBest;
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Q Search - captures generation.                                            //
+// Since the best move failed, this case handles generating and sorting       //
+// capture moves. After generating all captures, check if each capture has    //
+// a positive SEE (static exchange evaluation) score. If so, score them by    //
+// their LVA-MVV (least valuable attacker, most valuable victim) score. I     //
+// just do Victim - Attacker.                                                 //
+//                                                                            //
+// If the see value is negative, store the see value as the score.            //
+//                                                                            //
+// ---------------------------------------------------------------------------//
         case qAttacksGen:
-            mStage++;
             generateAttacks();
-            // MVV - LVA Algorithm.
             for (int i = 0; i < mSize; ++i)
-                mList[i].score = mState.onSquare(getDst(mList[i].move))
-                               - mState.onSquare(getSrc(mList[i].move));
+            {
+                int see = mState.see(mList[i].move);
+                if (see > 0)
+                    mList[i].score = mState.onSquare(getDst(mList[i].move))
+                                   - mState.onSquare(getSrc(mList[i].move));
+                else
+                    mList[i].score = see;
+            }
+            mStage++;
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Q Search - captures.                                                       //
+// Since there are not very many captures there's not need to run a sorting   //
+// algorithm on them. Since we pop off the move from the end of the array,    //
+// swap the max element in the array with the move in the final position.     //
+// Make sure to confirm the move is not the same as the best move we already  //
+// tried.                                                                     //
+//                                                                            //
+// ---------------------------------------------------------------------------//
         case qAttacks: 
             while (mSize)
             {
@@ -551,11 +950,35 @@ Move_t MoveList::getBestMove()
                     return move;
             }
             mStage++;
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Q Search - generate quiet checks.                                          //
+// Generate quiet checks and score them based on their history score. The     //
+// history score uses the moves increment from the history heuristic and the  //
+// butterfly hueristic.                                                       //
+//                                                                            //
+// score = history / butterfly                                                //
+//                                                                            //
+// The history score is increased by += depth*depth if a quiet move causes a  //
+// beta cutoff. The butterfly score is increased by += depth if a quiet move  //
+// does not improve alpha in search.                                          //
+//                                                                            //
+// ---------------------------------------------------------------------------//
         case qQuietChecksGen:
             generateQuietChecks();
             for (int i = 0; i < mSize; ++i)
                 mList[i].score = mHistory->getHistoryScore(mList[i].move);
             mStage++;
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Q Search - quiet checks.                                                   //
+// Since there are not very many quiet checks there's no need to run a        //
+// sorting algorithm on them. Since we pop off the move from the end of the   //
+// array, swap the max element in the array with the move in the final        //
+// position. Make sure to confirm the move is not the same as the best move   //
+// we already tried.                                                          //
+//                                                                            //
+// ---------------------------------------------------------------------------//
         case qQuietChecks:
             while (mSize)
             {
@@ -566,13 +989,33 @@ Move_t MoveList::getBestMove()
                     return move;
             }
             break;
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Q search (double check) - best move                                        //
+// Before generating any moves, first check if the move given by the pv list  //
+// or the transposition table is valid. If so, return that move and pray for  //
+// a beta cutoff.                                                             //
+//                                                                            //
+// ---------------------------------------------------------------------------//
         case qKingEvadeBestMove:
             mStage++;
             if (mState.isValid(mBest, mValidKingMoves, mValid))
                 return mBest;
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Q search (double check) - generate captures                                //
+// Generate king captures only. No scoring or sorting is done.                //
+//                                                                            //
+// ---------------------------------------------------------------------------//
         case qKingEvadeAttacksGen:
             pushAttackMoves<king>();
             mStage++;
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Q search (double check) - captures                                         //
+// As long as the capture is not the same as the best move, return it.        //
+//                                                                            //
+// ---------------------------------------------------------------------------//
         case qKingEvadeAttacks:
             while (mSize)
             {
@@ -581,14 +1024,34 @@ Move_t MoveList::getBestMove()
                     return move;
             }
             break;
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Normal search (double check) - best move                                   //
+// Before generating any moves, first check if the move given by the pv list  //
+// or the transposition table is valid. If so, return that move and pray for  //
+// a beta cutoff.                                                             //
+//                                                                            //
+// ---------------------------------------------------------------------------//
         case nKingEvadeBestMove:
             mStage++;
             if (mState.isValid(mBest, mValidKingMoves, mValid))
                 return mBest;
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Noraml search (double check) - generate evasions                           //
+// Generate king evasions only. No scoring or sorting is done.                //
+//                                                                            //
+// ---------------------------------------------------------------------------//
         case nKingEvadeMovesGen:
             pushQuietMoves<king>();
             pushAttackMoves<king>();
             mStage++;
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Normal search (double check) - evasions                                    //
+// As long as the capture is not the same as the best move, return it.        //
+//                                                                            //
+// ---------------------------------------------------------------------------//
         case nKingEvadeMoves:
             while (mSize)
             {
@@ -597,6 +1060,13 @@ Move_t MoveList::getBestMove()
                     return move;
             }
             break;
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// All Legal                                                                  //
+// Generate all legal moves and return each one. Useful for testing such as   //
+// PERFT.                                                                     //
+//                                                                            //
+// ---------------------------------------------------------------------------//
         case allLegal:
             while (mSize)
             {

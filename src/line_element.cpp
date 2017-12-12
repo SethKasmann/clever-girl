@@ -6,7 +6,7 @@ line_element::line_element()
 : mMove(nullMove), mKey(0) 
 {}
 
-line_element::line_element(Move_t pMove, U64 pKey)
+line_element::line_element(Move pMove, U64 pKey)
 : mMove(pMove), mKey(pKey)
 {}
 
@@ -26,7 +26,7 @@ void line_element::operator=(const line_element& pLineElement)
 	mKey = pLineElement.mKey;
 }
 
-Move_t line_element::get_move() const 
+Move line_element::get_move() const 
 { 
 	return mMove; 
 }
@@ -36,7 +36,7 @@ U64 line_element::get_key() const
 	return mKey; 
 }
 
-void line_element::set_move(Move_t pMove)
+void line_element::set_move(Move pMove)
 { 
 	mMove = pMove; 
 }

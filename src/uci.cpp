@@ -2,9 +2,9 @@
 #include <fstream>
 
 // Check if a move given by the uci is valid.
-Move_t get_uci_move(std::string & token, State & s)
+Move get_uci_move(std::string & token, State & s)
 {
-    Move_t m;
+    Move m;
 
     token.erase(std::remove(token.begin(), token.end(), ','),
                     token.end());
@@ -24,7 +24,7 @@ void go(std::istringstream & is, State & s)
 {
     std::string token;
     SearchInfo search_info;
-    Move_t m;
+    Move m;
 
     while (is >> token)
     {
@@ -61,14 +61,14 @@ void go(std::istringstream & is, State & s)
         else if (token == "mate")
             is >> search_info.mate;
         else if (token == "movetime")
-            is >> search_info.move_time;
+            is >> search_info.moveTime;
         else if (token == "infinite")
             search_info.infinite = true;
     }
 
     search_info.start_time = system_time();
-    if (!search_info.move_time)
-        search_info.move_time = allocate_time(search_info.time[s.getOurColor()], 
+    if (!search_info.moveTime)
+        search_info.moveTime = allocate_time(search_info.time[s.getOurColor()], 
                                               history.size() / 2, 
                                               search_info.moves_to_go);
     setup_search(s, search_info);
@@ -77,7 +77,7 @@ void go(std::istringstream & is, State & s)
 void position(std::istringstream & is, State & s)
 {
     std::string token, fen;
-    Move_t m;
+    Move m;
     bool start_flag = false;
 
     s = State(Start_fen);

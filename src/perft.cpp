@@ -58,7 +58,7 @@ int perft(State & s, int depth)
 	MoveList mlist(s, nullMove, &history, 0);
 
 	State c;
-	Move_t m;
+	Move m;
 
 	while (m = mlist.getBestMove())
 	{

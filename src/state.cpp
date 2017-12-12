@@ -217,7 +217,7 @@ U64 State::getDiscoveredChecks(Color c) const
     return discover;
 }
 
-bool State::isLegal(Move_t pMove) const
+bool State::isLegal(Move pMove) const
 {
     if (!mPinned[mUs])
         return true;
@@ -241,7 +241,7 @@ bool State::isLegal(Move_t pMove) const
 // cutoff in the search routine, we may not need to generate moves at all.    //
 //                                                                            //
 // -------------------------------------------------------------------------- //
-bool State::isValid(Move_t pMove, U64 pValidKingMoves, U64 pValidMoves) const
+bool State::isValid(Move pMove, U64 pValidKingMoves, U64 pValidMoves) const
 {
     assert(getSrc(pMove) < no_sq);
     assert(getDst(pMove) < no_sq);
@@ -410,7 +410,7 @@ bool State::isValid(Move_t pMove, U64 pValidKingMoves, U64 pValidMoves) const
     assert(false);
 }
 
-int State::see(Move_t m) const
+int State::see(Move m) const
 {
     Prop prop;
     Color color;
@@ -512,7 +512,7 @@ int State::see(Move_t m) const
 // destination, and type of move.
 // ----------------------------------------------------------------------------
 
-void State::make_t(Move_t pMove)
+void State::make_t(Move pMove)
 {
     assert(pMove != nullMove);
     assert(getSrc(pMove) < no_sq);
@@ -598,7 +598,7 @@ void State::make_t(Move_t pMove)
     mKey ^= Zobrist::key();
 
     assert(!check());
-    swap_turn();
+    swapTurn();
 
     setPins(white);
     setPins(black);
@@ -609,7 +609,7 @@ void State::make_t(Move_t pMove)
 // Function to return a bitboard of all valid king moves for the current 
 // player
 // ----------------------------------------------------------------------------
-U64 State::valid_king_moves() const
+U64 State::getValidKingMoves() const
 {
     U64 m;
 
@@ -726,6 +726,7 @@ std::ostream & operator << (std::ostream & o, const State & s)
         o << "White to move.\n";
     else 
         o << "Black to move.\n";
+    
     //o << "Color(mUs)" << s.mUs << '\n';
     //o << "Color(mThem)" << s.mThem << '\n';
 

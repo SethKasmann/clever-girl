@@ -3,7 +3,7 @@
 
 #include <string>
 
-#define NDEBUG
+//#define NDEBUG
 #include <assert.h>
 
 // ----------------------------------------------------------------------------
@@ -133,20 +133,6 @@ enum CR
     b_queen_castle = 8
 };
 
-// ----------------------------------------------------------------------------
-// Move Types
-//
-// Moves are stored in 32 bits:
-// bits 0-5   : source location
-// bits 6-11  : destination location
-// bits 12-15 : move property
-// bits 16-22 : move score
-// ----------------------------------------------------------------------------
-
-typedef unsigned int Move;
-
-static const int No_move = 0;
-
 static const int Score[Types_size][Types_size] = 
 {
     { 26, 30, 31, 33, 36, 0 },  
@@ -155,19 +141,6 @@ static const int Score[Types_size][Types_size] =
     { 16, 17, 18, 23, 32, 0 },  
     { 12, 13, 14, 15, 22, 0 },  
     { 7,  8,  9,  10, 11, 0 } 
-};
-
-enum MoveScore
-{
-    BP = 0,
-    RP = 1,
-    NP = 2,
-    QP = 37,
-    Q  = 3,
-    C  = 4,
-    QC = 5,
-    BC = 6,
-    EP = 26
 };
 
 enum Dir
@@ -207,16 +180,6 @@ enum Prop : uint32_t
     bishop_promo,
     en_passant
 };
-
-inline Square get_src(Move m) { return Square(m & 0x3F); }
-inline Square get_dst(Move m) { return Square((m & 0xFC0) >> 6); }
-inline Prop get_prop(Move m)  { return Prop((m & 0xF000) >> 12); }
-inline int get_score(Move m)  { return (m & 0x7F0000) >> 16; }
-inline void set_score(Move* m, int s) { *m = (*m ^ (*m & 0x7F0000)) | (s << 16); };
-inline bool is_quiet(Move m)
-{
-    return get_score(m) < BC;
-}
 
 // ----------------------------------------------------------------------------
 // Search Types
@@ -275,15 +238,5 @@ inline std::string to_string(PieceType p)
          : p == queen ? "Q"
          : "K";
 }
-
-inline std::string to_string(Move m)
-{
-    return to_string(file(get_src(m))) 
-         + to_string(rank(get_src(m)))
-         + to_string(file(get_dst(m))) 
-         + to_string(rank(get_dst(m)))
-         + to_string(get_prop(m));
-}   
-
 
 #endif

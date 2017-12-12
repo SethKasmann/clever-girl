@@ -25,7 +25,7 @@ public:
 	line_manager()
 	: mMatingLine(false), mSize(0)
 	{}
-	void push_to_pv(Move_t pMove, U64 pKey, int pPly, int pScore)
+	void push_to_pv(Move pMove, U64 pKey, int pPly, int pScore)
 	{
 		// Check if this is a mating line.
 		mMatingLine = std::abs(pScore) + pPly >= Checkmate ? true : false;
@@ -47,7 +47,7 @@ public:
 	{
 		return mPv[pPly].get_key();
 	}
-	Move_t get_pv_move(int pPly=0) const
+	Move get_pv_move(int pPly=0) const
 	{
 		return mPv[pPly].get_move();
 	}
@@ -67,7 +67,7 @@ public:
 	void check_pv(State& pState)
 	{
 		State c;
-		Move_t nextMove;
+		Move nextMove;
 		std::memmove(&c, &pState, sizeof(pState));
 		for (int i = 0; i < Max_ply; ++i)
 		{

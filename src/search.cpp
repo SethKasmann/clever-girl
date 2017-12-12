@@ -1,7 +1,7 @@
 #include "search.h"
 #include <fstream>
 
-static Move_t killers[Max_ply][Killer_size];
+static Move killers[Max_ply][Killer_size];
 cgirl::line_manager lineManager;
 GameList glist;
 History history;
@@ -9,7 +9,7 @@ History history;
 bool interrupt(SearchInfo& si)
 {
     // Check to see if we have run out of time.
-    if (system_time() - si.start_time >= si.move_time && !si.infinite)
+    if (system_time() - si.start_time >= si.moveTime && !si.infinite)
     {
         si.quit = true;
         return true;
@@ -63,7 +63,7 @@ int qsearch(State& s, SearchInfo& si, int ply, int alpha, int beta)
     MoveList mlist(s, nullMove, &history, ply, true);
 
     int val;
-    Move_t m;
+    Move m;
     State c;
 
     while (m = mlist.getBestMove())
@@ -73,10 +73,10 @@ int qsearch(State& s, SearchInfo& si, int ply, int alpha, int beta)
         val = -qsearch(c, si, ply + 1, -beta, -alpha); // Recursive call to qsearch.
         if (val >= beta)                         // Alpha-Beta pruning.
         {
-            /*
+         /*   
             std::cout << " Ply: " << ply << '\n';
             std::cout << "Alpha: " << alpha << " Beta: " << beta << '\n';
-            std::cout << "QSCORE: " << beta << '\n';
+            std::cout << "Val: " << val << '\n';
             std::cout << s;
             std::cin >> z;*/
             return beta;
@@ -101,7 +101,7 @@ int qsearch(State& s, SearchInfo& si, int ply, int alpha, int beta)
 
 int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int beta)
 {
-    Move_t best_move = nullMove;
+    Move best_move = nullMove;
 /*
     std::cout << "Depth: " << depth << " Ply: " << ply << '\n';
     std::cout << "Alpha: " << alpha << " Beta: " << beta << '\n';
@@ -178,7 +178,7 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
     int b = beta;
     int score;
     int bestScore = Neg_inf;
-    Move_t m;
+    Move m;
     State c;
     bool first = true;
 
@@ -227,9 +227,9 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
             a = b;
             if (s.isQuiet(m))
             {
-                /*
-                std::cout << "Storing a killer!: " << toString(m) << '\n';
-                std::cin >> z;*/
+                
+                //std::cout << "Storing a killer!: " << toString(m) << '\n';
+                //std::cin >> z;
                 history.update(m, depth, ply, true);
             }
             break;
@@ -276,7 +276,7 @@ void iterative_deepening(State& s, SearchInfo& si)
     int score;
 
     // Iterative deepening.
-    for (int d = 1; /*d < 6*/!si.quit; ++d)
+    for (int d = 1; /*d < 8*/!si.quit; ++d)
     {
         //std::cout << "SEARCH CALL BEGIN D = " << d << '\n';
         score = scout_search(s, si, d, 0, Neg_inf, Pos_inf);

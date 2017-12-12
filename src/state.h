@@ -34,55 +34,56 @@ public:
     U64 getEnPassantBB() const;
     int getCastleRights() const;
     U64 getCheckersBB() const;
-    template<PieceType P> const std::array<Square, Piece_max>& getPieceList(Color pColor) const;
+    PieceType onSquare(const Square s) const;
+    Square getKingSquare(Color c) const;
+    int getPstScore(GameStage g) const;
 
     // Access piece bitboards.
+    template<PieceType P> const std::array<Square, Piece_max>& getPieceList(Color pColor) const;
     template<PieceType P> U64 getPieceBB(Color c) const;
     template<PieceType P> U64 getPieceBB() const;
     template<PieceType P> int getPieceCount(Color c) const;
     template<PieceType P> int getPieceCount() const;
-    Square getKingSquare(Color c) const;
-    int getPstScore(GameStage g) const;
 
     // Board occupancy
     U64 getOccupancyBB() const;
     U64 getOccupancyBB(Color c) const;
     U64 getEmptyBB() const;
-    PieceType onSquare(const Square s) const;
 
     // Castle rights.
     bool canCastleKingside() const;
     bool canCastleQueenside() const;
-    bool isQuiet(Move_t pMove) const;
-    bool isCapture(Move_t pMove) const;
-    bool isValid(Move_t pMove, U64 pValidKingMoves, U64 pValid) const;
+    bool isQuiet(Move pMove) const;
+    bool isCapture(Move pMove) const;
+    bool isValid(Move pMove, U64 pValidKingMoves, U64 pValid) const;
 
     // Functions involved in making a move.
-    void make(Move m);
-    void make_t(Move_t m);
+    void make_t(Move m);
     void addPiece(Color pColor, PieceType pPiece, Square pSquare);
     void movePiece(Color pColor, PieceType pPiece, Square pSrc, Square pDst);
     void removePiece(Color pColor, PieceType pPiece, Square pSquare);
-    void swap_turn();
+    void swapTurn();
 
     // Valid king moves and pins.
-    U64 valid_king_moves() const;
+    U64 getValidKingMoves() const;
     void setCheckers();
     void setPins(Color c);
     U64 getPinsBB(Color c) const;
     U64 getDiscoveredChecks(Color c) const;
 
     // Check and attack information.
-    bool isLegal(Move_t pMove) const;
+    bool isLegal(Move pMove) const;
     bool attacked(Square s) const;
     bool defended(Square s, Color c) const;
     bool check() const;
     bool check(U64 change) const;
     bool check(U64 change, Color c) const;
+    bool inCheck() const;
+    bool inDoubleCheck() const;
     U64 getAttackersBB(Square s, Color c) const;
     U64 allAttackers(Square s) const;
     template<PieceType> U64 getAttackBB(Square s, Color c=white) const;
-    int see(Move_t m) const;
+    int see(Move m) const;
     U64 getXRayAttacks(Square square) const;
 
     // Print
@@ -147,12 +148,12 @@ inline U64 State::getPinsBB(Color c) const
     return mPinned[c];
 }
 
-inline bool State::isCapture(Move_t pMove) const
+inline bool State::isCapture(Move pMove) const
 {
     return square_bb[getDst(pMove)] & (getOccupancyBB(mThem) | mEnPassant);
 }
 
-inline bool State::isQuiet(Move_t m) const
+inline bool State::isQuiet(Move m) const
 {
     return !isCapture(m);
 }
@@ -217,7 +218,7 @@ inline void State::removePiece(Color pColor, PieceType pPiece, Square pSquare)
 }
 
 inline
-void State::swap_turn()
+void State::swapTurn()
 {
     mThem =  mUs;
     mUs   = !mUs;
@@ -359,6 +360,18 @@ bool State::attacked(Square s) const
         || getAttackBB<knight>(s) &  getPieceBB<knight>(mThem)
         || getAttackBB<bishop>(s) & (getPieceBB<bishop>(mThem) | getPieceBB<queen>(mThem))
         || getAttackBB< rook >(s) & (getPieceBB< rook >(mThem) | getPieceBB<queen>(mThem));
+}
+
+inline
+bool State::inCheck() const
+{
+    return getCheckersBB();
+}
+
+inline
+bool State::inDoubleCheck() const
+{
+    return pop_count(getCheckersBB()) == 2;
 }
 
 inline

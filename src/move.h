@@ -4,11 +4,11 @@
 #include <string>
 #include "types.h"
 
-typedef uint16_t Move_t;
+typedef uint16_t Move;
 
 struct MoveEntry
 {
-	Move_t move;
+	Move move;
 	int score;
 };
 
@@ -17,7 +17,7 @@ inline bool noScore(const MoveEntry & entry)
 	return entry.score == 0;
 }
 
-inline bool operator==(const MoveEntry& pEntry, const Move_t pMove)
+inline bool operator==(const MoveEntry& pEntry, const Move pMove)
 {
 	return pEntry.move == pMove;
 }
@@ -27,52 +27,52 @@ inline bool operator<(const MoveEntry& pEntry1, const MoveEntry& pEntry2)
 	return pEntry1.score < pEntry2.score;
 }
 
-static const Move_t nullMove = 0;
-static const Move_t srcMask           = 0x003F;
-static const Move_t dstMask           = 0x0FC0;
-static const Move_t piecePromoMask    = 0x7000;
-static const Move_t castleFlag        = 0x8000;
+static const Move nullMove = 0;
+static const Move srcMask           = 0x003F;
+static const Move dstMask           = 0x0FC0;
+static const Move piecePromoMask    = 0x7000;
+static const Move castleFlag        = 0x8000;
 
-inline Move_t makeMove(Square src, Square dst)
+inline Move makeMove(Square src, Square dst)
 {
-	return static_cast<Move_t>(src) | static_cast<Move_t>(dst) << 6;
+	return static_cast<Move>(src) | static_cast<Move>(dst) << 6;
 }
 
-inline Move_t makeMove(Square src, Square dst, PieceType promo)
+inline Move makeMove(Square src, Square dst, PieceType promo)
 {
-	return static_cast<Move_t>(src) 
-	     | static_cast<Move_t>(dst)   << 6 
-	     | static_cast<Move_t>(promo) << 12;
+	return static_cast<Move>(src) 
+	     | static_cast<Move>(dst)   << 6 
+	     | static_cast<Move>(promo) << 12;
 }
 
-inline Move_t makeCastle(Square src, Square dst)
+inline Move makeCastle(Square src, Square dst)
 {
-	return static_cast<Move_t>(src) 
-	     | static_cast<Move_t>(dst) << 6
+	return static_cast<Move>(src) 
+	     | static_cast<Move>(dst) << 6
 	     | castleFlag;
 }
 
-inline Square getSrc(Move_t m)
+inline Square getSrc(Move m)
 {
 	return static_cast<Square>(m & srcMask);
 }
 
-inline Square getDst(Move_t m)
+inline Square getDst(Move m)
 {
 	return static_cast<Square>((m & dstMask) >> 6);
 }
 
-inline PieceType getPiecePromo(Move_t m)
+inline PieceType getPiecePromo(Move m)
 {
 	return static_cast<PieceType>((m & piecePromoMask) >> 12);
 }
 
-inline bool isCastle(Move_t m)
+inline bool isCastle(Move m)
 {
 	return m & castleFlag;
 }
 
-inline std::string toString(Move_t m)
+inline std::string toString(Move m)
 {
 	std::string ret;
 	Square src, dst;
