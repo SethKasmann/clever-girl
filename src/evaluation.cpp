@@ -89,12 +89,7 @@ int eval_pawns(const State & s, const Color c)
         score += Pawn_wt;
         // Check if the pawn is a passed pawn.
         if (!((file_bb[p] | adj_files[p]) & in_front[c][p] & s.getPieceBB<pawn>(!c)))
-        {
             score += Passed;
-            // Check if the pawn is connected
-            if (rank_bb[p - dir] & s.getPieceBB<pawn>(c) & adj_files[p])
-                score += Connected;
-        }
         // Look for candidate and backwards pawns since the logic is related.
         // First check for a half open file.
         else if (!(file_bb[p] & in_front[c][p] & s.getPieceBB<pawn>(!c)))
@@ -130,6 +125,9 @@ int eval_pawns(const State & s, const Color c)
                 }
             }
         }
+        // Check if the pawn is connected
+        if (rank_bb[p - dir] & s.getPieceBB<pawn>(c) & adj_files[p])
+            score += Connected;
 
         // Check if the pawn is isolated
         if (!(adj_files[p] & s.getPieceBB<pawn>(c)))
@@ -246,10 +244,10 @@ int evaluate(const State & s)
     int pawnScore = 0;
     PawnEntry* pawnEntry;
 
-    scaledPstScore(s);
+    finalScore = scaledPstScore(s);
 
     // Pawn Evaluation
-    if (s.getPieceCount<pawn>(s.getOurColor()) + s.getPieceCount<pawn>(s.getTheirColor()))
+    if (s.getPieceCount<pawn>(s.getOurColor()) + s.getPieceCount<pawn>(s.getTheirColor()) != 0)
     {
         //Probe the pawn hash.
         pawnEntry = probe(s.getPawnKey());

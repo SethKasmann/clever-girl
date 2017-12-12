@@ -436,6 +436,11 @@ int State::see(Move m) const
     // Get X ray attacks and add in pawns from attackers.
     xRay = getXRayAttacks(dst);
 
+    std::cout << *this;
+    std::cout << src << " " << target << " " << gain[d] << '\n';
+    int z;
+    std::cin >> z;
+
 
     while (from)
     {
@@ -452,6 +457,8 @@ int State::see(Move m) const
 
         // Storing the potential gain, if defended.
         gain[d] = getPieceValue(target) - gain[d - 1];
+        std::cout << src << " " << target << " " << gain[d] << '\n';
+        std::cin >> z;
 
         // Prune if the gain cannot be improved.
         if (std::max(-gain[d - 1], gain[d]) < 0)
@@ -460,8 +467,10 @@ int State::see(Move m) const
         // Remove the from bit to simulate making the move.
         attackers ^= from;
         occupancy ^= from;
+        print_bb(attackers);
+        print_bb(occupancy);
 
-        // If the target is not a night, piece movement could camUse a discovered
+        // If the target is not a night, piece movement could cause a discovered
         // attacker.
         if (target != knight)
         {
@@ -473,8 +482,11 @@ int State::see(Move m) const
                 mayAttack = pop_lsb(potential);
                 // If no bits are between the new square and the dst, there
                 // is a new attacker.
-                if (!(between[mayAttack][dst] & occupancy));
+                if ((between[mayAttack][dst] & occupancy) == 0)
                 {
+                    std::cout << "here!\n";
+                    print_bb(between[mayAttack][dst]);
+                    std::cout << (between[mayAttack][dst] & occupancy) << '\n';
                     attackers |= square_bb[mayAttack];
                     break;
                 }
@@ -504,6 +516,7 @@ int State::see(Move m) const
     while (--d > 0)
         gain[d - 1] = -std::max(-gain[d - 1], gain[d]);
 
+std::cout << "RETURNING " << gain[0] << '\n';
     return gain[0];
 }
 

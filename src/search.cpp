@@ -34,25 +34,23 @@ int qsearch(State& s, SearchInfo& si, int ply, int alpha, int beta)
 {
     si.nodes++;
     assert(ply < Max_ply);
-/*
+
+    int qscore = evaluate(s);
+    /*
     std::cout << " Ply: " << ply << '\n';
     std::cout << "Alpha: " << alpha << " Beta: " << beta << '\n';
     std::cout << "BEGINNING Q SEARCH.\n";
+    std::cout << "QSCORE: " << qscore << '\n';
     std::cout << s;
     int z;
-    std::cin >> z;*/
+    std::cin >> z;
+    */
 
-    int qscore = evaluate(s);
 
     // If a beta cutoff is found, return the qscore.
     if (qscore >= beta)
     {
-        /*
-        std::cout << " Ply: " << ply << '\n';
-        std::cout << "Alpha: " << alpha << " Beta: " << beta << '\n';
-        std::cout << "QSCORE: " << qscore << '\n';
-        std::cout << s;
-        std::cin >> z;*/
+        //std::cout << "QSCORE >= BETA, returning: " << beta << '\n';
         return beta;
     }
 
@@ -72,28 +70,29 @@ int qsearch(State& s, SearchInfo& si, int ply, int alpha, int beta)
         c.make_t(m);                               // Make move.
         val = -qsearch(c, si, ply + 1, -beta, -alpha); // Recursive call to qsearch.
         if (val >= beta)                         // Alpha-Beta pruning.
-        {
-         /*   
+        { 
+            /*
             std::cout << " Ply: " << ply << '\n';
             std::cout << "Alpha: " << alpha << " Beta: " << beta << '\n';
             std::cout << "Val: " << val << '\n';
+            std::cout << "BETA CUTOFF, returning: " << beta << '\n';
             std::cout << s;
             std::cin >> z;*/
             return beta;
         }
-        /*
+/*
+        alpha = std::max(alpha, val);
         std::cout << " Ply: " << ply << '\n';
         std::cout << "Alpha: " << alpha << " Beta: " << beta << '\n';
         std::cout << "CONTINUING Q SEARCH.\n";
         std::cout << s;
         int z;
         std::cin >> z;*/
-        alpha = std::max(alpha, val);
     }
     /*
     std::cout << " Ply: " << ply << '\n';
     std::cout << "Alpha: " << alpha << " Beta: " << beta << '\n';
-    std::cout << "QSCORE: " << qscore << '\n';
+    std::cout << "Q SEARCH DONE. Returning: " << alpha << '\n';
     std::cout << s;
     std::cin >> z;*/
     return alpha;                                // Fail-Hard alpha beta score.
@@ -176,6 +175,7 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
 
     int a = alpha;
     int b = beta;
+    int d;
     int score;
     int bestScore = Neg_inf;
     Move m;
@@ -184,9 +184,19 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
 
     while (m = mlist.getBestMove())
     {
+        d = depth - 1;
         std::memmove(&c, &s, sizeof s);              // Copy current state.
         c.make_t(m);                                 // Make move.
         history.push(std::make_pair(m, c.getKey())); // Add move to gamelist.
+
+        if (c.inCheck() && (depth == 1 || s.see(m) > -50))
+        {
+            std::cout << c;
+            std::cout << s.see(m) << '\n';
+            int z;
+            std::cin >> z;
+            d++;
+        }
 
         // Scout alrogithm. Search the first node with a full window.
         if (first)
@@ -194,19 +204,20 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
             // Set the best move to the first move just in case no move
             // improves alpha.
             //std::cout << "Full Search\n";
-            score = -scout_search(c, si, depth - 1, ply + 1, -b, -a);
+            best_move = m;
+            score = -scout_search(c, si, d, ply + 1, -b, -a);
             first = false;
         }       
         else
         {
             //std::cout << "Scout Search\n";
-            score = -scout_search(c, si, depth - 1, ply + 1, -(a + 1), -a);
+            score = -scout_search(c, si, d, ply + 1, -(a + 1), -a);
 
             // If an alpha improvement caused fail high, research using a full window.
             if (a < score && b > score)
             {
                 //std::cout << "Full research\n";
-                score = -scout_search(c, si, depth - 1, ply + 1, -b, -a);
+                score = -scout_search(c, si, d, ply + 1, -b, -a);
             }
         }
 
@@ -276,7 +287,7 @@ void iterative_deepening(State& s, SearchInfo& si)
     int score;
 
     // Iterative deepening.
-    for (int d = 1; /*d < 8*/!si.quit; ++d)
+    for (int d = 1; !si.quit; ++d)
     {
         //std::cout << "SEARCH CALL BEGIN D = " << d << '\n';
         score = scout_search(s, si, d, 0, Neg_inf, Pos_inf);
