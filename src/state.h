@@ -55,7 +55,7 @@ public:
     bool canCastleQueenside() const;
     bool isQuiet(Move pMove) const;
     bool isCapture(Move pMove) const;
-    bool isValid(Move pMove, U64 pValidKingMoves, U64 pValid) const;
+    bool isValid(Move pMove, U64 pValid) const;
 
     // Functions involved in making a move.
     void make_t(Move m);
@@ -73,6 +73,7 @@ public:
 
     // Check and attack information.
     bool isLegal(Move pMove) const;
+    bool isAttacked(Square pSquare, Color pColor, U64 pChange) const;
     bool attacked(Square s) const;
     bool defended(Square s, Color c) const;
     bool check() const;
@@ -98,6 +99,7 @@ private:
     U64 mPawnKey;
     U64 mCheckers;
     U64 mEnPassant;
+    std::array<U64, Types_size> mCheckSquares;
     std::array<U64, Player_size> mPinned;
     std::array<U64, Player_size> mOccupancy;
     std::array<int, Board_size> mPieceIndex;
@@ -342,6 +344,11 @@ inline
 void State::setCheckers()
 {
     mCheckers = getAttackersBB(getKingSquare(mUs), mThem);
+    mCheckSquares[pawn] = getAttackBB<pawn>(getKingSquare(mUs), mUs);
+    mCheckSquares[knight] = getAttackBB<knight>(getKingSquare(mUs));
+    mCheckSquares[bishop] = getAttackBB<bishop>(getKingSquare(mUs));
+    mCheckSquares[rook] = getAttackBB<rook>(getKingSquare(mUs));
+    mCheckSquares[queen] = mCheckSquares[bishop] | mCheckSquares[rook];
 }
 
 inline
@@ -351,6 +358,17 @@ bool State::defended(Square s, Color c) const
         || getAttackBB<knight>(s) &  getPieceBB<knight>(c)
         || getAttackBB<bishop>(s) & (getPieceBB<bishop>(c) | getPieceBB<queen>(c))
         || getAttackBB< rook >(s) & (getPieceBB< rook >(c) | getPieceBB<queen>(c));
+}
+
+inline
+bool State::isAttacked(Square pSquare, Color pColor, U64 pChange) const
+{
+    U64 occupancy = getOccupancyBB() ^ pChange;
+    return getAttackBB<pawn>(pSquare, pColor) & getPieceBB<pawn>(!pColor)
+        || getAttackBB<knight>(pSquare) & getPieceBB<knight>(!pColor)
+        || Bmagic(pSquare, occupancy) & (getPieceBB<bishop>(!pColor) | getPieceBB<queen>(!pColor))
+        || Rmagic(pSquare, occupancy) & (getPieceBB<rook>(!pColor) | getPieceBB<queen>(!pColor))
+        || getAttackBB<king>(pSquare) & getPieceBB<king>(!pColor);
 }
 
 inline

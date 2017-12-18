@@ -150,6 +150,7 @@ void State::init()
     mPawnKey = 0;
     mCheckers = 0;
     mEnPassant = 0;
+    mCheckSquares.fill({});
     mPinned.fill({});
     mOccupancy.fill({});
     mPieceIndex.fill({});
@@ -219,15 +220,47 @@ U64 State::getDiscoveredChecks(Color c) const
 
 bool State::isLegal(Move pMove) const
 {
-    if (!mPinned[mUs])
-        return true;
-
     Square src = getSrc(pMove);
     Square dst = getDst(pMove);
 
+// -------------------------------------------------------------------------- //
+//                                                                            //
+// Check if the piece is pinned. If so, confirm it is moving along it's       //
+// pin ray.                                                                   //
+//                                                                            //
+// -------------------------------------------------------------------------- //
     if (square_bb[src] & mPinned[mUs]
-     && !(coplanar[src][dst] & getPieceBB<king>(mUs)))
+        && !(coplanar[src][dst] & getPieceBB<king>(mUs)))
         return false;
+
+// -------------------------------------------------------------------------- //
+//                                                                            //
+// Check for en-passant. Remove both the attacking pawn and the captured      //
+// pawn from the occupancy and see if the king is left in check. This avoids  //
+// the rare scenario where both pawns are pinned to the king by a slider.     //
+//                                                                            //
+// -------------------------------------------------------------------------- //
+    if (onSquare(src) == pawn && square_bb[dst] & mEnPassant)
+    {
+        U64 change = mUs == white ? square_bb[src] | square_bb[dst - 8]
+                                  : square_bb[src] | square_bb[dst + 8];
+        if (check(change))
+            return false;
+    }
+
+// -------------------------------------------------------------------------- //
+//                                                                            //
+// Check for king non-castling king moves. See if the king is left in check   //
+// after the move is made. Since castling moves are a more difficult case     //
+// only legal castling moves are generated.                                   //
+//                                                                            //
+// -------------------------------------------------------------------------- //
+    if (onSquare(src) == king && !isCastle(pMove))
+    {
+        U64 change = square_bb[src];
+        if (isAttacked(dst, mUs, change))
+            return false;
+    }
 
     return true;
 }
@@ -241,7 +274,7 @@ bool State::isLegal(Move pMove) const
 // cutoff in the search routine, we may not need to generate moves at all.    //
 //                                                                            //
 // -------------------------------------------------------------------------- //
-bool State::isValid(Move pMove, U64 pValidKingMoves, U64 pValidMoves) const
+bool State::isValid(Move pMove, U64 pValidMoves) const
 {
     assert(getSrc(pMove) < no_sq);
     assert(getDst(pMove) < no_sq);
@@ -292,18 +325,6 @@ bool State::isValid(Move pMove, U64 pValidKingMoves, U64 pValidMoves) const
         dst == getKingSquare(mThem))
         return false;
 
-// -------------------------------------------------------------------------- //
-//                                                                            //
-// Check for pins. If the source square bitwise ANDS with the pinned pieces   //
-// bitboard, check if the line created by the source square and dst square    //
-// intersects with the enemy king. If so, we moved towards the king, and the  //
-// move is still valid.                                                       //
-//                                                                            //
-// -------------------------------------------------------------------------- //
-    if (square_bb[src] & mPinned[mUs]
-        && !(coplanar[src][dst] & getPieceBB<king>(mUs)))
-        return false;
-
     switch (onSquare(src))
     {
 
@@ -329,8 +350,7 @@ bool State::isValid(Move pMove, U64 pValidKingMoves, U64 pValidMoves) const
                 return false;
             if (square_bb[dst] & mEnPassant)
             {
-                return pawn_push[mThem][dst] & pValidMoves &&
-                       !check(pawn_push[mThem][dst] | square_bb[src]);
+                return pawn_push[mThem][dst] & pValidMoves;
             }
             std::pair<Square, Square> advance = std::minmax(src, dst);
             switch (advance.second - advance.first)
@@ -399,7 +419,7 @@ bool State::isValid(Move pMove, U64 pValidKingMoves, U64 pValidMoves) const
                     && !attacked(k+2));
                 }
             }
-            return square_bb[dst] & pValidKingMoves;
+            return square_bb[dst];
         }
     }
 // -------------------------------------------------------------------------- //
@@ -436,12 +456,6 @@ int State::see(Move m) const
     // Get X ray attacks and add in pawns from attackers.
     xRay = getXRayAttacks(dst);
 
-    std::cout << *this;
-    std::cout << src << " " << target << " " << gain[d] << '\n';
-    int z;
-    std::cin >> z;
-
-
     while (from)
     {
         // Update the target piece and the square it came from.
@@ -457,8 +471,6 @@ int State::see(Move m) const
 
         // Storing the potential gain, if defended.
         gain[d] = getPieceValue(target) - gain[d - 1];
-        std::cout << src << " " << target << " " << gain[d] << '\n';
-        std::cin >> z;
 
         // Prune if the gain cannot be improved.
         if (std::max(-gain[d - 1], gain[d]) < 0)
@@ -467,8 +479,6 @@ int State::see(Move m) const
         // Remove the from bit to simulate making the move.
         attackers ^= from;
         occupancy ^= from;
-        print_bb(attackers);
-        print_bb(occupancy);
 
         // If the target is not a night, piece movement could cause a discovered
         // attacker.
@@ -482,11 +492,8 @@ int State::see(Move m) const
                 mayAttack = pop_lsb(potential);
                 // If no bits are between the new square and the dst, there
                 // is a new attacker.
-                if ((between[mayAttack][dst] & occupancy) == 0)
+                if (!(between[mayAttack][dst] & occupancy))
                 {
-                    std::cout << "here!\n";
-                    print_bb(between[mayAttack][dst]);
-                    std::cout << (between[mayAttack][dst] & occupancy) << '\n';
                     attackers |= square_bb[mayAttack];
                     break;
                 }
@@ -516,7 +523,6 @@ int State::see(Move m) const
     while (--d > 0)
         gain[d - 1] = -std::max(-gain[d - 1], gain[d]);
 
-std::cout << "RETURNING " << gain[0] << '\n';
     return gain[0];
 }
 

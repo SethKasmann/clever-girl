@@ -19,7 +19,6 @@ void init()
     mg_init();
     Zobrist::init();
     bb_init();
-    search_init();
 
     // initialize opening book database
 
@@ -61,9 +60,9 @@ int main(int argc, char* argv[])
     init();
     //perftTestDebug();
     //perftTest();
-    //State s("rn1qkb1r/pp1bpppp/8/1B1n4/3P4/4P3/PP3PPP/R1BQK1NR w KQkq -");
-    //std::cout << evaluate(s) << '\n';
+    //State s("rnbqkbnr/ppp1pppp/8/3p4/Q1P5/8/PP1PPPPP/RNB1KBNR b KQkq -");
+    //std::cout << s.see(1988) << '\n';
     //ccrTest();
     uci();
     return 0;
-}
+} 

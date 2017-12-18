@@ -49,6 +49,7 @@ public:
     Move getBestMove();
     Move pop();
     void checkLegal();
+    void pushPawnCaptures();
     void generateAttacks();
     void generateQuiets();
     void generateQuietChecks();
@@ -59,12 +60,13 @@ public:
     friend std::ostream & operator << (std::ostream & o, const MoveList & mlist);
 private:
     bool mQSearch;
-    U64 mValid, mValidKingMoves;
+    U64 mValid;
     const State& mState;
     const History* mHistory;
     int mPly;
     int mStage;
     std::array<MoveEntry, maxSize> mList;
+    std::vector<MoveEntry> badCaptures;
     std::size_t mSize;
     Move mBest;
     Move mKiller1;

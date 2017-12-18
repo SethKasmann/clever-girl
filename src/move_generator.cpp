@@ -20,8 +20,6 @@ MoveList::MoveList(const State& pState, Move pBest, History* pHistory, int pPly,
         mKiller2 = mHistory->getKiller(pPly).second;
     }
 
-    mValidKingMoves = mState.getValidKingMoves();
-
     if (mState.inCheck())
     {
         if (mState.inDoubleCheck())
@@ -50,7 +48,6 @@ MoveList::MoveList(const State& pState)
         mValid = between_dia[king][checker] | between_hor[king][checker]
                | mState.getCheckersBB();
     }
-    mValidKingMoves = mState.getValidKingMoves();
     generateAllMoves();
     mStage = allLegal;
 }
@@ -152,20 +149,20 @@ void MoveList::pushQuietChecks()
         dst = src + dir;
         if (dst & promo)
         {
-            if (square_bb[dst] & Not_a_file && square_bb[dst+1] & mState.getOccupancyBB(them) & mValid 
+            if (square_bb[dst] & Not_a_file && square_bb[dst+1] & mState.getOccupancyBB(them)
               & mState.getAttackBB<knight>(mState.getKingSquare(them)))
                 push(makeMove(src, dst+1, knight));
-            if (square_bb[dst] & Not_h_file && square_bb[dst-1] & mState.getOccupancyBB(them) & mValid
+            if (square_bb[dst] & Not_h_file && square_bb[dst-1] & mState.getOccupancyBB(them)
               & mState.getAttackBB<knight>(mState.getKingSquare(them)))
                 push(makeMove(src, dst-1, knight));
-            if (square_bb[dst] & mState.getEmptyBB() & mValid & mState.getAttackBB<knight>(mState.getKingSquare(them)))
+            if (square_bb[dst] & mState.getEmptyBB() & mState.getAttackBB<knight>(mState.getKingSquare(them)))
                 push(makeMove(src, dst, knight));
         }
         else
         {
             if (square_bb[dst] & mState.getEmptyBB())
             {
-                if (square_bb[dst] & mValid)
+                if (square_bb[dst])
                 {
                     if (square_bb[dst] & pawnChecks)
                         push(makeMove(src, dst));
@@ -175,7 +172,7 @@ void MoveList::pushQuietChecks()
                 }
                 if (pawn_dbl_push[us][src] & square_bb[dst+dir] & mState.getEmptyBB())
                 {
-                    if (square_bb[dst+dir] & mValid)
+                    if (square_bb[dst+dir])
                     {
                         if (square_bb[dst+dir] & pawnChecks)
                             push(makeMove(src, dst+dir));
@@ -201,7 +198,7 @@ void MoveList::pushQuietChecks()
     {
         if (src == no_sq)
             break;
-        m  = mState.getAttackBB<knight>(src) & mValid & mState.getEmptyBB();
+        m  = mState.getAttackBB<knight>(src) & mState.getEmptyBB();
         while (m)
         {
             dst = pop_lsb(m);
@@ -226,7 +223,7 @@ void MoveList::pushQuietChecks()
     {
         if (src == no_sq)
             break;
-        m  = mState.getAttackBB<bishop>(src) & mValid & mState.getEmptyBB();
+        m  = mState.getAttackBB<bishop>(src) & mState.getEmptyBB();
         while (m)
         {
             dst = pop_lsb(m);
@@ -254,7 +251,7 @@ void MoveList::pushQuietChecks()
     {
         if (src == no_sq)
             break;
-        m  = mState.getAttackBB<rook>(src) & mValid & mState.getEmptyBB();
+        m  = mState.getAttackBB<rook>(src) & mState.getEmptyBB();
         while (m)
         {
             dst = pop_lsb(m);
@@ -282,7 +279,7 @@ void MoveList::pushQuietChecks()
     {
         if (src == no_sq)
             break;
-        m  = mState.getAttackBB<queen>(src) & mValid & mState.getEmptyBB();
+        m  = mState.getAttackBB<queen>(src) & mState.getEmptyBB();
         while (m)
         {
             dst = pop_lsb(m);
@@ -445,11 +442,7 @@ void MoveList::pushAttackMoves<pawn>()
         dst = get_lsb(mState.getEnPassantBB());
         attack = pawn_attacks[them][dst] & mState.getPieceBB<pawn>(us);
         while (attack)
-        {
-            if (mState.check(pawn_push[them][dst] | get_lsb_bb(attack)))
-                return;
             push(makeMove(pop_lsb(attack), dst));
-        }
     }
 }
 
@@ -468,7 +461,7 @@ void MoveList::pushAttackMoves<king>()
 
     k = mState.getKingSquare(mState.getOurColor());
 
-    m = mValidKingMoves & mState.getOccupancyBB(mState.getTheirColor());
+    m = mState.getAttackBB<king>(k) & mState.getOccupancyBB(mState.getTheirColor());
 
     while (m) 
         push(makeMove(k, pop_lsb(m)));
@@ -619,7 +612,7 @@ void MoveList::pushQuietMoves<king>()
 
     k = mState.getKingSquare(mState.getOurColor());
 
-    m = mValidKingMoves & mState.getEmptyBB();
+    m = mState.getAttackBB<king>(k) & mState.getEmptyBB();
 
     while (m) 
         push(makeMove(k, pop_lsb(m)));
@@ -668,7 +661,6 @@ void MoveList::generateAllMoves()
     {
         pushAttackMoves<king>();
         pushQuietMoves<king>();
-        return;
     }
     else
     {
@@ -760,7 +752,8 @@ Move MoveList::getBestMove()
 // ---------------------------------------------------------------------------//
         case nBestMove:
             mStage++;
-            if (mState.isValid(mBest, mValidKingMoves, mValid))
+            if (mState.isValid(mBest, mValid)
+                && mState.isLegal(mBest))
                 return mBest;
 // ---------------------------------------------------------------------------//
 //                                                                            //
@@ -783,7 +776,12 @@ Move MoveList::getBestMove()
                     mList[i].score = mState.onSquare(getDst(mList[i].move))
                                    - mState.onSquare(getSrc(mList[i].move));
                 else
+                {
                     mList[i].score = see;
+                    badCaptures.push_back(mList[i]);
+                    std::swap(mList[i], mList[mSize - 1]);
+                    pop();
+                }
             }
             mStage++;
 // ---------------------------------------------------------------------------//
@@ -802,7 +800,8 @@ Move MoveList::getBestMove()
                 std::iter_swap(std::max_element(mList.begin(), mList.begin() + mSize), 
                                mList.begin() + mSize - 1);
                 move = pop();
-                if (move != mBest)
+                if (move != mBest
+                    && mState.isLegal(move))
                     return move;
             }
             mStage++;
@@ -816,7 +815,9 @@ Move MoveList::getBestMove()
 // ---------------------------------------------------------------------------//
         case nKiller1:
             mStage++;
-            if ((mState.isValid(mKiller1, mValidKingMoves, mValid))
+            if ((mState.isValid(mKiller1, mValid)
+                && mState.isLegal(mKiller1)
+                && mState.isQuiet(mKiller1))
                 && mKiller1 != mBest)
                 return mKiller1;
 // ---------------------------------------------------------------------------//
@@ -829,7 +830,9 @@ Move MoveList::getBestMove()
 // ---------------------------------------------------------------------------//
         case nKiller2:
             mStage++;
-            if ((mState.isValid(mKiller2, mValidKingMoves, mValid))
+            if ((mState.isValid(mKiller2, mValid))
+                && mState.isLegal(mKiller2)
+                && mState.isQuiet(mKiller2)
                 && mKiller2 != mBest
                 && mKiller2 != mKiller1)
                 return mKiller2;
@@ -890,7 +893,16 @@ Move MoveList::getBestMove()
                 move = pop();
                 if (move != mBest
                     && move != mKiller1
-                    && move != mKiller2)
+                    && move != mKiller2
+                    && mState.isLegal(move))
+                    return move;
+            }
+            while (!badCaptures.empty())
+            {
+                move = badCaptures.back().move;
+                badCaptures.pop_back();
+                if (move != mBest
+                    && mState.isLegal(move))
                     return move;
             }
             break;
@@ -904,7 +916,8 @@ Move MoveList::getBestMove()
 // ---------------------------------------------------------------------------//
         case qBestMove:
             mStage++;
-            if (mState.isValid(mBest, mValidKingMoves, mValid))
+            if (mState.isValid(mBest, mValid)
+                && mState.isLegal(mBest))
                 return mBest;
 // ---------------------------------------------------------------------------//
 //                                                                            //
@@ -927,7 +940,12 @@ Move MoveList::getBestMove()
                     mList[i].score = mState.onSquare(getDst(mList[i].move))
                                    - mState.onSquare(getSrc(mList[i].move));
                 else
+                {
                     mList[i].score = see;
+                    badCaptures.push_back(mList[i]);
+                    std::swap(mList[i], mList[mSize - 1]);
+                    pop();
+                }
             }
             mStage++;
 // ---------------------------------------------------------------------------//
@@ -946,7 +964,8 @@ Move MoveList::getBestMove()
                 std::iter_swap(std::max_element(mList.begin(), mList.begin() + mSize), 
                                mList.begin() + mSize - 1);
                 move = pop();
-                if (move != mBest)
+                if (move != mBest
+                    && mState.isLegal(move))
                     return move;
             }
             mStage++;
@@ -985,7 +1004,16 @@ Move MoveList::getBestMove()
                 std::iter_swap(std::max_element(mList.begin(), mList.begin() + mSize), 
                                mList.begin() + mSize - 1);
                 move = pop();
-                if (move != mBest)
+                if (move != mBest
+                    && mState.isLegal(move))
+                    return move;
+            }
+            while (!badCaptures.empty())
+            {
+                move = badCaptures.back().move;
+                badCaptures.pop_back();
+                if (move != mBest
+                    && mState.isLegal(move))
                     return move;
             }
             break;
@@ -999,7 +1027,8 @@ Move MoveList::getBestMove()
 // ---------------------------------------------------------------------------//
         case qKingEvadeBestMove:
             mStage++;
-            if (mState.isValid(mBest, mValidKingMoves, mValid))
+            if (mState.isValid(mBest, mValid)
+                && mState.isLegal(mBest))
                 return mBest;
 // ---------------------------------------------------------------------------//
 //                                                                            //
@@ -1020,7 +1049,8 @@ Move MoveList::getBestMove()
             while (mSize)
             {
                 move = pop();
-                if (move != mBest)
+                if (move != mBest
+                    && mState.isLegal(move))
                     return move;
             }
             break;
@@ -1034,7 +1064,8 @@ Move MoveList::getBestMove()
 // ---------------------------------------------------------------------------//
         case nKingEvadeBestMove:
             mStage++;
-            if (mState.isValid(mBest, mValidKingMoves, mValid))
+            if (mState.isValid(mBest, mValid)
+                && mState.isLegal(mBest))
                 return mBest;
 // ---------------------------------------------------------------------------//
 //                                                                            //
@@ -1056,7 +1087,8 @@ Move MoveList::getBestMove()
             while (mSize)
             {
                 move = pop();
-                if (move != mBest)
+                if (move != mBest
+                    && mState.isLegal(move))
                     return move;
             }
             break;

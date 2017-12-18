@@ -68,25 +68,24 @@ void ccrTest()
 		history.clear();
 		history.push(std::make_pair(nullMove, s.getKey()));
 		SearchInfo si;
-		si.moveTime = allocate_time(100000, 0, 40);
+		si.moveTime = allocate_time(10000000, 0, 40);
 		si.start_time = system_time();
 		// Clear the game list.
 		ttable.clear();
-		lineManager.clear_pv();
-		search_init();
+		lineManager.clearPv();
 
 		int score;
-		for (int d = 1; d < 6/*!si.quit*/; ++d)
+		for (int d = 1; d < 9; ++d)
 		{
 			score = scout_search(s, si, d, 0, Neg_inf, Pos_inf);
 			if (si.quit)
 				break;
 		}
 
-		Move pv = lineManager.get_pv_move();
+		Move pv = lineManager.getPvMove();
 
 		std::cout << s;
-		std::cout << "bestmove " << toString(s.onSquare(getSrc(pv))) << toString(pv) << std::endl;
+		std::cout << "bestmove " << getSrc(pv) << toString(pv) << std::endl;
 		std::cout << ccrResults[i] << '\n';
 	}
 }

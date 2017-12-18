@@ -86,6 +86,8 @@ int eval_pawns(const State & s, const Color c)
     {
         if (p == no_sq)
             break;
+        if (!s.defended(p, c))
+            score -= 10;
         score += Pawn_wt;
         // Check if the pawn is a passed pawn.
         if (!((file_bb[p] | adj_files[p]) & in_front[c][p] & s.getPieceBB<pawn>(!c)))
@@ -170,14 +172,19 @@ int eval(const State & s, const Color c)
             king_threats += Knight_th;
         score += outpost<knight>(s, p, c);
 
+        if (!s.defended(p, c))
+            score -= 10;
+
         // Calculate knight mobility.
         if (square_bb[p] & pins)
-            score += knightMobility[0];
+            score -= 10;
+        /*
         else
         {
             moves = s.getAttackBB<knight>(p) & mobilityNet;
             score += knightMobility[pop_count(moves)];
         }
+        */
     }
 
     // Bishop evaluation.
@@ -190,11 +197,16 @@ int eval(const State & s, const Color c)
             king_threats += Bishop_th;
         score += outpost<bishop>(s, p, c);
 
+        if (!s.defended(p, c))
+            score -= 10;
         // Calculate bishop mobility
-        moves = s.getAttackBB<bishop>(p) & mobilityNet;
+        //moves = s.getAttackBB<bishop>(p) & mobilityNet;
         if (square_bb[p] & pins)
+            score -= 10;
+            /*
             moves &= between_dia[p][kingSq];
         score += bishopMobility[pop_count(moves)];
+        */
     }
 
     // Rook evaluation.
@@ -207,10 +219,16 @@ int eval(const State & s, const Color c)
             king_threats += Rook_th;
 
         // Calculate rook mobility.
-        moves = s.getAttackBB<rook>(p) & mobilityNet;
         if (square_bb[p] & pins)
+            score -= 25;
+
+        if (!s.defended(p, c))
+            score -= 10;
+        /*
+        moves = s.getAttackBB<rook>(p) & mobilityNet;
             moves &= between_hor[p][kingSq];
         score += rookMobility[pop_count(moves)];
+        */
     }
 
     // Queen evaluation.
@@ -223,13 +241,19 @@ int eval(const State & s, const Color c)
             king_threats += Queen_th;
 
         // Calculate queen mobility.
-        moves = s.getAttackBB<queen>(p) & mobilityNet;
         if (square_bb[p] & pins)
+            score -= 10;
+
+        if (!s.defended(p, c))
+            score -= 10;
+        /*
+        moves = s.getAttackBB<queen>(p) & mobilityNet;
         {
             moves &= between_hor[p][kingSq] ? between_hor[p][kingSq]
                                             : between_dia[p][kingSq];
         }
         score += queenMobility[pop_count(moves)];
+        */
     }
 
     // King evaluation.
@@ -246,7 +270,10 @@ int evaluate(const State & s)
 
     finalScore = scaledPstScore(s);
 
+    pawnScore = eval_pawns(s, s.getOurColor()) - eval_pawns(s, s.getTheirColor());
+
     // Pawn Evaluation
+    /*
     if (s.getPieceCount<pawn>(s.getOurColor()) + s.getPieceCount<pawn>(s.getTheirColor()) != 0)
     {
         //Probe the pawn hash.
@@ -262,6 +289,7 @@ int evaluate(const State & s)
             store(s.getPawnKey(), pawnScore, s.getOurColor());
         }
     }
+    */
     finalScore += pawnScore;
 
     finalScore += eval(s, s.getOurColor()) - eval(s, s.getTheirColor()) + tempo;
