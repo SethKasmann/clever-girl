@@ -23,6 +23,7 @@ namespace Zobrist
 				piece_rand[black][p][s] = rand_64();
 			}
 		}
+		std::cout << piece_rand[black][pawn][52] << '\n';
 		for (File f = a_file; f <= h_file; ++f)
 		{
 			ep_file_rand[f] = rand_64();

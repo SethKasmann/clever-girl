@@ -84,7 +84,7 @@ State::State(const std::string & fen)
             addPiece(c, p, s);
             mKey ^= Zobrist::key(c, p, s);
             if (p == pawn)
-                mPawnKey ^= Zobrist::key(c, p, s);
+                mPawnKey ^= Zobrist::key(c, pawn, s);
             position++;
         }
         else if (*it == ' ')
@@ -127,7 +127,6 @@ State::State(const std::string & fen)
 
     if (enpass > -1)
     {
-        //enpass += square_bb[enpass] & Rank_3 ? 8 : -8;
         mEnPassant = square_bb[enpass];
         mKey ^= Zobrist::key(get_file(mEnPassant));
     }
@@ -310,7 +309,6 @@ bool State::isValid(Move pMove, U64 pValidMoves) const
 // -------------------------------------------------------------------------- //
     if (isCastle(pMove) && onSquare(src) != king)
         return false;
-
 
 // -------------------------------------------------------------------------- //
 //                                                                            //
@@ -544,6 +542,7 @@ void State::make_t(Move pMove)
     src = getSrc(pMove);
     dst = getDst(pMove);
     moved = onSquare(src);
+    assert(moved != none);
     captured = onSquare(dst);
 
     // Update the Fifty Move Rule
@@ -559,6 +558,8 @@ void State::make_t(Move pMove)
     {
         mFiftyMoveRule = 0;
         removePiece(mThem, captured, dst);
+        if (captured == pawn)
+            mPawnKey ^= Zobrist::key(mThem, pawn, dst);
     }
 
     if (isCastle(pMove))
@@ -588,20 +589,21 @@ void State::make_t(Move pMove)
         if (int(std::max(src, dst)) - int(std::min(src, dst)) == 16)
         {
             mEnPassant = mUs == white ? square_bb[dst - 8]
-                               : square_bb[dst + 8];
+                                      : square_bb[dst + 8];
 
-            mKey ^= Zobrist::key(get_file(dst));
+            mKey ^= Zobrist::key(get_file(mEnPassant));
             epFlag = true;
         }
         else if (getPiecePromo(pMove))
         {
+            mPawnKey ^= Zobrist::key(mUs, pawn, dst);
             removePiece(mUs, pawn, dst);
             addPiece(mUs, getPiecePromo(pMove), dst);
         }
         else if (mEnPassant & square_bb[dst])
         {
-            Square epCapture = mUs == white ? dst - 8 : dst + 8;
-            mPawnKey ^= Zobrist::key(mUs, pawn, epCapture);
+            Square epCapture = (mUs == white) ? dst - 8 : dst + 8;
+            mPawnKey ^= Zobrist::key(mThem, pawn, epCapture);
             removePiece(mThem, pawn, epCapture);
         }
     }

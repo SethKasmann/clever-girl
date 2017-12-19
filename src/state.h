@@ -174,8 +174,8 @@ inline void State::addPiece(Color pColor, PieceType pPiece, Square pSquare)
     mPieceIndex[pSquare] = mPieceCount[pColor][pPiece]++;
     mPieceList[pColor][pPiece][mPieceIndex[pSquare]] = pSquare;
 
-    mPstScore[pColor][middle] += PieceSquareTable::pst[pPiece][middle][pColor][pSquare];
-    mPstScore[pColor][late] += PieceSquareTable::pst[pPiece][late][pColor][pSquare];
+    mPstScore[pColor][middle] += PieceSquareTable::getScore(pPiece, middle, pColor, pSquare);
+    mPstScore[pColor][late] += PieceSquareTable::getScore(pPiece, late, pColor, pSquare);
 
     mKey ^= Zobrist::key(pColor, pPiece, pSquare);
 }
@@ -189,10 +189,10 @@ inline void State::movePiece(Color pColor, PieceType pPiece, Square pSrc, Square
     mPieceIndex[pDst] = mPieceIndex[pSrc];
     mPieceList[pColor][pPiece][mPieceIndex[pDst]] = pDst;
 
-    mPstScore[pColor][middle] -= PieceSquareTable::pst[pPiece][middle][pColor][pSrc];
-    mPstScore[pColor][late] -= PieceSquareTable::pst[pPiece][late][pColor][pSrc];
-    mPstScore[pColor][middle] += PieceSquareTable::pst[pPiece][middle][pColor][pDst];
-    mPstScore[pColor][late] += PieceSquareTable::pst[pPiece][late][pColor][pDst];
+    mPstScore[pColor][middle] -= PieceSquareTable::getScore(pPiece, middle, pColor, pSrc);
+    mPstScore[pColor][late] -= PieceSquareTable::getScore(pPiece, late, pColor, pSrc);
+    mPstScore[pColor][middle] += PieceSquareTable::getScore(pPiece, middle, pColor, pDst);
+    mPstScore[pColor][late] += PieceSquareTable::getScore(pPiece, late, pColor, pDst);
 
     mKey ^= Zobrist::key(pColor, pPiece, pSrc, pDst);
 }
@@ -213,8 +213,8 @@ inline void State::removePiece(Color pColor, PieceType pPiece, Square pSquare)
     mPieceList[pColor][pPiece][mPieceIndex[swap]] = swap;
     mPieceList[pColor][pPiece][pieceCount] = no_sq;
 
-    mPstScore[pColor][middle] -= PieceSquareTable::pst[pPiece][middle][pColor][pSquare];
-    mPstScore[pColor][late] -= PieceSquareTable::pst[pPiece][late][pColor][pSquare];
+    mPstScore[pColor][middle] -= PieceSquareTable::getScore(pPiece, middle, pColor, pSquare);
+    mPstScore[pColor][late] -= PieceSquareTable::getScore(pPiece, late, pColor, pSquare);
 
     mKey ^= Zobrist::key(pColor, pPiece, pSquare);
 }
