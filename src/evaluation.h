@@ -80,14 +80,26 @@ static const int queenMobility[] =
 struct PawnEntry
 {
 	PawnEntry()
-	: mKey(0), mScore(0), mColor(white)
+	: mKey(0), mStructure{}
 	{}
-	PawnEntry(U64 pKey, int pScore, Color pColor)
-	: mKey(pKey), mScore(pScore), mColor(pColor)
+	PawnEntry(U64 pKey, const std::array<int, Player_size>& pStructure)
+	: mKey(pKey), mStructure(pStructure)
 	{}
+	U64 getKey() const
+	{
+		return mKey;
+	}
+	const std::array<int, Player_size>& getStructure() const
+	{
+		return mStructure;
+	}
+	const std::array<int, Player_size>& getMaterial() const
+	{
+		return mMaterial;
+	}
 	U64 mKey;
-	int mScore;
-	Color mColor;
+	std::array<int, Player_size> mStructure;
+	std::array<int, Player_size> mMaterial;
 };
 
 extern std::array<PawnEntry, hash_size> pawnHash;
@@ -97,9 +109,9 @@ inline PawnEntry* probe(U64 pKey)
 	return &pawnHash[pKey % pawnHash.size()];
 }
 
-inline void store(U64 pKey, int pScore, Color pColor)
+inline void store(U64 pKey, const std::array<int, Player_size>& pStructure)
 {
-	pawnHash[pKey % pawnHash.size()] = PawnEntry(pKey, pScore, pColor);
+	pawnHash[pKey % pawnHash.size()] = PawnEntry(pKey, pStructure);
 }
 
 void init_eval();
@@ -115,59 +127,33 @@ public:
 	, mMobility{}
 	, mKingSafety{}
 	{
-		/*
-		PawnEntry* pawnEntry;
-		if (s.getPieceCount<pawn>(s.getOurColor()) + s.getPieceCount<pawn>(s.getTheirColor()))
+		if (mState.getPieceCount<pawn>())
 		{
-			pawnEntry = probe(mState.getPawnKey());
-			if (pawnEntry && pawnEntry->mKey == mState.getPawnKey())
-
+			const PawnEntry* pawnEntry = probe(mState.getPawnKey());
+			if (pawnEntry && pawnEntry->getKey() == mState.getPawnKey())
+			{
+				mPawnStructure = pawnEntry->getStructure();
+				mMaterial = pawnEntry->getMaterial();
+			}
+			else
+			{
+				evalPawns(white);
+				evalPawns(black);
+				store(mState.getPawnKey(), mPawnStructure);
+			}
 		}
-		pawnStructure(mState.getOurColor());
-		pawnStructure(mState.getTheirColor());
-		material(mState.getOurColor());
-		material(mState.getTheirColor());
 
-		int finalScore;
-    int pawnScore = 0;
-    PawnEntry* pawnEntry;
+		float phase = totalPhase
+			        - mState.getPieceCount<pawn>()   * pawnPhase
+	                - mState.getPieceCount<knight>() * knightPhase
+	                - mState.getPieceCount<bishop>() * bishopPhase
+	                - mState.getPieceCount<rook>()   * rookPhase
+	                - mState.getPieceCount<queen>()  * queenPhase;
 
-    scaledPstScore(s);
+	    mGamePhase = (phase * 256 + (totalPhase / 2)) / totalPhase;
 
-    // Pawn Evaluation
-    if (s.getPieceCount<pawn>(s.getOurColor()) + s.getPieceCount<pawn>(s.getTheirColor()))
-    {
-        //Probe the pawn hash.
-        pawnEntry = probe(s.getPawnKey());
-        if (pawnEntry && pawnEntry->mKey == s.getPawnKey())
-        {
-            pawnScore = (pawnEntry->mColor == s.getOurColor()) ?  pawnEntry->mScore 
-                                                    : -pawnEntry->mScore;
-        }
-        else
-        {
-            pawnScore = eval_pawns(s, s.getOurColor()) - eval_pawns(s, s.getTheirColor());
-            store(s.getPawnKey(), pawnScore, s.getOurColor());
-        }
-    }
-    finalScore += pawnScore;
-
-    finalScore += eval(s, s.getOurColor()) - eval(s, s.getTheirColor()) + tempo;
-
-	return finalScore;*/
-	}
-	float getGamePhase()
-	{
-	    float phase;
-
-	    phase = totalPhase 
-	          - mState.getPieceCount<pawn>()   * pawnPhase
-	          - mState.getPieceCount<knight>() * knightPhase
-	          - mState.getPieceCount<bishop>() * bishopPhase
-	          - mState.getPieceCount<rook>()   * rookPhase
-	          - mState.getPieceCount<queen>()  * queenPhase;
-
-	    return (phase * 256 + (totalPhase / 2)) / totalPhase;
+		evalPieces(white);
+		evalPieces(black);
 	}
 	// Returns the score of a bishop or rook on an outpost square.
 	template<PieceType PT>
@@ -190,7 +176,7 @@ public:
 
 	    return score;
 	}
-	void pawnStructure(const Color c)
+	void evalPawns(const Color c)
 	{
 	    const int dir = c == white ? 8 : -8;
 
@@ -251,7 +237,7 @@ public:
 	            mPawnStructure[c] += Doubled;
 	    }
 	}
-	void material(const Color c)
+	void evalPieces(const Color c)
 	{
 	    U64 moves, pins;
 	    U64 mobilityNet;
@@ -296,14 +282,15 @@ public:
 	        if (p == no_sq)
 	            break;
 	        mMaterial[c] += Bishop_wt;
-	        if (mState.getAttackBB<bishop>(p) & king_net_bb[!c][mState.getKingSquare(!c)])
-	            king_threats += Bishop_th;
 	        mMaterial[c] += outpost<bishop>(p, c);
 
-	        // Calculate bishop mobility
 	        moves = mState.getAttackBB<bishop>(p) & mobilityNet;
 	        if (square_bb[p] & pins)
-	            moves &= between_dia[p][kingSq];
+	            moves &= between_dia[p][mState.getKingSquare(!c)];
+
+	        if (moves & king_net_bb[!c][mState.getKingSquare(!c)])
+	        	king_threats += Bishop_th;
+
 	        mMobility[c] += bishopMobility[pop_count(moves)];
 	    }
 
@@ -313,13 +300,13 @@ public:
 	        if (p == no_sq)
 	            break;
 	        mMaterial[c] += Rook_wt;
-	        if (mState.getAttackBB<rook>(p) & king_net_bb[!c][mState.getKingSquare(!c)])
-	            king_threats += Rook_th;
-
-	        // Calculate rook mobility.
 	        moves = mState.getAttackBB<rook>(p) & mobilityNet;
 	        if (square_bb[p] & pins)
 	            moves &= between_hor[p][kingSq];
+
+	        if (moves & king_net_bb[!c][mState.getKingSquare(!c)])
+	            king_threats += Rook_th;
+
 	        mMobility[c] += rookMobility[pop_count(moves)];
 	    }
 
@@ -329,28 +316,41 @@ public:
 	        if (p == no_sq)
 	            break;
 	        mMaterial[c] += Queen_wt;
-	        if (mState.getAttackBB<queen>(p) & king_net_bb[!c][mState.getKingSquare(!c)])
+	        moves = mState.getAttackBB<queen>(p) & mobilityNet;
+	        if (square_bb[p] & pins)
+	            moves &= between[p][kingSq];
+
+	        if (moves & king_net_bb[!c][mState.getKingSquare(!c)])
 	            king_threats += Queen_th;
 
 	        // Calculate queen mobility.
-	        moves = mState.getAttackBB<queen>(p) & mobilityNet;
-	        if (square_bb[p] & pins)
-	        {
-	            moves &= between_hor[p][kingSq] ? between_hor[p][kingSq]
-	                                            : between_dia[p][kingSq];
-	        }
 	        mMobility[c] += queenMobility[pop_count(moves)];
 	    }
 
 	    // King evaluation.
 	    mKingSafety[!c] -= Safety_table[king_threats];
 	}
+	int getScore()
+	{
+		int score;
+		Color c = mState.getOurColor();
+		score = mMobility[c]      - mMobility[!c]
+		      + mKingSafety[c]    - mKingSafety[!c]
+		      + mPawnStructure[c] - mPawnStructure[!c]
+		      + mMaterial[c]      - mMaterial[!c];
+
+		score += ((mState.getPstScore(middle) * (256 - mGamePhase))
+		       + mState.getPstScore(late) * mGamePhase) / 256;
+
+		return score;
+	}
 private:
+	float mGamePhase;
 	const State& mState;
-	std::array<int, Player_size> mMaterial;
 	std::array<int, Player_size> mMobility;
 	std::array<int, Player_size> mKingSafety;
 	std::array<int, Player_size> mPawnStructure;
+	std::array<int, Player_size> mMaterial;
 };
 
 #endif
