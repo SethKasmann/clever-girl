@@ -8,6 +8,8 @@
 namespace PieceSquareTable
 {
 
+inline int getScore(PieceType p, GameStage g, Color c, Square s);
+
 const int pst[Types_size][gameStageSize][Player_size][Board_size]
 {
 	// Pawns.
@@ -383,6 +385,12 @@ const int outpost[gameStageSize][Player_size][Board_size]
 		}
 	}
 };
+
+inline int getScore(PieceType p, GameStage g, Color c, Square s)
+{
+	return pst[p][g][c][s];
+}
+
 }
 
 #endif
