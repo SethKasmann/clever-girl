@@ -56,6 +56,8 @@ static const U64 File_h = 0x0101010101010101ULL;
 static const U64 Not_a_file = 0x7F7F7F7F7F7F7F7F;
 static const U64 Not_h_file = 0xFEFEFEFEFEFEFEFE;
 static const U64 Center_files = Not_a_file & Not_h_file;
+static const U64 Rightside = 0x0F0F0F0F0F0F0F0F;
+static const U64 Leftside = 0xF0F0F0F0F0F0F0F0;
 
 void bb_init();
 //unsigned int pop_count(U64);
