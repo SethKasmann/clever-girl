@@ -52,7 +52,9 @@ public:
 
     // Castle rights.
     bool canCastleKingside() const;
+    bool canCastleKingside(Color c) const;
     bool canCastleQueenside() const;
+    bool canCastleQueenside(Color c) const;
     bool isQuiet(Move pMove) const;
     bool isCapture(Move pMove) const;
     bool isValid(Move pMove, U64 pValid) const;
@@ -298,10 +300,22 @@ bool State::canCastleKingside() const
     return mUs ? mCastleRights & b_king_castle : mCastleRights & w_king_castle;
 }
 
+inline 
+bool State::canCastleKingside(Color c) const
+{
+    return c == white ? mCastleRights & w_king_castle : mCastleRights & b_king_castle;
+}
+
 inline
 bool State::canCastleQueenside() const
 {
     return mUs ? mCastleRights & b_queen_castle : mCastleRights & w_queen_castle;
+}
+
+inline 
+bool State::canCastleQueenside(Color c) const
+{
+    return c == white ? mCastleRights & w_queen_castle : mCastleRights & b_queen_castle;
 }
 
 template<PieceType Pawn>
