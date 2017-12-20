@@ -36,8 +36,11 @@ static const int Isolated       = -10;
 static const int Doubled        = -5;
 static const int Full_backwards = -15;
 static const int Backwards      = -5;
-static const int BadBishop = -2;
-static const int TrappedRook = -25;
+static const int BadBishop      = -2;
+static const int TrappedRook    = -25;
+static const int StrongPawnAttack = -80;
+static const int WeakPawnAttack = -40;
+static const int Hanging        = -25;
 
 static const int Midgame_limit  = 4500;
 static const int Lategame_limit = 2500;
@@ -134,6 +137,9 @@ public:
     , mPawnStructure{}
     , mMobility{}
     , mKingSafety{}
+    , mAttacks{}
+    , mPieceAttacksBB{}
+    , mAllAttacksBB{}
     {
         if (mState.getPieceCount<pawn>())
         {
@@ -162,6 +168,21 @@ public:
 
         evalPieces(white);
         evalPieces(black);
+
+        // set attack bitboards for pawns.
+        mPieceAttacksBB[white][pawn] |= (mState.getPieceBB<pawn>(white) & Not_a_file) << 9
+            & mState.getOccupancyBB();
+        mPieceAttacksBB[white][pawn] |= (mState.getPieceBB<pawn>(white) & Not_h_file) << 7
+            & mState.getOccupancyBB();
+        mPieceAttacksBB[black][pawn] |= (mState.getPieceBB<pawn>(black) & Not_a_file) >> 7
+            & mState.getOccupancyBB();
+        mPieceAttacksBB[black][pawn] |= (mState.getPieceBB<pawn>(black) & Not_h_file) >> 9
+            & mState.getOccupancyBB();
+        mAllAttacksBB[white] |= mPieceAttacksBB[white][pawn];
+        mAllAttacksBB[black] |= mPieceAttacksBB[black][pawn];
+
+        evalAttacks(white);
+        evalAttacks(black);
 
         Color c = mState.getOurColor();
         mScore = mMobility[c]      - mMobility[!c]
@@ -204,6 +225,7 @@ public:
         {
             if (p == no_sq)
                 break;
+
             mMaterial[c] += Pawn_wt;
             // Check if the pawn is a passed pawn.
             if (!((file_bb[p] | adj_files[p]) & in_front[c][p] & mState.getPieceBB<pawn>(!c)))
@@ -282,18 +304,22 @@ public:
             if (p == no_sq)
                 break;
             mMaterial[c] += Knight_wt;
-            if (mState.getAttackBB<knight>(p) & king_net_bb[!c][mState.getKingSquare(!c)])
-                king_threats += Knight_th;
             mMaterial[c] += outpost<knight>(p, c);
 
-            // Calculate knight mobility.
             if (square_bb[p] & pins)
-                mMobility[c] += knightMobility[0];
-            else
             {
-                moves = mState.getAttackBB<knight>(p) & mobilityNet;
-                mMobility[c] += knightMobility[pop_count(moves)];
+                mMobility[c] += knightMobility[0];
+                continue;
             }
+
+            moves = mState.getAttackBB<knight>(p);
+            mPieceAttacksBB[c][knight] |= moves & mState.getOccupancyBB();
+            mAllAttacksBB[c] |= mPieceAttacksBB[c][knight];
+
+            mMobility[c] += knightMobility[pop_count(moves & mobilityNet)];
+
+            if (moves & king_net_bb[!c][mState.getKingSquare(!c)] & mobilityNet)
+                king_threats += Knight_th;
         }
 
         // Bishop evaluation.
@@ -304,17 +330,21 @@ public:
             mMaterial[c] += Bishop_wt;
             mMaterial[c] += outpost<bishop>(p, c);
 
-            moves = mState.getAttackBB<bishop>(p) & mobilityNet;
-            if (square_bb[p] & pins)
-                moves &= between_dia[p][mState.getKingSquare(!c)];
+            moves = mState.getAttackBB<bishop>(p);
 
-            if (moves & king_net_bb[!c][mState.getKingSquare(!c)])
+            if (square_bb[p] & pins)
+                moves &= coplanar[p][kingSq];
+
+            mPieceAttacksBB[c][bishop] = moves & mState.getOccupancyBB();
+            mAllAttacksBB[c] |= mPieceAttacksBB[c][bishop];
+
+            if (moves & king_net_bb[!c][mState.getKingSquare(!c)] & mobilityNet)
                 king_threats += Bishop_th;
 
-            mMobility[c] += bishopMobility[pop_count(moves)];
+            mMobility[c] += bishopMobility[pop_count(moves & mobilityNet)];
 
             // Check for a bad bishop (penalty for pawns on the same square);
-            mMobility[c] += BadBishop * 
+            mMaterial[c] += BadBishop * 
                 pop_count(squares_of_color(p) & mState.getPieceBB<pawn>(c));
         }
 
@@ -324,14 +354,18 @@ public:
             if (p == no_sq)
                 break;
             mMaterial[c] += Rook_wt;
-            moves = mState.getAttackBB<rook>(p) & mobilityNet;
-            if (square_bb[p] & pins)
-                moves &= between_hor[p][kingSq];
 
-            if (moves & king_net_bb[!c][mState.getKingSquare(!c)])
+            moves = mState.getAttackBB<rook>(p);
+            if (square_bb[p] & pins)
+                moves &= coplanar[p][kingSq];
+
+            mPieceAttacksBB[c][rook] = moves & mState.getOccupancyBB();
+            mAllAttacksBB[c] |= mPieceAttacksBB[c][rook];
+
+            if (moves & king_net_bb[!c][mState.getKingSquare(!c)] & mobilityNet)
                 king_threats += Rook_th;
 
-            mMobility[c] += rookMobility[pop_count(moves)];
+            mMobility[c] += rookMobility[pop_count(moves & mobilityNet)];
 
             // Check if the rook is trapped.
             // TODO: more testing to confirm this is working propertly.
@@ -343,7 +377,7 @@ public:
                     (kingSq < p && !mState.canCastleQueenside(c) &&
                     square_bb[kingSq] & Leftside)) 
                 {
-                    if (pop_count(moves & ~(bottomRank)) <= 3)
+                    if (pop_count(moves & mobilityNet & ~(bottomRank)) <= 3)
                         mMaterial[c] += TrappedRook;
                 }
             }
@@ -355,19 +389,47 @@ public:
             if (p == no_sq)
                 break;
             mMaterial[c] += Queen_wt;
-            moves = mState.getAttackBB<queen>(p) & mobilityNet;
+            moves = mState.getAttackBB<queen>(p);
             if (square_bb[p] & pins)
-                moves &= between[p][kingSq];
+                moves &= coplanar[p][kingSq];
 
-            if (moves & king_net_bb[!c][mState.getKingSquare(!c)])
+            mPieceAttacksBB[c][queen] = moves & mState.getOccupancyBB();
+            mAllAttacksBB[c] |= mPieceAttacksBB[c][queen];
+
+            if (moves & king_net_bb[!c][mState.getKingSquare(!c)] & mobilityNet)
                 king_threats += Queen_th;
 
             // Calculate queen mobility.
-            mMobility[c] += queenMobility[pop_count(moves)];
+            mMobility[c] += queenMobility[pop_count(moves & mobilityNet)];
         }
 
         // King evaluation.
         mKingSafety[!c] -= Safety_table[king_threats];
+    }
+    void evalAttacks(Color c)
+    {
+        U64 attackedByPawn, hanging;
+        // First check all enemy pieces attacked by a pawn.
+        attackedByPawn = mPieceAttacksBB[!c][pawn] 
+            & (mState.getOccupancyBB(c) ^ mState.getPieceBB<pawn>(c));
+
+        while (attackedByPawn)
+        {
+            Square to = pop_lsb(attackedByPawn);
+            if (mState.getAttackBB<pawn>(to, c) 
+                & mState.getPieceBB<pawn>(!c) 
+                & mAllAttacksBB[!c])
+                mAttacks[c] += StrongPawnAttack;
+            else
+                mAttacks[c] += WeakPawnAttack;
+        }
+
+        // Check for hanging pieces - pieces that are attacked but not 
+        // defended.
+        hanging = mAllAttacksBB[!c] & mState.getOccupancyBB(c) 
+                & ~mAllAttacksBB[c];
+
+        mAttacks[c] += pop_count(hanging) * Hanging;
     }
     int getScore() const
     {
@@ -407,6 +469,11 @@ public:
           << std::setw(13) << e.mKingSafety[!c] << "|"
           << std::setw(13) << e.mKingSafety[ c] - e.mKingSafety[!c] << "|\n"
           << "-------------------------------------------------------------\n"
+          << "| Attacks         |"
+          << std::setw(13) << e.mAttacks[ c] << "|" 
+          << std::setw(13) << e.mAttacks[!c] << "|"
+          << std::setw(13) << e.mAttacks[ c] - e.mAttacks[!c] << "|\n"
+          << "-------------------------------------------------------------\n"
           << "| PST (mid/late)  |"
           << std::setw(13) << pstMid << "|" 
           << std::setw(13) << pstLate << "|"
@@ -427,6 +494,9 @@ private:
     std::array<int, Player_size> mKingSafety;
     std::array<int, Player_size> mPawnStructure;
     std::array<int, Player_size> mMaterial;
+    std::array<int, Player_size> mAttacks;
+    std::array<std::array<U64, Types_size>, Player_size> mPieceAttacksBB;
+    std::array<U64, Player_size> mAllAttacksBB;
 };
 
 #endif
