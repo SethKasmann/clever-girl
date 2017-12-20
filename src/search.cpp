@@ -34,7 +34,11 @@ int qsearch(State& s, SearchInfo& si, int ply, int alpha, int beta)
     si.nodes++;
     assert(ply < Max_ply);
 
-    int qscore = evaluate(s);
+    Evaluate evaluate(s);
+    std::cout << evaluate;
+    int z;
+    std::cin >> z;
+    int qscore = evaluate.getScore();
 
 
     // If a beta cutoff is found, return the qscore.
