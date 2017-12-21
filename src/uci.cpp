@@ -81,7 +81,7 @@ void position(std::istringstream & is, State & s)
     bool start_flag = false;
 
     s = State(Start_fen);
-    history.clear();
+    history.init();
     history.push(std::make_pair(nullMove, s.getKey()));
 
     is >> token;
