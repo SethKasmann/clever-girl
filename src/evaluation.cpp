@@ -1,5 +1,12 @@
 #include "evaluation.h"
 
+// -------------------------------------------------------------------------- //
+//                                                                            //
+// Constructor for the Evaluation object. This object will take a state and   //
+// calculate the score in centipawns from the perspective of the side to      //
+// move.                                                                      //
+//                                                                            //
+// -------------------------------------------------------------------------- //
 Evaluate::Evaluate(const State& pState)
 : mState(pState)
 , mMaterial{}
@@ -10,6 +17,18 @@ Evaluate::Evaluate(const State& pState)
 , mPieceAttacksBB{}
 , mAllAttacksBB{}
 {
+
+// -------------------------------------------------------------------------- //
+//                                                                            //
+// If any pawns are on the board, check if there is a valid entry in the      //
+// pawn hash table. The pawn key for the current state is used to check if    //
+// the value in the hash table matches the current state. If a pawn is        //
+// neither moved or captured, we can use some of the same evaluation          //
+// information. If a valid is found, we can use calculations for:             //
+//   1. Pawn Structure                                                        //
+//   2. Pawn Material                                                         //
+//                                                                            //
+// -------------------------------------------------------------------------- //
     if (mState.getPieceCount<pawn>())
     {
         const PawnEntry* pawnEntry = probe(mState.getPawnKey());
@@ -20,12 +39,27 @@ Evaluate::Evaluate(const State& pState)
         }
         else
         {
+// -------------------------------------------------------------------------- //
+//                                                                            //
+// If no pawn entry is found in the hash table, evaluate pawns for both       // 
+// players and store the result as a new entry in the hash table.             //
+//                                                                            //
+// -------------------------------------------------------------------------- //
             evalPawns(white);
             evalPawns(black);
             store(mState.getPawnKey(), mPawnStructure, mMaterial);
         }
     }
 
+// -------------------------------------------------------------------------- //
+//                                                                            //
+// For evaluation concepts that have different weights for mid-game and       //
+// end-game (such as PST), a game phase is used to interpolate these values   //
+// and avoid any evaluation discontinuity. This is also known as a tapered    //
+// evaluation. The game phase is between 0 - 255, closer to 0 puts more       //
+// weight on the mid-game, closer to 255 puts more weight on the endgame.     //
+//                                                                            //
+// -------------------------------------------------------------------------- //
     float phase = totalPhase
                 - mState.getPieceCount<pawn>()   * pawnPhase
                 - mState.getPieceCount<knight>() * knightPhase
@@ -38,7 +72,13 @@ Evaluate::Evaluate(const State& pState)
     evalPieces(white);
     evalPieces(black);
 
-    // set attack bitboards for pawns.
+// -------------------------------------------------------------------------- //
+//                                                                            //
+// Add pawn attacks to the attacks bitboards. These can't be stored in the    //
+// pawn hash, since the same configuration of pawns could give different      //
+// attack sets depening on the location of non-pawn pieces.                   //
+//                                                                            //
+// -------------------------------------------------------------------------- //
     mPieceAttacksBB[white][pawn] |= (mState.getPieceBB<pawn>(white) & Not_a_file) << 9
         & mState.getOccupancyBB();
     mPieceAttacksBB[white][pawn] |= (mState.getPieceBB<pawn>(white) & Not_h_file) << 7
@@ -62,6 +102,11 @@ Evaluate::Evaluate(const State& pState)
     mScore += ((mState.getPstScore(middle) * (256 - mGamePhase))
            + mState.getPstScore(late) * mGamePhase) / 256;
 
+// -------------------------------------------------------------------------- //
+//                                                                            //
+// Tempo is added to the score to give the side to move a slight advantage.   //
+//                                                                            //
+// -------------------------------------------------------------------------- //
     mScore += tempo;
 }
 
