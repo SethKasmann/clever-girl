@@ -33,11 +33,18 @@ public:
 	{
 		return mGameHistory.size();
 	}
-	void clear()
+	void init()
 	{
 		mKillers = {};
 		mHistory = {};
 		mGameHistory.clear();
+		for (std::array<int, Board_size>& arr : mButterfly)
+			arr.fill(1);
+	}
+	void clear()
+	{
+		mKillers = {};
+		mHistory = {};
 		for (std::array<int, Board_size>& arr : mButterfly)
 			arr.fill(1);
 	}
@@ -52,20 +59,11 @@ public:
 	}
 	bool isThreefoldRepetition(State& pState) const
 	{
-		if (pState.getFiftyMoveRule() < 8)
+		if (mGameHistory.size() < 5)
 			return false;
-		int repetitions = 0;
-		int count = std::max(0, static_cast<int>(mGameHistory.size()) 
-			                  - pState.getFiftyMoveRule() - 1);
-		for (int i = mGameHistory.size() - 5; i >= count; i -= 4)
-		{
-			if (mGameHistory[i].second == mGameHistory.back().second)
-			{
-				repetitions++;
-				if (repetitions == 2)
-					return true;
-			}
-		}
+		int candidate = mGameHistory.size() - 5;
+		if (mGameHistory[candidate].second == mGameHistory.back().second)
+			return true;
 		return false;
 	}
 	void update(Move pBest, int pDepth, int ply, bool causedCutoff)
