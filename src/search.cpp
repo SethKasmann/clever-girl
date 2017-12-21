@@ -35,9 +35,11 @@ int qsearch(State& s, SearchInfo& si, int ply, int alpha, int beta)
     assert(ply < Max_ply);
 
     Evaluate evaluate(s);
+    /*
     std::cout << evaluate;
     int z;
     std::cin >> z;
+    */
     int qscore = evaluate.getScore();
 
 
@@ -69,7 +71,7 @@ int qsearch(State& s, SearchInfo& si, int ply, int alpha, int beta)
     return alpha;                                // Fail-Hard alpha beta score.
 }
 
-int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int beta)
+int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int beta, bool isPv, bool isNull)
 {
     Move best_move = nullMove;
     
@@ -112,13 +114,36 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
     if (lineManager.getPvKey(ply) == s.getKey())
         best_move = lineManager.getPvMove(ply);
 
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Null move pruning. Make a null move and searched to a reduced to check     //
+// for fail high under the following conditions:                              //
+//   1. The current node is not a PV node.                                    //
+//   2. The current state is not in check.                                    //
+//   3. The depth is high enough.                                             //
+//   4. There are enough non pawn pieces on the board.                        //
+//                                                                            //
+// ---------------------------------------------------------------------------//
+    if (!isPv && !isNull && !s.inCheck() && depth > NullMoveDepth 
+        && s.getNonPawnPieceCount(s.getOurColor()) > NullMoveCount)
+    {
+        State n;
+        std::memmove(&n, &s, sizeof s);
+        n.swapTurn();
+        history.push(std::make_pair(nullMove, n.getKey()));
+        int nullScore = -scout_search(n, si, depth - 3, ply + 1, -(alpha + 1), -alpha, false, true);
+        history.pop();
+        if (nullScore >= beta)
+            return beta;
+    }
+
     // Internal Iterative Deepening. If no best move was found, do a small
     // search to determine which move to search first.
-    if (best_move == nullMove && depth > 5)
+    if (isPv && !isNull && !s.inCheck() && best_move == nullMove && depth > 5)
     {
         // Using depth calculation from Stockfish.
         int d = 3 * depth / 4 - 2;
-        scout_search(s, si, d, ply, alpha, beta);
+        scout_search(s, si, d, ply, alpha, beta, isPv, true);
         table_entry = ttable.probe(s.getKey());
         if (table_entry->key == s.getKey())
             best_move = table_entry->best;
@@ -135,6 +160,7 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
     Move m;
     State c;
     bool first = true;
+    int count = 0;
 
     while (m = mlist.getBestMove())
     {
@@ -142,6 +168,7 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
         std::memmove(&c, &s, sizeof s);              // Copy current state.
         c.make_t(m);                                 // Make move.
         history.push(std::make_pair(m, c.getKey())); // Add move to gamelist.
+        count++;
 
         if (c.inCheck() && depth == 1)
             d++;
@@ -152,16 +179,35 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
             // Set the best move to the first move just in case no move
             // improves alpha.
             best_move = m;
-            score = -scout_search(c, si, d, ply + 1, -b, -a);
+            score = -scout_search(c, si, d, ply + 1, -b, -a, isPv, isNull);
             first = false;
         }       
         else
         {
-            score = -scout_search(c, si, d, ply + 1, -(a + 1), -a);
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Late move reduction. Perform a reduced depth search (by 1 ply) under the   //
+// following conditions:                                                      //
+//   1. A number (LmrCount) of moves have already been tried.                 //
+//   2. The current node is not a PV node.                                    //
+//   3. The side to move is not in check.                                     //
+//   4. The move itself does not give check.                                  //
+//   5. The move does not promote a piece.                                    //
+//   6. The move does not capture a piece.                                    //
+//                                                                            //
+// ---------------------------------------------------------------------------//
+            if (count > LmrCount && depth > LmrDepth && !isPv && !s.inCheck()
+                && !c.inCheck() && !s.isCapture(m) && getPiecePromo(m) == none)
+                score = -scout_search(c, si, d - 1, ply + 1, -(a + 1), -a, false, isNull);
+            else
+                score = a + 1;
+
+            if (score > a)
+                score = -scout_search(c, si, d, ply + 1, -(a + 1), -a, false, isNull);
 
             // If an alpha improvement caused fail high, research using a full window.
             if (a < score && b > score)
-                score = -scout_search(c, si, d, ply + 1, -b, -a);
+                score = -scout_search(c, si, d, ply + 1, -b, -a, isPv, isNull);
         }
 
         history.pop();                           // Remove move from gamelist.
@@ -213,7 +259,7 @@ void iterative_deepening(State& s, SearchInfo& si)
     // Iterative deepening.
     for (int d = 1; !si.quit; ++d)
     {
-        score = scout_search(s, si, d, 0, Neg_inf, Pos_inf);
+        score = scout_search(s, si, d, 0, Neg_inf, Pos_inf, true, false);
 
         if (lineManager.getPvMove() == nullMove)
         {

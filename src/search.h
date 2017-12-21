@@ -17,6 +17,11 @@
 #include "move.h"
 #include "history.h"
 
+static const int LmrCount = 3;
+static const int LmrDepth = 2;
+static const int NullMoveCount = 3;
+static const int NullMoveDepth = 3;
+
 enum SearchType
 {
     qSearch,
@@ -98,6 +103,6 @@ extern History history;
 extern LineManager lineManager;
 void setup_search(State& s, SearchInfo& si);
 void iterative_deepening(State& s, SearchInfo& si);
-int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int beta);
+int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int beta, bool isPv, bool isNull);
 
 #endif  
