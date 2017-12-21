@@ -44,6 +44,7 @@ public:
     template<PieceType P> U64 getPieceBB() const;
     template<PieceType P> int getPieceCount(Color c) const;
     template<PieceType P> int getPieceCount() const;
+    int getNonPawnPieceCount(Color c) const;
 
     // Board occupancy
     U64 getOccupancyBB() const;
@@ -224,6 +225,7 @@ inline void State::removePiece(Color pColor, PieceType pPiece, Square pSquare)
 inline
 void State::swapTurn()
 {
+    mKey ^= Zobrist::key();
     mThem =  mUs;
     mUs   = !mUs;
 }
@@ -250,6 +252,12 @@ template<PieceType P>
 inline int State::getPieceCount(Color c) const
 {
     return mPieceCount[c][P];
+}
+
+inline int State::getNonPawnPieceCount(Color c) const
+{
+    return mPieceCount[c][knight] + mPieceCount[c][bishop]
+         + mPieceCount[c][rook]   + mPieceCount[c][queen];
 }
 
 inline

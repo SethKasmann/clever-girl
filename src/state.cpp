@@ -616,7 +616,6 @@ void State::make_t(Move pMove)
     mCastleRights &= Castle_rights[dst];
 
     mKey ^= Zobrist::key(mCastleRights);
-    mKey ^= Zobrist::key();
 
     assert(!check());
     swapTurn();
