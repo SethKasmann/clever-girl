@@ -28,62 +28,6 @@ enum SearchType
     scoutSearch
 };
 
-struct OldMove
-{
-    Move move;
-    U64 key;
-};
-
-class GameList
-{
-public:
-    GameList() : e(history), r(history)
-    {}
-    void push_root(Move m, U64 k)
-    {
-        e->move = m;
-        e->key  = k;
-        ++e;
-        ++r;
-    }
-    void push(Move m, U64 k)
-    {
-        e->move = m;
-        e->key  = k;
-        ++e;
-    }
-    void operator--()
-    {
-        --e;
-    }
-    Move operator*() const
-    {
-        return e->move;
-    }
-    size_t size() const
-    {
-        return e - history;
-    }
-    int ply() const
-    {
-        return e - r - 1;
-    }
-    bool repeat()
-    {
-        return size() >= 5 ? ((e-1)->key == (e-5)->key) 
-                           : false;
-    }
-    void clear()
-    {
-        e = history;
-        r = history;
-    }
-private:
-    OldMove history[1024];
-    OldMove* e;
-    OldMove* r;
-};
-
 struct SearchInfo
 {
     SearchInfo() : moveTime(0), nodes(0), moves_to_go(0), quit(false), infinite(false)
@@ -98,7 +42,6 @@ struct SearchInfo
     std::vector<Move> sm;
 };
 
-extern GameList glist;
 extern History history;
 extern LineManager lineManager;
 void setup_search(State& s, SearchInfo& si);

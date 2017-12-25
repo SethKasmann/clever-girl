@@ -2,7 +2,6 @@
 #include <fstream>
 
 LineManager lineManager;
-GameList glist;
 History history;
 
 bool interrupt(SearchInfo& si)
