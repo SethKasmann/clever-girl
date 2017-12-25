@@ -6,7 +6,6 @@
 #include <iterator>
 #include "state.h"
 #include "move_generator.h"
-#include "line_element.h"
 #include "types.h"
 #include "move.h"
 
