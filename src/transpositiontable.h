@@ -10,16 +10,12 @@ const int Default_size = 1024;
 
 struct TableEntry
 {
-	TableEntry() : depth(0), key(0)
-	{}
-	TableEntry(U64 k, Move b, NodeType t, int d, int s)
-	  : key(k), best(b), type(t), depth(d), score(s)
-	{}
 	U64 key;
 	Move best;
 	NodeType type;
 	int depth;	
 	int score;
+	bool ancient;
 };
 
 class TranspositionTable
@@ -40,16 +36,22 @@ public:
 	}
 	void clear()
 	{
-		for (std::vector<TableEntry>::iterator it = table.begin(); it != table.end(); ++it)
+		for (TableEntry& tableEntry : table)
 		{
-			it->key = 0;
-			it->best = nullMove;
-			it->type = pv;
-			it->depth = 0;
-			it->score = 0;
+			tableEntry.key     = 0;
+			tableEntry.best    = nullMove;
+			tableEntry.type    = pv;
+			tableEntry.depth   = 0;
+			tableEntry.score   = 0;
+			tableEntry.ancient = true;
 		}
 	}
-	int size() const
+	void setAncient()
+	{
+		for (TableEntry& tableEntry : table)
+			tableEntry.ancient = true;
+	}
+	std::size_t size() const
 	{
 		return table.size();
 	}
@@ -57,11 +59,13 @@ public:
 	{
 		table.clear();
 		table.resize(size_mb * 1000 * 1000 / sizeof(TableEntry));
+		clear();
 	}
 	void store(U64 key, Move best, NodeType type, int depth, int score)
 	{
 		int i = key % table.size();
-		if (table[i].depth < depth)
+		if (table[i].depth < depth ||
+			table[i].ancient)
 		{
 			table[i].key   = key;
 			table[i].best  = best;
