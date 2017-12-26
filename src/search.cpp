@@ -113,7 +113,39 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
 
     // Check if we are at the PV line.
     if (lineManager.getPvKey(ply) == s.getKey())
+    {
         best_move = lineManager.getPvMove(ply);
+    }
+
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Static Evaluation. Evaluate the current position statically if the         //
+// current node is not a PV node.                                             //
+//                                                                            //
+// ---------------------------------------------------------------------------//
+    int staticEval = 0;
+    if (!isPv)
+    {
+        Evaluate evaluate(s);
+        staticEval = evaluate.getScore();
+    }
+
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Reverse Futility Pruning. At pre-frontier and pre-pre-frontier, if the     //
+// side to move is doing so well that the static evaluation - a futility      //
+// penalty still causes a beta cutoff, return beta.                           //
+//                                                                            //
+// ---------------------------------------------------------------------------//
+    if (!isPv && 
+        !isNull &&
+        !s.inCheck() &&
+        depth <= 2 &&
+        s.getNonPawnPieceCount(s.getOurColor()))
+    {
+        if (staticEval - 100 * depth > beta)
+            return beta;
+    }
 
 // ---------------------------------------------------------------------------//
 //                                                                            //
@@ -174,6 +206,20 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
         if (c.inCheck() && depth == 1)
             d++;
 
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Futility Pruning                                                           //
+//                                                                            //
+// ---------------------------------------------------------------------------//
+        if (!isPv &&
+            depth == 1 &&
+            !s.inCheck() &&
+            !c.inCheck() &&
+            s.isQuiet(m) &&
+            getPiecePromo(m) == none &&
+            staticEval + 300 < a)
+            continue;
+
         // Scout alrogithm. Search the first node with a full window.
         if (first)
         {
@@ -208,7 +254,9 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
 
             // If an alpha improvement caused fail high, research using a full window.
             if (a < score && b > score)
+            {
                 score = -scout_search(c, si, d, ply + 1, -b, -a, isPv, isNull);
+            }
         }
 
         history.pop();                           // Remove move from gamelist.
@@ -238,7 +286,7 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
     }
 
     if (bestScore == Neg_inf)
-        return s.check() ? -Checkmate : Stalemate;
+        return s.check() ? -Checkmate + ply : Stalemate;
 
     if (a > alpha && a < b && !si.quit)
     {
@@ -308,6 +356,7 @@ void iterative_deepening(State& s, SearchInfo& si)
 
 void setup_search(State& s, SearchInfo& si)
 {
+    //ttable.setAncient();
     ttable.clear();
     lineManager.clearPv();
     init_eval();
