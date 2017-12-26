@@ -55,7 +55,10 @@ int perft(State & s, int depth)
 	if (s.getFiftyMoveRule() == 100)
 		return nodes;
 
-	MoveList mlist(s, nullMove, &history, 0);
+	MoveList mlist(s);
+
+	if (depth == 1)
+		return mlist.size();
 
 	State c;
 	Move m;
@@ -64,10 +67,7 @@ int perft(State & s, int depth)
 	{
 		std::memmove(&c, &s, sizeof s);
 		c.make_t(m);
-		if (depth == 1)
-			nodes++;
-		else
-			nodes += perft(c, depth-1);
+		nodes += perft(c, depth-1);
 	}
 
 	return nodes;

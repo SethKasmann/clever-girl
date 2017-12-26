@@ -50,6 +50,6 @@ extern History history;
 extern LineManager lineManager;
 void setup_search(State& s, SearchInfo& si);
 void iterative_deepening(State& s, SearchInfo& si);
-int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int beta, bool isPv, bool isNull);
+int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int beta, bool isPv, bool isNull, bool isRoot);
 
 #endif  

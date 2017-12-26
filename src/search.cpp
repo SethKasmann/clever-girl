@@ -72,7 +72,7 @@ int qsearch(State& s, SearchInfo& si, int ply, int alpha, int beta)
     return alpha;                                // Fail-Hard alpha beta score.
 }
 
-int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int beta, bool isPv, bool isNull)
+int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int beta, bool isPv, bool isNull, bool isRoot)
 {
     Move best_move = nullMove;
     
@@ -81,7 +81,8 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
 
     si.nodes++;
     // Check for draw.
-    if (history.isThreefoldRepetition(s) || s.getFiftyMoveRule() > 99)
+    if ((!isRoot && history.isThreefoldRepetition(s)) || 
+        s.getFiftyMoveRule() > 99)
         return Draw;
 
     // Evaluate leaf nodes.
@@ -164,7 +165,7 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
         std::memmove(&n, &s, sizeof s);
         n.swapTurn();
         history.push(std::make_pair(nullMove, n.getKey()));
-        int nullScore = -scout_search(n, si, depth - 3, ply + 1, -(alpha + 1), -alpha, false, true);
+        int nullScore = -scout_search(n, si, depth - 3, ply + 1, -(alpha + 1), -alpha, false, true, false);
         history.pop();
         if (nullScore >= beta)
             return beta;
@@ -176,7 +177,7 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
     {
         // Using depth calculation from Stockfish.
         int d = 3 * depth / 4 - 2;
-        scout_search(s, si, d, ply, alpha, beta, isPv, true);
+        scout_search(s, si, d, ply, alpha, beta, isPv, true, false);
         table_entry = ttable.probe(s.getKey());
         if (table_entry->key == s.getKey())
             best_move = table_entry->best;
@@ -226,7 +227,7 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
             // Set the best move to the first move just in case no move
             // improves alpha.
             best_move = m;
-            score = -scout_search(c, si, d, ply + 1, -b, -a, isPv, isNull);
+            score = -scout_search(c, si, d, ply + 1, -b, -a, isPv, isNull, false);
             first = false;
         }       
         else
@@ -245,17 +246,17 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
 // ---------------------------------------------------------------------------//
             if (count > LmrCount && depth > LmrDepth && !isPv && !s.inCheck()
                 && !c.inCheck() && !s.isCapture(m) && getPiecePromo(m) == none)
-                score = -scout_search(c, si, d - 1, ply + 1, -(a + 1), -a, false, isNull);
+                score = -scout_search(c, si, d - 1, ply + 1, -(a + 1), -a, false, isNull, false);
             else
                 score = a + 1;
 
             if (score > a)
-                score = -scout_search(c, si, d, ply + 1, -(a + 1), -a, false, isNull);
+                score = -scout_search(c, si, d, ply + 1, -(a + 1), -a, false, isNull, false);
 
             // If an alpha improvement caused fail high, research using a full window.
             if (a < score && b > score)
             {
-                score = -scout_search(c, si, d, ply + 1, -b, -a, isPv, isNull);
+                score = -scout_search(c, si, d, ply + 1, -b, -a, isPv, isNull, false);
             }
         }
 
@@ -308,7 +309,7 @@ void iterative_deepening(State& s, SearchInfo& si)
     // Iterative deepening.
     for (int d = 1; !si.quit; ++d)
     {
-        score = scout_search(s, si, d, 0, Neg_inf, Pos_inf, true, false);
+        score = scout_search(s, si, d, 0, Neg_inf, Pos_inf, true, false, true);
 
         if (lineManager.getPvMove() == nullMove)
         {

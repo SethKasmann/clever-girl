@@ -77,7 +77,7 @@ void ccrTest()
 		int score;
 		for (int d = 1; d < 9; ++d)
 		{
-			score = scout_search(s, si, d, 0, Neg_inf, Pos_inf, true, false);
+			score = scout_search(s, si, d, 0, Neg_inf, Pos_inf, true, false, true);
 			if (si.quit)
 				break;
 		}
