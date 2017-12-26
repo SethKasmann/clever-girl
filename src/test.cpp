@@ -69,7 +69,7 @@ void ccrTest()
 		history.push(std::make_pair(nullMove, s.getKey()));
 		SearchInfo si;
 		si.moveTime = allocate_time(10000000, 0, 40);
-		si.start_time = system_time();
+		si.clock.set();
 		// Clear the game list.
 		ttable.clear();
 		lineManager.clearPv();

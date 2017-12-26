@@ -12,7 +12,6 @@
 #include "types.h"
 #include "transpositiontable.h"
 #include "timer.h"
-#include "misc.h"
 #include "line_manager.h"
 #include "move.h"
 #include "history.h"
@@ -36,8 +35,9 @@ struct SearchInfo
         time[black] = 0;
     }
     int time[Player_size], inc[Player_size];
-    int moves_to_go, depth, max_nodes, nodes, mate, moveTime;
-    int64_t start_time;
+    int moves_to_go, depth, max_nodes, nodes, mate;
+    int64_t moveTime;
+    Clock clock;
     bool infinite, ponder, quit;
     std::vector<Move> sm;
 };

@@ -76,8 +76,8 @@ int perft(State & s, int depth)
 void printPerft(const std::string& fen, int maxDepth)
 {
 	int nodes;
-	double nps;
-	int32_t time;
+	double nps, time;
+	Clock clock;
 	State s(fen);
 
 	std::cout << s;
@@ -90,16 +90,16 @@ void printPerft(const std::string& fen, int maxDepth)
 	for (int depth = 1; depth <= maxDepth; ++depth)
 	{
 		nodes = 0;
-		time = system_time();
+		clock.set();
 		nodes = perft(s, depth);
-		time = system_time() - time;
+		time = clock.elapsed<std::chrono::microseconds>() / static_cast<double>(1000000);
 		std::cout << "| " << std::setfill(' ') << std::setw(10) << std::left << depth
 		          << "| " << std::setw(12) << std::left << nodes
 		          << "| ";
 		if (time > 0.0)
 			std::cout << std::setw(25) << std::left << std::scientific 
 		              << std::setprecision(2) 
-		              << static_cast<double>(nodes) / (time / 1000.0)
+		              << static_cast<double>(nodes) / time
 		              << "|" << std::endl;
 		else
 			std::cout << std::setw(26) << std::right << "|" << std::endl;

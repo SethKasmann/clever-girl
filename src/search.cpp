@@ -1,4 +1,5 @@
 #include "search.h"
+#include "misc.h"
 #include <fstream>
 
 LineManager lineManager;
@@ -7,7 +8,8 @@ History history;
 bool interrupt(SearchInfo& si)
 {
     // Check to see if we have run out of time.
-    if (system_time() - si.start_time >= si.moveTime && !si.infinite)
+    if (si.clock.elapsed<std::chrono::milliseconds>() >= si.moveTime
+        && !si.infinite)
     {
         si.quit = true;
         return true;
@@ -286,9 +288,12 @@ void iterative_deepening(State& s, SearchInfo& si)
             std::cout << " score cp " << score;
         }
 
-        std::cout << " time " << system_time() - si.start_time
-                  << " nodes " << si.nodes
-                  << " nps " << si.nodes / (system_time() - si.start_time + 1) * 1000;   
+        std::cout << " time " 
+                  << si.clock.elapsed<std::chrono::milliseconds>()
+                  << " nodes " 
+                  << si.nodes
+                  << " nps " 
+                  << si.nodes / (si.clock.elapsed<std::chrono::milliseconds>() + 1) * 1000;
         lineManager.printPv();
         std::cout << std::endl;
 

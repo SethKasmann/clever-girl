@@ -66,7 +66,7 @@ void go(std::istringstream & is, State & s)
             search_info.infinite = true;
     }
 
-    search_info.start_time = system_time();
+    search_info.clock.set();
     if (!search_info.moveTime)
         search_info.moveTime = allocate_time(search_info.time[s.getOurColor()], 
                                               history.size() / 2, 

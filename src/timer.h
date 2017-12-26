@@ -1,30 +1,32 @@
 #ifndef TIMER_H
 #define TIMER_H
 
+#include <chrono>
+//#include <sys/time.h>
+
 const int min_time = 500; // Absolute minimum time to spend searching.
 
-#if defined(_MSC_VER)
-#include <windows.h>
-inline int64_t system_time()
+class Clock
 {
-	SYSTEMTIME time;
-	GetSystemTime(&time);
-	return (time.wSecond * 1000LL) + time.wMilliseconds;
-}
-#else
-#include <sys/time.h>
-inline int64_t system_time()
-{
-	timeval t;
-	gettimeofday(&t, NULL);
-	return t.tv_sec * 1000LL + t.tv_usec / 1000LL;
-}
-#endif
+public:
+	void set()
+	{
+		mTime = std::chrono::high_resolution_clock::now();
+	}
+	template<typename T>
+	int64_t elapsed()
+	{
+		std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
+		return std::chrono::duration_cast<T>(now - mTime).count();
+	}
+private:
+	std::chrono::high_resolution_clock::time_point mTime;
+};
 
 // Robert Hyatt's formula.
-inline int allocate_time(int time_left, int moves, int moves_to_go)
+inline int64_t allocate_time(int time_left, int moves, int moves_to_go)
 {
-	int num_moves, target, time;
+	int64_t num_moves, target, time;
 	float factor;
 
 	num_moves = std::min(moves, 10);
