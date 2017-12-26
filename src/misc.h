@@ -4,6 +4,9 @@
 #include <string>
 #include <sstream>
 
+// It's not clear why I need this to compile.
+#include <sys/time.h>
+
 // Credit to Oliver Brausch
 inline int input_waiting()
 {
