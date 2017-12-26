@@ -29,11 +29,15 @@ enum SearchType
 
 struct SearchInfo
 {
-    SearchInfo() : moveTime(0), nodes(0), moves_to_go(0), quit(false), infinite(false)
-    {
-        time[white] = 0;
-        time[black] = 0;
-    }
+    SearchInfo() 
+    : moveTime(0)
+    , nodes(0)
+    , moves_to_go(0)
+    , quit(false)
+    , infinite(false)
+    , time{}
+    , inc{}
+    {}
     int time[Player_size], inc[Player_size];
     int moves_to_go, depth, max_nodes, nodes, mate;
     int64_t moveTime;
