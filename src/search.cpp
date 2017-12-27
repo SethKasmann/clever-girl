@@ -35,6 +35,13 @@ int qsearch(State& s, SearchInfo& si, int ply, int alpha, int beta)
     si.nodes++;
     assert(ply < Max_ply);
 
+/*
+    if (s.getFiftyMoveRule() > 99)
+    {
+        int z;
+        std::cin >> z;
+    }*/
+
     if (history.isThreefoldRepetition(s) || 
         s.getFiftyMoveRule() > 99)
         return Draw;
@@ -107,8 +114,8 @@ int qsearch(State& s, SearchInfo& si, int ply, int alpha, int beta)
             return beta;
     }
 
-    if (bestScore == Neg_inf)
-        return s.check() ? -Checkmate + ply : Stalemate;
+    if (bestScore == Neg_inf && s.check())
+        return -Checkmate + ply;
 
     return alpha;                                // Fail-Hard alpha beta score.
 }
