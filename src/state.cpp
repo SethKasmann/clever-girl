@@ -625,6 +625,19 @@ void State::make_t(Move pMove)
     setCheckers();
 }
 
+void State::makeNull()
+{
+    // Remove the ep file and castle rights from the zobrist key.
+    if (mEnPassant)
+        mKey ^= Zobrist::key(get_file(mEnPassant));
+
+    // Reset the en-passant square.
+    mEnPassant = 0;
+
+    // Swap the turn.
+    swapTurn();
+}
+
 // ----------------------------------------------------------------------------
 // Function to return a bitboard of all valid king moves for the current 
 // player

@@ -63,6 +63,7 @@ public:
 
     // Functions involved in making a move.
     void make_t(Move m);
+    void makeNull();
     void addPiece(Color pColor, PieceType pPiece, Square pSquare);
     void movePiece(Color pColor, PieceType pPiece, Square pSrc, Square pDst);
     void removePiece(Color pColor, PieceType pPiece, Square pSquare);
