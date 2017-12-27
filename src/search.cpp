@@ -204,7 +204,7 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
     {
         State n;
         std::memmove(&n, &s, sizeof s);
-        n.swapTurn();
+        n.makeNull();
         history.push(std::make_pair(nullMove, n.getKey()));
         int nullScore = -scout_search(n, si, depth - 3, ply + 1, -(alpha + 1), -alpha, false, true, false);
         history.pop();
