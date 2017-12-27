@@ -3,7 +3,7 @@
 
 #include <string>
 
-#define NDEBUG
+//#define NDEBUG
 #include <assert.h>
 
 // ----------------------------------------------------------------------------
@@ -68,13 +68,14 @@ static const int King_wt   = 32767;
 
 inline int getPieceValue(PieceType piece)
 {
-    assert(piece != none);
+    //assert(piece != none);
     return piece == pawn   ? Pawn_wt
          : piece == knight ? Knight_wt
          : piece == bishop ? Bishop_wt
          : piece == rook   ? Rook_wt
          : piece == queen  ? Queen_wt
-         : King_wt;
+         : piece == king   ? King_wt
+         : 0;
 }
 
 enum Square : uint32_t
