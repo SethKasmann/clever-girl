@@ -35,6 +35,10 @@ int qsearch(State& s, SearchInfo& si, int ply, int alpha, int beta)
     si.nodes++;
     assert(ply < Max_ply);
 
+    if (history.isThreefoldRepetition(s) || 
+        s.getFiftyMoveRule() > 99)
+        return Draw;
+
     Evaluate evaluate(s);
     /*
     std::cout << evaluate;
@@ -54,20 +58,57 @@ int qsearch(State& s, SearchInfo& si, int ply, int alpha, int beta)
     // Generate moves and create the movelist.
     MoveList mlist(s, nullMove, &history, ply, true);
 
-    int val;
+    int bestScore = Neg_inf;
+    int score;
     Move m;
     State c;
 
     while (m = mlist.getBestMove())
     {
-        std::memmove(&c, &s, sizeof s);          // Copy current state.
-        c.make_t(m);                               // Make move.
-        val = -qsearch(c, si, ply + 1, -beta, -alpha); // Recursive call to qsearch.
-        if (val >= beta)                         // Alpha-Beta pruning.
-            return beta;
+        std::memmove(&c, &s, sizeof s);
+        c.make_t(m);
 
-        alpha = std::max(alpha, val);
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Futility pruning. Do not search subtrees that are unlikely to improve      //
+// alpha. To avoid pruning away tactical positions, there are a few things    //
+// we need to check:                                                          //
+//   1. Side to move is not in check.                                         //
+//   2. Move itself doesn't give check.                                       //
+//   3. Move is not en passant. I want to be sure to calculate the fScore     //
+//      properly, but en passant could throw a wrench by adding a 0 piece     //
+//      value. Insead of a separate check to cover en passant moves, I am     //
+//      currently just not cosidering them.                                   //
+//                                                                            //
+// ---------------------------------------------------------------------------//
+        if (!s.inCheck() &&
+            !c.inCheck() &&
+            !s.isEnPassant(m))
+        {
+            // TODO:
+            // Can I simply include en passant in this calculation?
+            // Add a "gives check" function, so I dont have to make the move.
+            int fScore = qscore + 100 + getPieceValue(s.onSquare(getDst(m)));
+            if (fScore <= alpha)
+            {
+                bestScore = std::max(bestScore, fScore);
+                continue;
+            }
+        }
+        history.push(std::make_pair(m, c.getKey()));
+        score = -qsearch(c, si, ply + 1, -beta, -alpha);
+        history.pop();
+        if (score >= bestScore)
+            bestScore = score;
+
+        alpha = std::max(alpha, bestScore);
+
+        if (alpha >= beta)
+            return beta;
     }
+
+    if (bestScore == Neg_inf)
+        return s.check() ? -Checkmate + ply : Stalemate;
 
     return alpha;                                // Fail-Hard alpha beta score.
 }
@@ -212,12 +253,14 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
 // Futility Pruning                                                           //
 //                                                                            //
 // ---------------------------------------------------------------------------//
+        // TODO:
+        // Add a "gives check" function so I don't have to actually make the move.
         if (!isPv &&
             depth == 1 &&
             !s.inCheck() &&
             !c.inCheck() &&
             s.isQuiet(m) &&
-            getPiecePromo(m) == none &&
+            isPromotion(m) &&
             staticEval + 300 < a)
             continue;
 
@@ -245,7 +288,7 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
 //                                                                            //
 // ---------------------------------------------------------------------------//
             if (count > LmrCount && depth > LmrDepth && !isPv && !s.inCheck()
-                && !c.inCheck() && !s.isCapture(m) && getPiecePromo(m) == none)
+                && !c.inCheck() && !s.isCapture(m) && isPromotion(m))
                 score = -scout_search(c, si, d - 1, ply + 1, -(a + 1), -a, false, isNull, false);
             else
                 score = a + 1;
