@@ -58,6 +58,7 @@ public:
     bool canCastleQueenside(Color c) const;
     bool isQuiet(Move pMove) const;
     bool isCapture(Move pMove) const;
+    bool isEnPassant(Move m) const;
     bool isValid(Move pMove, U64 pValid) const;
 
     // Functions involved in making a move.
@@ -161,6 +162,12 @@ inline bool State::isCapture(Move pMove) const
 inline bool State::isQuiet(Move m) const
 {
     return !isCapture(m);
+}
+
+inline bool State::isEnPassant(Move m) const
+{
+    return onSquare(getSrc(m)) == pawn &&
+           (square_bb[getDst(m)] & mEnPassant);
 }
 
 template<PieceType P>
