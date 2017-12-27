@@ -428,6 +428,43 @@ bool State::isValid(Move pMove, U64 pValidMoves) const
     assert(false);
 }
 
+bool State::givesCheck(Move pMove) const
+{
+    Square src = getSrc(pMove);
+    Square dst = getDst(pMove);
+    PieceType piece = onSquare(src);
+
+    // Direct check.
+    if (getCheckSquaresBB(piece) & square_bb[dst])
+        return true;
+
+    // Discovered check.
+    if ((getDiscoveredChecks(mUs) & square_bb[src]) &&
+        !(coplanar[src][dst] & getPieceBB<king>(mThem)))
+        return true;
+
+    if (isEnPassant(pMove))
+    {
+        U64 change = square_bb[src] | 
+                     mUs == white ? square_bb[dst - 8] :
+                                    square_bb[dst + 8];
+        return check(getOccupancyBB() ^ change, mThem);
+    }
+    else if (isCastle(pMove))
+    {
+        Square rookSquare = src > dst ? dst + 1 : dst - 2;
+        return getAttackBB(rook, rookSquare, getOccupancyBB() & square_bb[src]) &
+               getPieceBB<king>(mThem);
+    }
+    else if (isPromotion(pMove))
+    {
+        PieceType promo = getPiecePromo(pMove);
+        return getAttackBB(promo, dst, getOccupancyBB() ^ square_bb[src]) &
+               getPieceBB<king>(mThem);
+    }
+    return false;
+}
+
 int State::see(Move m) const
 {
     Prop prop;
@@ -637,73 +674,6 @@ void State::makeNull()
     // Swap the turn.
     swapTurn();
 }
-
-// ----------------------------------------------------------------------------
-// Function to return a bitboard of all valid king moves for the current 
-// player
-// ----------------------------------------------------------------------------
-U64 State::getValidKingMoves() const
-{
-    U64 m;
-
-    const Dir L   = mUs == white ? SW : NW;
-    const Dir R   = mUs == white ? SE : NE;
-
-    // Remove king from occupancy to check squares attacked behind the king.
-    const U64 o = getOccupancyBB() ^ getPieceBB<king>(mUs);
-
-    m = King_moves[getKingSquare(mUs)];
-    m &= ~(shift_e(getPieceBB<pawn>(mThem), R) | shift_w(getPieceBB<pawn>(mThem), L));
-
-    for (Square s : getPieceList<knight>(mThem))
-    {
-        if (s == no_sq)
-            break;
-        m &= ~(Knight_moves[s]);
-    }
-
-    for (Square s : getPieceList<bishop>(mThem))
-    {
-        if (s == no_sq)
-            break;
-        m &= ~(Bmagic(s, o));
-    }
-
-    for (Square s : getPieceList<rook>(mThem))
-    {
-        if (s == no_sq)
-            break;
-        m &= ~(Rmagic(s, o));
-    }
-
-    for (Square s : getPieceList<queen>(mThem))
-    {
-        if (s == no_sq)
-            break;
-        m &= ~(Qmagic(s, o));
-    }
-
-    m &= ~(King_moves[getKingSquare(mThem)]);
-    m &= ~(getOccupancyBB(mUs));
-
-    return m;
-}
-
-
-// ----------------------------------------------------------------------------
-// Function to check whether the current player's king is in check. mUsed 
-// mostly for debugging.
-// ----------------------------------------------------------------------------
-/*
-bool State::in_check()
-{
-    const Square k = mPieceList[mUs][king][0];
-    return (pawn_attacks[mUs][k] & e_pawn())
-         | (Knight_moves[k] & e_knight())
-         | (Bmagic(k, occ()) & (e_bishop() | e_queen()))
-         | (Rmagic(k, occ()) & (e_rook() | e_queen()));
-}
-*/
 
 // ----------------------------------------------------------------------------
 // Function to print the board on the screen. mUsed for debugging.

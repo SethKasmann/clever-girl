@@ -60,6 +60,7 @@ public:
     bool isCapture(Move pMove) const;
     bool isEnPassant(Move m) const;
     bool isValid(Move pMove, U64 pValid) const;
+    bool givesCheck(Move pMove) const;
 
     // Functions involved in making a move.
     void make_t(Move m);
@@ -70,7 +71,7 @@ public:
     void swapTurn();
 
     // Valid king moves and pins.
-    U64 getValidKingMoves() const;
+    U64 getCheckSquaresBB(PieceType pPiece) const;
     void setCheckers();
     void setPins(Color c);
     U64 getPinsBB(Color c) const;
@@ -89,6 +90,7 @@ public:
     U64 getAttackersBB(Square s, Color c) const;
     U64 allAttackers(Square s) const;
     template<PieceType> U64 getAttackBB(Square s, Color c=white) const;
+    U64 getAttackBB(PieceType pPiece, Square pSquare, U64 pOcc) const;
     int see(Move m) const;
     U64 getXRayAttacks(Square square) const;
 
@@ -368,6 +370,23 @@ template<>
 inline U64 State::getAttackBB<king>(Square s, Color c) const
 {
     return King_moves[s];
+}
+
+inline
+U64 State::getAttackBB(PieceType pPiece, Square pSquare, U64 pOcc) const
+{
+    assert(pPiece != pawn);
+    assert(pPiece != king);
+    return pPiece == knight ? getAttackBB<knight>(pSquare) :
+           pPiece == bishop ? Bmagic(pSquare, pOcc)        :
+           pPiece == rook   ? Rmagic(pSquare, pOcc)        :
+                              Qmagic(pSquare, pOcc);
+}
+
+inline 
+U64 State::getCheckSquaresBB(PieceType pPiece) const
+{
+    return mCheckSquares[pPiece];
 }
 
 inline
