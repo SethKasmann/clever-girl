@@ -928,17 +928,14 @@ Move MoveList::getBestMove()
 // their LVA-MVV (least valuable attacker, most valuable victim) score. I     //
 // just do Victim - Attacker.                                                 //
 //                                                                            //
-// If the see value is negative, store the see value as the score.            //
-//                                                                            //
 // ---------------------------------------------------------------------------//
         case qAttacksGen:
             generateAttacks();
             for (int i = 0; i < mSize; ++i)
             {
-                int see = mState.see(mList[i].move);
-                if (see > 0)
-                    mList[i].score = mState.onSquare(getDst(mList[i].move))
-                                   - mState.onSquare(getSrc(mList[i].move));
+                mList[i].score = mState.onSquare(getDst(mList[i].move))
+                               - mState.onSquare(getSrc(mList[i].move));
+                                   /*
                 else
                 {
                     mList[i].score = see;
@@ -946,6 +943,7 @@ Move MoveList::getBestMove()
                     std::swap(mList[i], mList[mSize - 1]);
                     pop();
                 }
+                */
             }
             mStage++;
 // ---------------------------------------------------------------------------//
@@ -964,6 +962,8 @@ Move MoveList::getBestMove()
                 std::iter_swap(std::max_element(mList.begin(), mList.begin() + mSize), 
                                mList.begin() + mSize - 1);
                 move = pop();
+                if (mState.see(move) < 0 && !isPromotion(move))
+                    continue;
                 if (move != mBest
                     && mState.isLegal(move))
                     return move;
@@ -1008,6 +1008,7 @@ Move MoveList::getBestMove()
                     && mState.isLegal(move))
                     return move;
             }
+            /*
             while (!badCaptures.empty())
             {
                 move = badCaptures.back().move;
@@ -1015,7 +1016,7 @@ Move MoveList::getBestMove()
                 if (move != mBest
                     && mState.isLegal(move))
                     return move;
-            }
+            }*/
             break;
 // ---------------------------------------------------------------------------//
 //                                                                            //
