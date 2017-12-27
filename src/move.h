@@ -67,6 +67,11 @@ inline PieceType getPiecePromo(Move m)
 	return static_cast<PieceType>((m & piecePromoMask) >> 12);
 }
 
+inline bool isPromotion(Move m)
+{
+	return getPiecePromo(m);
+}
+
 inline bool isCastle(Move m)
 {
 	return m & castleFlag;
