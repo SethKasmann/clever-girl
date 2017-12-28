@@ -254,7 +254,10 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
             s.isQuiet(m) &&
             !isPromotion(m) &&
             staticEval + 300 < a)
+        {
+            bestScore = std::max(bestScore, Neg_inf + 1);
             continue;
+        }
 
         std::memmove(&c, &s, sizeof s);              // Copy current state.
         c.make_t(m);                                 // Make move.
