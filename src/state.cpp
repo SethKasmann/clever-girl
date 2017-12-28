@@ -445,15 +445,14 @@ bool State::givesCheck(Move pMove) const
 
     if (isEnPassant(pMove))
     {
-        U64 change = square_bb[src] | 
-                     mUs == white ? square_bb[dst - 8] :
-                                    square_bb[dst + 8];
-        return check(getOccupancyBB() ^ change, mThem);
+        U64 change = square_bb[src] | square_bb[dst];
+        change |= mUs == white ? square_bb[dst - 8] : square_bb[dst + 8];
+        return check(change, mThem);
     }
     else if (isCastle(pMove))
     {
-        Square rookSquare = src > dst ? dst + 1 : dst - 2;
-        return getAttackBB(rook, rookSquare, getOccupancyBB() & square_bb[src]) &
+        Square rookSquare = src > dst ? dst + 1 : dst - 1;
+        return getAttackBB(rook, rookSquare, getOccupancyBB() ^ square_bb[src]) &
                getPieceBB<king>(mThem);
     }
     else if (isPromotion(pMove))
@@ -664,6 +663,7 @@ void State::make_t(Move pMove)
 
 void State::makeNull()
 {
+    assert(mCheckers == 0);
     // Remove the ep file and castle rights from the zobrist key.
     if (mEnPassant)
         mKey ^= Zobrist::key(get_file(mEnPassant));
@@ -673,6 +673,13 @@ void State::makeNull()
 
     // Swap the turn.
     swapTurn();
+
+    // Set check squares.
+    mCheckSquares[pawn] = getAttackBB<pawn>(getKingSquare(mThem), mThem);
+    mCheckSquares[knight] = getAttackBB<knight>(getKingSquare(mThem));
+    mCheckSquares[bishop] = getAttackBB<bishop>(getKingSquare(mThem));
+    mCheckSquares[rook] = getAttackBB<rook>(getKingSquare(mThem));
+    mCheckSquares[queen] = mCheckSquares[bishop] | mCheckSquares[rook];
 }
 
 // ----------------------------------------------------------------------------
