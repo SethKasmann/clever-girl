@@ -393,10 +393,10 @@ inline
 void State::setCheckers()
 {
     mCheckers = getAttackersBB(getKingSquare(mUs), mThem);
-    mCheckSquares[pawn] = getAttackBB<pawn>(getKingSquare(mUs), mUs);
-    mCheckSquares[knight] = getAttackBB<knight>(getKingSquare(mUs));
-    mCheckSquares[bishop] = getAttackBB<bishop>(getKingSquare(mUs));
-    mCheckSquares[rook] = getAttackBB<rook>(getKingSquare(mUs));
+    mCheckSquares[pawn] = getAttackBB<pawn>(getKingSquare(mThem), mThem);
+    mCheckSquares[knight] = getAttackBB<knight>(getKingSquare(mThem));
+    mCheckSquares[bishop] = getAttackBB<bishop>(getKingSquare(mThem));
+    mCheckSquares[rook] = getAttackBB<rook>(getKingSquare(mThem));
     mCheckSquares[queen] = mCheckSquares[bishop] | mCheckSquares[rook];
 }
 
