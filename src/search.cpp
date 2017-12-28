@@ -244,19 +244,48 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
         d = depth - 1;
 // ---------------------------------------------------------------------------//
 //                                                                            //
-// Futility Pruning                                                           //
+// Early Pruning                                                              //
+//                                                                            //
+// It may be possible to prune before the child move is made, under the       //
+// following conditions:                                                      //
+//   1. Current node is not a PV node.                                        //
+//   2. Best score searched is greater than the - checkmate bound.            //
+//   3. Side to move is not in check.                                         //
+//   4. Move itself does not give check.                                      //
+//   5. Side to move has at least 1 major or minor piece.                     //
 //                                                                            //
 // ---------------------------------------------------------------------------//
         if (!isPv &&
-            depth == 1 &&
+            bestScore > -CheckmateBound &&
             !s.inCheck() &&
             !s.givesCheck(m) &&
-            s.isQuiet(m) &&
-            !isPromotion(m) &&
-            staticEval + 300 < a)
+            s.getNonPawnPieceCount(s.getOurColor()))
         {
-            bestScore = std::max(bestScore, Neg_inf + 1);
-            continue;
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Futility Pruning                                                           //
+//                                                                            //
+// Prune quiet moves at depth 1 that will not improve alpha.                  //
+//                                                                            //
+// ---------------------------------------------------------------------------//
+            if (depth == 1 &&
+                s.isQuiet(m) &&
+                !isPromotion(m) &&
+                staticEval + 300 < a)
+                continue;
+
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Pruning based on SEE.                                                      //
+//                                                                            //
+// Original idea from Stockfish. If the SEE is low relative to the depth,     //
+// prune the move. The calculation I'm currently using is:                    //
+//   see(move) < -pawn * 2^(depth - 1)                                        //
+//                                                                            //
+// ---------------------------------------------------------------------------//
+            if (depth < 3 &&
+                s.see(m) < -Pawn_wt * (1 << (depth - 1)))
+                continue;
         }
 
         std::memmove(&c, &s, sizeof s);              // Copy current state.
