@@ -80,7 +80,8 @@ int qsearch(State& s, SearchInfo& si, int ply, int alpha, int beta)
 // ---------------------------------------------------------------------------//
         if (!s.inCheck() &&
             !s.givesCheck(m) &&
-            !s.isEnPassant(m))
+            !s.isEnPassant(m) &&
+            !isPromotion(m))
         {
             // TODO:
             // Can I simply include en passant in this calculation?
@@ -186,7 +187,7 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
         depth <= 2 &&
         s.getNonPawnPieceCount(s.getOurColor()))
     {
-        if (staticEval - 100 * depth > beta)
+        if (staticEval - 100 * depth >= beta)
             return beta;
     }
 
@@ -251,7 +252,7 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
             !s.inCheck() &&
             !s.givesCheck(m) &&
             s.isQuiet(m) &&
-            isPromotion(m) &&
+            !isPromotion(m) &&
             staticEval + 300 < a)
             continue;
 
@@ -288,7 +289,7 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
 //                                                                            //
 // ---------------------------------------------------------------------------//
             if (count > LmrCount && depth > LmrDepth && !isPv && !s.inCheck()
-                && !c.inCheck() && !s.isCapture(m) && isPromotion(m))
+                && !c.inCheck() && !s.isCapture(m) && !isPromotion(m))
                 score = -scout_search(c, si, d - 1, ply + 1, -(a + 1), -a, false, isNull, false);
             else
                 score = a + 1;
