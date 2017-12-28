@@ -35,13 +35,6 @@ int qsearch(State& s, SearchInfo& si, int ply, int alpha, int beta)
     si.nodes++;
     assert(ply < Max_ply);
 
-/*
-    if (s.getFiftyMoveRule() > 99)
-    {
-        int z;
-        std::cin >> z;
-    }*/
-
     if (history.isThreefoldRepetition(s) || 
         s.getFiftyMoveRule() > 99)
         return Draw;
@@ -72,9 +65,6 @@ int qsearch(State& s, SearchInfo& si, int ply, int alpha, int beta)
 
     while (m = mlist.getBestMove())
     {
-        std::memmove(&c, &s, sizeof s);
-        c.make_t(m);
-
 // ---------------------------------------------------------------------------//
 //                                                                            //
 // Futility pruning. Do not search subtrees that are unlikely to improve      //
@@ -89,7 +79,7 @@ int qsearch(State& s, SearchInfo& si, int ply, int alpha, int beta)
 //                                                                            //
 // ---------------------------------------------------------------------------//
         if (!s.inCheck() &&
-            !c.inCheck() &&
+            !s.givesCheck(m) &&
             !s.isEnPassant(m))
         {
             // TODO:
@@ -102,6 +92,10 @@ int qsearch(State& s, SearchInfo& si, int ply, int alpha, int beta)
                 continue;
             }
         }
+
+        std::memmove(&c, &s, sizeof s);
+        c.make_t(m);
+
         history.push(std::make_pair(m, c.getKey()));
         score = -qsearch(c, si, ply + 1, -beta, -alpha);
         history.pop();
@@ -247,6 +241,20 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
     while (m = mlist.getBestMove())
     {
         d = depth - 1;
+// ---------------------------------------------------------------------------//
+//                                                                            //
+// Futility Pruning                                                           //
+//                                                                            //
+// ---------------------------------------------------------------------------//
+        if (!isPv &&
+            depth == 1 &&
+            !s.inCheck() &&
+            !s.givesCheck(m) &&
+            s.isQuiet(m) &&
+            isPromotion(m) &&
+            staticEval + 300 < a)
+            continue;
+
         std::memmove(&c, &s, sizeof s);              // Copy current state.
         c.make_t(m);                                 // Make move.
         history.push(std::make_pair(m, c.getKey())); // Add move to gamelist.
@@ -255,21 +263,6 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
         if (c.inCheck() && depth == 1)
             d++;
 
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Futility Pruning                                                           //
-//                                                                            //
-// ---------------------------------------------------------------------------//
-        // TODO:
-        // Add a "gives check" function so I don't have to actually make the move.
-        if (!isPv &&
-            depth == 1 &&
-            !s.inCheck() &&
-            !c.inCheck() &&
-            s.isQuiet(m) &&
-            isPromotion(m) &&
-            staticEval + 300 < a)
-            continue;
 
         // Scout alrogithm. Search the first node with a full window.
         if (first)
