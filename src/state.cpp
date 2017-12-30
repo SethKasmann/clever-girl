@@ -496,10 +496,6 @@ int State::see(Move m) const
         src = get_lsb(from);
         target = onSquare(src);
 
-        // Break if the target is a king.
-        if (target == king)
-            break;
-
         // Update the depth and color.
         d++;
 
@@ -550,7 +546,12 @@ int State::see(Move m) const
         else if (attackers & getPieceBB<queen>(color))
             from = get_lsb_bb(attackers & getPieceBB<queen>(color));
         else
+        {
             from = get_lsb_bb(attackers & getPieceBB<king>(color));
+            // Break if the king would be attacked.
+            if (attackers & getOccupancyBB(!color))
+                break;
+        }
     }
 
     // Negamax the gain array to determine the final SEE value.
