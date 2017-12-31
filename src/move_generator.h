@@ -56,7 +56,8 @@ public:
     void generateAllMoves();
     template<PieceType P> void pushQuietMoves();
     template<PieceType P> void pushAttackMoves();
-    void pushQuietChecks();
+    template<PieceType P> void pushQuietChecks(U64 discover);
+    template<PieceType P> void pushQuietNonChecks(U64 discover);
     friend std::ostream & operator << (std::ostream & o, const MoveList & mlist);
 private:
     bool mQSearch;
