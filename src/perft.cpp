@@ -52,7 +52,7 @@ int perft(State & s, int depth)
 {
 	int nodes = 0;
 
-	if (s.getFiftyMoveRule() == 100)
+	if (s.getFiftyMoveRule() > 99)
 		return nodes;
 
 	MoveList mlist(s);
