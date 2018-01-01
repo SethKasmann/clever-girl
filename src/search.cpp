@@ -35,18 +35,14 @@ int qsearch(State& s, SearchInfo& si, int ply, int alpha, int beta)
     si.nodes++;
     assert(ply < Max_ply);
 
-    if (history.isThreefoldRepetition(s) || 
+    if (history.isThreefoldRepetition(s) ||
+        s.insufficientMaterial() ||
         s.getFiftyMoveRule() > 99)
         return Draw;
 
     Evaluate evaluate(s);
-    /*
-    std::cout << evaluate;
-    int z;
-    std::cin >> z;
-    */
-    int qscore = evaluate.getScore();
 
+    int qscore = evaluate.getScore();
 
     // If a beta cutoff is found, return the qscore.
     if (qscore >= beta)
@@ -117,20 +113,22 @@ int qsearch(State& s, SearchInfo& si, int ply, int alpha, int beta)
 
 int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int beta, bool isPv, bool isNull, bool isRoot)
 {
+    assert(depth >= 0);
     Move best_move = nullMove;
+    si.nodes++;
     
     if (si.quit || (si.nodes % 3000 == 0 && interrupt(si)))
         return 0;
 
-    si.nodes++;
-    // Check for draw.
-    if ((!isRoot && history.isThreefoldRepetition(s)) || 
-        s.getFiftyMoveRule() > 99)
-        return Draw;
-
     // Evaluate leaf nodes.
     if (depth == 0)
         return qsearch(s, si, ply, alpha, beta);
+
+    // Check for draw.
+    if ((!isRoot && history.isThreefoldRepetition(s)) ||
+        s.insufficientMaterial() || 
+        s.getFiftyMoveRule() > 99)
+        return Draw;
 
     // Get a pointer to the correction transposition table location.
     const TableEntry* table_entry = ttable.probe(s.getKey());
