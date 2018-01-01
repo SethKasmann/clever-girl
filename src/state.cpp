@@ -683,6 +683,62 @@ void State::makeNull()
     mCheckSquares[queen] = mCheckSquares[bishop] | mCheckSquares[rook];
 }
 
+bool State::insufficientMaterial() const
+{
+    bool ret = false;
+
+// -------------------------------------------------------------------------- //
+//                                                                            //
+// First check that there are no pawns or major pieces on the board.          //
+//                                                                            //
+// -------------------------------------------------------------------------- //
+    if (getPieceCount<pawn>() +
+        getPieceCount<rook>() +
+        getPieceCount<queen>() == 0)
+    {
+        switch (getPieceCount<knight>())
+        {
+// -------------------------------------------------------------------------- //
+//                                                                            //
+// If no knights are present, check if all remaining bishops are on the same  //
+// color square.                                                              //
+//                                                                            //
+// -------------------------------------------------------------------------- //
+            case 0:
+                if ((getPieceBB<bishop>() & Dark_squares) == 
+                        getPieceBB<bishop>() ||
+                    (getPieceBB<bishop>() & Light_squares) == 
+                        getPieceBB<bishop>())
+                    ret = true;
+                break;
+// -------------------------------------------------------------------------- //
+//                                                                            //
+// If only 1 knight is present, check if there are no bishops on the board.   //
+//                                                                            //
+// -------------------------------------------------------------------------- //                
+            case 1:
+                if (!getPieceCount<bishop>())
+                    ret = true;
+                break;
+// -------------------------------------------------------------------------- //
+//                                                                            //
+// For two knights, check if both sides have a knight and neither side has a  //
+// bishop.                                                                    //
+//                                                                            //
+// -------------------------------------------------------------------------- //  
+            case 2:
+                if (getPieceCount<knight>(white) &&
+                    getPieceCount<knight>(black) &&
+                    !getPieceCount<bishop>())
+                    ret = true;
+                break;
+            default:
+                break;
+        }
+    }
+    return ret;
+}
+
 // ----------------------------------------------------------------------------
 // Function to print the board on the screen. mUsed for debugging.
 // ----------------------------------------------------------------------------
