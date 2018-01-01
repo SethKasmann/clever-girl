@@ -87,6 +87,7 @@ public:
     bool check(U64 change, Color c) const;
     bool inCheck() const;
     bool inDoubleCheck() const;
+    bool insufficientMaterial() const;
     U64 getAttackersBB(Square s, Color c) const;
     U64 allAttackers(Square s) const;
     template<PieceType> U64 getAttackBB(Square s, Color c=white) const;
