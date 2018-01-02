@@ -480,11 +480,11 @@ int State::see(Move m) const
     from = square_bb[src];
     // Check if the move is en passant.
     if (onSquare(src) == pawn && square_bb[dst] & mEnPassant)
-        gain[d] = getPieceValue(pawn);
+        gain[d] = PieceValue[pawn];
     else if (getPiecePromo(m) == queen)
         gain[d] = Queen_wt - Pawn_wt;
     else
-        gain[d] = getPieceValue(onSquare(dst));
+        gain[d] = PieceValue[onSquare(dst)];
     occupancy = getOccupancyBB();
     attackers = allAttackers(dst);
     // Get X ray attacks and add in pawns from attackers.
@@ -500,7 +500,7 @@ int State::see(Move m) const
         d++;
 
         // Storing the potential gain, if defended.
-        gain[d] = getPieceValue(target) - gain[d - 1];
+        gain[d] = PieceValue[target] - gain[d - 1];
 
         // Prune if the gain cannot be improved.
         if (std::max(-gain[d - 1], gain[d]) < 0)

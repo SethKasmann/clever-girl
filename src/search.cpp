@@ -82,7 +82,7 @@ int qsearch(State& s, SearchInfo& si, int ply, int alpha, int beta)
             // TODO:
             // Can I simply include en passant in this calculation?
             // Add a "gives check" function, so I dont have to make the move.
-            int fScore = qscore + 100 + getPieceValue(s.onSquare(getDst(m)));
+            int fScore = qscore + 100 + PieceValue[s.onSquare(getDst(m))];
             if (fScore <= alpha)
             {
                 bestScore = std::max(bestScore, fScore);
