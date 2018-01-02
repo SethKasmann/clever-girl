@@ -66,17 +66,16 @@ static const int Rook_wt   = 500;
 static const int Queen_wt  = 950;
 static const int King_wt   = 32767;
 
-inline int getPieceValue(PieceType piece)
+static const int PieceValue[] = 
 {
-    //assert(piece != none);
-    return piece == pawn   ? Pawn_wt
-         : piece == knight ? Knight_wt
-         : piece == bishop ? Bishop_wt
-         : piece == rook   ? Rook_wt
-         : piece == queen  ? Queen_wt
-         : piece == king   ? King_wt
-         : 0;
-}
+    Pawn_wt,
+    Knight_wt,
+    Bishop_wt,
+    Rook_wt,
+    Queen_wt,
+    King_wt,
+    0
+};
 
 enum Square : uint32_t
 {
