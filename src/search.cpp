@@ -61,7 +61,7 @@ int qsearch(State& s, SearchInfo& si, int ply, int alpha, int beta)
 
     while (m = mlist.getBestMove())
     {
-// ---------------------------------------------------------------------------//
+// -------------------------------------------------------------------------- //
 //                                                                            //
 // Futility pruning. Do not search subtrees that are unlikely to improve      //
 // alpha. To avoid pruning away tactical positions, there are a few things    //
@@ -73,7 +73,7 @@ int qsearch(State& s, SearchInfo& si, int ply, int alpha, int beta)
 //      value. Insead of a separate check to cover en passant moves, I am     //
 //      currently just not cosidering them.                                   //
 //                                                                            //
-// ---------------------------------------------------------------------------//
+// -------------------------------------------------------------------------- //
         if (!s.inCheck() &&
             !s.givesCheck(m) &&
             !s.isEnPassant(m) &&
@@ -115,19 +115,21 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
 {
     assert(depth >= 0);
     Move best_move = nullMove;
-    si.nodes++;
     
     if (si.quit || (si.nodes % 3000 == 0 && interrupt(si)))
         return 0;
+
+    si.nodes++;
 
     // Evaluate leaf nodes.
     if (depth == 0)
         return qsearch(s, si, ply, alpha, beta);
 
     // Check for draw.
-    if ((!isRoot && history.isThreefoldRepetition(s)) ||
+    if (!isRoot && 
+        (history.isThreefoldRepetition(s) ||
         s.insufficientMaterial() || 
-        s.getFiftyMoveRule() > 99)
+        s.getFiftyMoveRule() > 99))
         return Draw;
 
     // Get a pointer to the correction transposition table location.
@@ -152,19 +154,18 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
         best_move = table_entry->best;
     }
 
-
     // Check if we are at the PV line.
     if (lineManager.getPvKey(ply) == s.getKey())
     {
         best_move = lineManager.getPvMove(ply);
     }
 
-// ---------------------------------------------------------------------------//
+// -------------------------------------------------------------------------- //
 //                                                                            //
 // Static Evaluation. Evaluate the current position statically if the         //
 // current node is not a PV node.                                             //
 //                                                                            //
-// ---------------------------------------------------------------------------//
+// -------------------------------------------------------------------------- //
     int staticEval = 0;
     if (!isPv)
     {
@@ -172,13 +173,13 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
         staticEval = evaluate.getScore();
     }
 
-// ---------------------------------------------------------------------------//
+// -------------------------------------------------------------------------- //
 //                                                                            //
 // Reverse Futility Pruning. At pre-frontier and pre-pre-frontier, if the     //
 // side to move is doing so well that the static evaluation - a futility      //
 // penalty still causes a beta cutoff, return beta.                           //
 //                                                                            //
-// ---------------------------------------------------------------------------//
+// -------------------------------------------------------------------------- //
     if (!isPv && 
         !isNull &&
         !s.inCheck() &&
@@ -189,7 +190,7 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
             return beta;
     }
 
-// ---------------------------------------------------------------------------//
+// -------------------------------------------------------------------------- //
 //                                                                            //
 // Null move pruning. Make a null move and searched to a reduced to check     //
 // for fail high under the following conditions:                              //
@@ -198,7 +199,7 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
 //   3. The depth is high enough.                                             //
 //   4. There are enough non pawn pieces on the board.                        //
 //                                                                            //
-// ---------------------------------------------------------------------------//
+// -------------------------------------------------------------------------- //
     if (!isPv && !isNull && !s.inCheck() && depth > NullMoveDepth 
         && s.getNonPawnPieceCount(s.getOurColor()) > NullMoveCount)
     {
@@ -223,7 +224,6 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
         if (table_entry->key == s.getKey())
             best_move = table_entry->best;
     }
-
     // Generate moves and create the movelist.
     MoveList mlist(s, best_move, &history, ply);
 
@@ -240,7 +240,7 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
     while (m = mlist.getBestMove())
     {
         d = depth - 1;
-// ---------------------------------------------------------------------------//
+// -------------------------------------------------------------------------- //
 //                                                                            //
 // Early Pruning                                                              //
 //                                                                            //
@@ -252,27 +252,27 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
 //   4. Move itself does not give check.                                      //
 //   5. Side to move has at least 1 major or minor piece.                     //
 //                                                                            //
-// ---------------------------------------------------------------------------//
+// -------------------------------------------------------------------------- //
         if (!isPv &&
             bestScore > -CheckmateBound &&
             !s.inCheck() &&
             !s.givesCheck(m) &&
             s.getNonPawnPieceCount(s.getOurColor()))
         {
-// ---------------------------------------------------------------------------//
+// -------------------------------------------------------------------------- //
 //                                                                            //
 // Futility Pruning                                                           //
 //                                                                            //
 // Prune quiet moves at depth 1 that will not improve alpha.                  //
 //                                                                            //
-// ---------------------------------------------------------------------------//
+// -------------------------------------------------------------------------- //
             if (depth == 1 &&
                 s.isQuiet(m) &&
                 !isPromotion(m) &&
                 staticEval + 300 < a)
                 continue;
 
-// ---------------------------------------------------------------------------//
+// -------------------------------------------------------------------------- //
 //                                                                            //
 // Pruning based on SEE.                                                      //
 //                                                                            //
@@ -280,7 +280,7 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
 // prune the move. The calculation I'm currently using is:                    //
 //   see(move) < -pawn * 2^(depth - 1)                                        //
 //                                                                            //
-// ---------------------------------------------------------------------------//
+// -------------------------------------------------------------------------- //
             if (depth < 3 &&
                 s.see(m) < -Pawn_wt * (1 << (depth - 1)))
                 continue;
@@ -294,7 +294,6 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
         if (c.inCheck() && depth == 1)
             d++;
 
-
         // Scout alrogithm. Search the first node with a full window.
         if (first)
         {
@@ -306,7 +305,7 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
         }       
         else
         {
-// ---------------------------------------------------------------------------//
+// -------------------------------------------------------------------------- //
 //                                                                            //
 // Late move reduction. Perform a reduced depth search (by 1 ply) under the   //
 // following conditions:                                                      //
@@ -317,7 +316,7 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
 //   5. The move does not promote a piece.                                    //
 //   6. The move does not capture a piece.                                    //
 //                                                                            //
-// ---------------------------------------------------------------------------//
+// -------------------------------------------------------------------------- //
             if (count > LmrCount && depth > LmrDepth && !isPv && !s.inCheck()
                 && !c.inCheck() && !s.isCapture(m) && !isPromotion(m))
                 score = -scout_search(c, si, d - 1, ply + 1, -(a + 1), -a, false, isNull, false);
@@ -379,7 +378,6 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
 void iterative_deepening(State& s, SearchInfo& si)
 {
     int score;
-
     // Iterative deepening.
     for (int d = 1; !si.quit; ++d)
     {
