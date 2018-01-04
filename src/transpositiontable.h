@@ -18,6 +18,17 @@ struct TableEntry
     bool ancient;
 };
 
+inline std::ostream& operator<<(std::ostream& o, const TableEntry& tableEntry)
+{
+    o << "Best Move: " << toString(tableEntry.best) << '\n'
+      << "    Depth: " << tableEntry.depth << '\n'
+      << "    Score: " << tableEntry.score << '\n'
+      << "     Node: " << (tableEntry.type == pv  ? "PV" 
+                         : tableEntry.type == cut ? "CUT" 
+                         : "ALL")
+      << '\n';
+}
+
 class TranspositionTable
 {
 public:
@@ -67,11 +78,12 @@ public:
         if (table[i].depth < depth ||
             table[i].ancient)
         {
-            table[i].key   = key;
-            table[i].best  = best;
-            table[i].type  = type;
-            table[i].depth = depth;
-            table[i].score = score;
+            table[i].key     = key;
+            table[i].best    = best;
+            table[i].type    = type;
+            table[i].depth   = depth;
+            table[i].score   = score;
+            table[i].ancient = false;
         }
     }
 private:
