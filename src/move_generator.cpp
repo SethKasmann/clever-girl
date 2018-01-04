@@ -876,7 +876,7 @@ Move MoveList::getBestMove()
             for (int i = 0; i < mSize; ++i)
             {
                 int see = mState.see(mList[i].move);
-                if (see > 0)
+                if (see >= 0)
                     mList[i].score = mState.onSquare(getDst(mList[i].move))
                                    - mState.onSquare(getSrc(mList[i].move));
                 else
@@ -1060,7 +1060,7 @@ Move MoveList::getBestMove()
 // tried.                                                                     //
 //                                                                            //
 // ---------------------------------------------------------------------------//
-        case qAttacks: 
+        case qAttacks:
             while (mSize)
             {
                 std::iter_swap(std::max_element(mList.begin(), mList.begin() + mSize), 
