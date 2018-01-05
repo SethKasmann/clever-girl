@@ -32,14 +32,16 @@ struct SearchInfo
     SearchInfo() 
     : moveTime(0)
     , nodes(0)
+    , prevNodes(0)
     , moves_to_go(0)
     , quit(false)
     , infinite(false)
+    , depth(Max_ply)
     , time{}
     , inc{}
     {}
     int time[Player_size], inc[Player_size];
-    int moves_to_go, depth, max_nodes, nodes, mate;
+    int moves_to_go, depth, max_nodes, nodes, prevNodes, mate;
     int64_t moveTime;
     Clock clock;
     bool infinite, ponder, quit;
