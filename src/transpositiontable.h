@@ -27,6 +27,8 @@ inline std::ostream& operator<<(std::ostream& o, const TableEntry& tableEntry)
                          : tableEntry.type == cut ? "CUT" 
                          : "ALL")
       << '\n';
+
+      return o;
 }
 
 class TranspositionTable
@@ -76,7 +78,8 @@ public:
     {
         int i = key % table.size();
         if (table[i].depth < depth ||
-            table[i].ancient)
+            table[i].ancient ||
+            type == pv)
         {
             table[i].key     = key;
             table[i].best    = best;
