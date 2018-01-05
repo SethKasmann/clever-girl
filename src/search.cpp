@@ -329,7 +329,7 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
             // If an alpha improvement caused fail high, research using a full window.
             if (a < score && b > score)
             {
-                score = -scout_search(c, si, d, ply + 1, -b, -a, isPv, isNull, false);
+                score = -scout_search(c, si, d, ply + 1, -b, -a, true, isNull, false);
             }
         }
 
@@ -367,7 +367,6 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
         lineManager.pushToPv(best_move, s.getKey(), ply, a);
     }
 
-    // Store in transposition table, using depth first replacement.
     ttable.store(s.getKey(), best_move, a <= alpha ? all : a >= b ? cut : pv, depth, a);
 
     // Fail-Hard alpha beta score.
@@ -381,6 +380,9 @@ void iterative_deepening(State& s, SearchInfo& si)
     // Iterative deepening.
     for (int d = 1; !si.quit; ++d)
     {
+        if (d == si.depth)
+            break;
+
         score = scout_search(s, si, d, 0, Neg_inf, Pos_inf, true, false, true);
 
         if (lineManager.getPvMove() == nullMove)
@@ -418,12 +420,17 @@ void iterative_deepening(State& s, SearchInfo& si)
         lineManager.printPv();
         std::cout << std::endl;
 
+        // This check handles the case where the search tree was the same
+        // exact size as the previous depth (can occur for a forced draw
+        // or mating sequence).
+        if (si.nodes == si.prevNodes)
+            break;
+
         // Reset node count.
+        si.prevNodes = si.nodes;
         si.nodes = 0;
     }
 
-    s.make_t(lineManager.getPvMove());
-    history.push(std::make_pair(lineManager.getPvMove(), s.getKey()));
     std::cout << "bestmove " << toString(lineManager.getPvMove()) << std::endl;
 }
 
