@@ -57,7 +57,6 @@ int qsearch(State& s, SearchInfo& si, int ply, int alpha, int beta)
     int bestScore = Neg_inf;
     int score;
     Move m;
-    State c;
 
     while (m = mlist.getBestMove())
     {
@@ -90,7 +89,7 @@ int qsearch(State& s, SearchInfo& si, int ply, int alpha, int beta)
             }
         }
 
-        std::memmove(&c, &s, sizeof s);
+        State c(s);
         c.make_t(m);
 
         history.push(std::make_pair(m, c.getKey()));
@@ -233,7 +232,6 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
     int score;
     int bestScore = Neg_inf;
     Move m;
-    State c;
     bool first = true;
     int count = 0;
 
@@ -286,7 +284,7 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
                 continue;
         }
 
-        std::memmove(&c, &s, sizeof s);              // Copy current state.
+        State c(s);
         c.make_t(m);                                 // Make move.
         history.push(std::make_pair(m, c.getKey())); // Add move to gamelist.
         count++;
@@ -300,7 +298,7 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
             // Set the best move to the first move just in case no move
             // improves alpha.
             best_move = m;
-            score = -scout_search(c, si, d, ply + 1, -b, -a, isPv, isNull, false);
+            score = -scout_search(c, si, d, ply + 1, -b, -a, isPv, false, false);
             first = false;
         }       
         else
@@ -319,17 +317,17 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
 // -------------------------------------------------------------------------- //
             if (count > LmrCount && depth > LmrDepth && !isPv && !s.inCheck()
                 && !c.inCheck() && !s.isCapture(m) && !isPromotion(m))
-                score = -scout_search(c, si, d - 1, ply + 1, -(a + 1), -a, false, isNull, false);
+                score = -scout_search(c, si, d - 1, ply + 1, -(a + 1), -a, false, false, false);
             else
                 score = a + 1;
 
             if (score > a)
-                score = -scout_search(c, si, d, ply + 1, -(a + 1), -a, false, isNull, false);
+                score = -scout_search(c, si, d, ply + 1, -(a + 1), -a, false, false, false);
 
             // If an alpha improvement caused fail high, research using a full window.
             if (a < score && b > score)
             {
-                score = -scout_search(c, si, d, ply + 1, -b, -a, true, isNull, false);
+                score = -scout_search(c, si, d, ply + 1, -b, -a, true, false, false);
             }
         }
 

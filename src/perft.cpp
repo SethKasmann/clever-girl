@@ -60,12 +60,11 @@ int perft(State & s, int depth)
 	if (depth == 1)
 		return mlist.size();
 
-	State c;
 	Move m;
 
 	while (m = mlist.getBestMove())
 	{
-		std::memmove(&c, &s, sizeof s);
+		State c(s);
 		c.make_t(m);
 		nodes += perft(c, depth-1);
 	}
