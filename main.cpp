@@ -58,11 +58,6 @@ void choose(State & s)
 int main(int argc, char* argv[])
 {
     init();
-    //perftTestDebug();
-    //perftTest();
-    //State s("rnbqkbnr/ppp1pppp/8/3p4/Q1P5/8/PP1PPPPP/RNB1KBNR b KQkq -");
-    //std::cout << s.see(1988) << '\n';
-    //ccrTest();
     uci();
     return 0;
 } 
