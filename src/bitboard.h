@@ -43,6 +43,7 @@ static const U64 Rank_5 = 0x000000FF00000000ULL;
 static const U64 Rank_6 = 0x0000FF0000000000ULL;
 static const U64 Rank_7 = 0x00FF000000000000ULL;
 static const U64 Rank_8 = 0xFF00000000000000ULL;
+static const U64 RankPromo = Rank_1 | Rank_8;
 
 static const U64 File_a = 0x8080808080808080ULL;
 static const U64 File_b = 0x4040404040404040ULL;
@@ -135,13 +136,19 @@ inline Square get_lsb(U64 bb)
       return static_cast<Square>(__builtin_ctzll(bb));
 #else
       // DeBrujin Method
-      static const int DeBrujin = 0x077CB531;
-      static const int DeBrujin_table[32] =
+      static const U64 DeBrujin = 0x03f79d71b4cb0a89;
+      static const int DeBrujin_table[64] =
       {
-         0,  1,  28, 2,  29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4,  8
-         31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6,  11, 5,  10, 9
+          0,  1, 48,  2, 57, 49, 28,  3,
+         61, 58, 50, 42, 38, 29, 17,  4,
+         62, 55, 59, 36, 53, 51, 43, 22,
+         45, 39, 33, 30, 24, 18, 12,  5,
+         63, 47, 56, 27, 60, 41, 37, 16,
+         54, 35, 52, 21, 44, 32, 23, 11,
+         46, 26, 40, 15, 34, 20, 31, 10,
+         25, 14, 19,  9, 13,  8,  7,  6
       };
-      return static_cast<Square>(DeBrujin_table[((bb & -bb) * DeBrujin) >> 27]);
+      return static_cast<Square>(DeBrujin_table[((bb & -bb) * DeBrujin) >> 58]);
 #endif
 }
 
