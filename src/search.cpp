@@ -298,7 +298,7 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
             // Set the best move to the first move just in case no move
             // improves alpha.
             best_move = m;
-            score = -scout_search(c, si, d, ply + 1, -b, -a, isPv, false, false);
+            score = -scout_search(c, si, d, ply + 1, -b, -a, isPv, isNull, false);
             first = false;
         }       
         else
@@ -317,17 +317,17 @@ int scout_search(State& s, SearchInfo& si, int depth, int ply, int alpha, int be
 // -------------------------------------------------------------------------- //
             if (count > LmrCount && depth > LmrDepth && !isPv && !s.inCheck()
                 && !c.inCheck() && !s.isCapture(m) && !isPromotion(m))
-                score = -scout_search(c, si, d - 1, ply + 1, -(a + 1), -a, false, false, false);
+                score = -scout_search(c, si, d - 1, ply + 1, -(a + 1), -a, false, isNull, false);
             else
                 score = a + 1;
 
             if (score > a)
-                score = -scout_search(c, si, d, ply + 1, -(a + 1), -a, false, false, false);
+                score = -scout_search(c, si, d, ply + 1, -(a + 1), -a, false, isNull, false);
 
             // If an alpha improvement caused fail high, research using a full window.
             if (a < score && b > score)
             {
-                score = -scout_search(c, si, d, ply + 1, -b, -a, true, false, false);
+                score = -scout_search(c, si, d, ply + 1, -b, -a, true, isNull, false);
             }
         }
 
@@ -422,6 +422,10 @@ void iterative_deepening(State& s, SearchInfo& si)
         // exact size as the previous depth (can occur for a forced draw
         // or mating sequence).
         if (si.nodes == si.prevNodes)
+            break;
+
+        // Break if there's not enough time for the next search.
+        if (si.clock.elapsed<std::chrono::milliseconds>() * 2 > si.moveTime)
             break;
 
         // Reset node count.
