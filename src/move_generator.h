@@ -29,13 +29,20 @@ enum MoveStage
     qAttacks,
     qQuietChecksGen,
     qQuietChecks,
-    qKingEvadeBestMove,
-    qKingEvadeAttacksGen,
-    qKingEvadeAttacks,
-    nKingEvadeBestMove,
-    nKingEvadeMovesGen,
-    nKingEvadeMoves,
+    nEvadeBestMove,
+    nEvadeMovesGen,
+    nEvade,
     allLegal
+};
+
+enum class MoveType
+{
+    Attacks,
+    Quiets,
+    Evasions,
+    QuietChecks,
+    QuietNonChecks,
+    All
 };
 
 class MoveList
@@ -49,19 +56,17 @@ public:
     Move getBestMove();
     Move pop();
     void checkLegal();
-    void pushPawnCaptures();
-    void generateAttacks();
-    void generateQuiets();
-    void generateQuietChecks();
-    void generateAllMoves();
-    template<PieceType P> void pushQuietMoves();
-    template<PieceType P> void pushAttackMoves();
-    template<PieceType P> void pushQuietChecks(U64 discover);
-    template<PieceType P> void pushQuietNonChecks(U64 discover);
+    template<MoveType T> void generateMoves();
+
+    template<MoveType T, Color C> void pushPawnMoves();
+    template<MoveType T, PieceType P> void pushMoves();
+    template<MoveType T> void pushCastle();
+    template<MoveType T> void pushPromotion(Square src, Square dst);
     friend std::ostream & operator << (std::ostream & o, const MoveList & mlist);
 private:
     bool mQSearch;
     U64 mValid;
+    U64 mDiscover;
     const State& mState;
     const History* mHistory;
     int mPly;

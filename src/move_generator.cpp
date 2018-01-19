@@ -22,16 +22,10 @@ MoveList::MoveList(const State& pState, Move pBest, History* pHistory, int pPly,
 
     if (mState.inCheck())
     {
-        if (mState.inDoubleCheck())
-            mStage = mQSearch ? qKingEvadeBestMove : nKingEvadeBestMove;
-        else
-        {
-            Square checker = get_lsb(mState.getCheckersBB());
-            Square king = mState.getKingSquare(mState.getOurColor());
-            mValid = between_dia[king][checker] | between_hor[king][checker]
-                   | mState.getCheckersBB();
-            mStage = nBestMove;
-        }
+        Square k = mState.getKingSquare(mState.getOurColor());
+        Square c = get_lsb(mState.getCheckersBB());
+        mValid = between[k][c] | mState.getCheckersBB();
+        mStage = nEvadeBestMove;
     }
     else
         mStage = mQSearch ? qBestMove : nBestMove;
@@ -58,676 +52,309 @@ bool MoveList::contains(Move move) const
             != mList.begin() + mSize;
 }
 
-template<PieceType P>
-void MoveList::pushQuietChecks(U64 pDiscover)
+template<MoveType T>
+void MoveList::pushPromotion(Square src, Square dst)
 {
-    U64 m;
-    Square dst;
-    Color c = mState.getOurColor();
-
-    for (Square src : mState.getPieceList<P>(c))
+    const Color C = mState.getOurColor();
+    if (square_bb[dst] & Not_a_file && square_bb[dst+1] & mState.getOccupancyBB(!C))
     {
-        if (src == no_sq)
-            break;
+        if (T == MoveType::Attacks || T == MoveType::All)
+            push(makeMove(src, dst+1, queen));
 
-        m = mState.getAttackBB<P>(src) & mState.getEmptyBB();
-
-        if (square_bb[src] & pDiscover)
-            m &= ~coplanar[src][mState.getKingSquare(!c)] |
-                 mState.getCheckSquaresBB(P);
-        else
-            m &= mState.getCheckSquaresBB(P);
-
-        while (m)
-            push(makeMove(src, pop_lsb(m)));
-    }
-}
-
-template<PieceType P>
-void MoveList::pushQuietNonChecks(U64 pDiscover)
-{
-    U64 m;
-    Square dst;
-    Color c = mState.getOurColor();
-
-    for (Square src : mState.getPieceList<P>(c))
-    {
-        if (src == no_sq)
-            break;
-        m  = mState.getAttackBB<P>(src) & mState.getEmptyBB();
-        while (m)
+        if (T == MoveType::Quiets || T == MoveType::All)
         {
-            dst = pop_lsb(m);
-            if (!(square_bb[dst] & mState.getCheckSquaresBB(P)) &&
-                !(square_bb[src] & pDiscover 
-                  && !(coplanar[src][dst] & mState.getPieceBB<king>(!c))))
-                push(makeMove(src, dst));
+            push(makeMove(src, dst+1, knight));
+            push(makeMove(src, dst+1, rook));
+            push(makeMove(src, dst+1, bishop));
         }
-    }
-}
 
-template<>
-void MoveList::pushQuietChecks<pawn>(U64 pDiscover)
-{
-    Square dst;
-    U64 promo, pawnChecks;
-    int dir;
-    Color us, them;
-
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Some initialization. Based on the color to move, store the colors of the   //
-// players, a mask of the promotion rank, and the direction of a pawn push.   //
-// This is only done to make the remaining code more readable.                //
-//                                                                            //
-// More importantly, we initialize discovered checks and pawn checks.         //
-// Discovered checks are pieces which are pinned to the enemy king by their   //
-// own slider. This means if they make a quiet move that is not directly      //
-// towards are away from the king (on the same diagonal/horizontal), then the //
-// move will give discovered check.                                           //
-//                                                                            //
-// Also initialize the bitboard for pawn checks - which is simply where a     //
-// pawn needs to be to give check. We can then attempt to push pawns AND      //
-// bitwise AND them with this bitboard to confirm whether or not they give    //
-// check.                                                                     //
-//                                                                            //
-// -------------------------------------------------------------------------- //    
-
-    if (mState.getOurColor() == white)
-    {
-        us = white;
-        them = black;
-        promo = Rank_8;
-        dir = 8;
-    }
-    else
-    {
-        us = black;
-        them = white;
-        promo = Rank_1;
-        dir = -8;
-    }
-
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Iterate through the pawn piece list. We're looking for three cases:        //
-//   1. Pawn pushes that attack the enemy king.                               //
-//   2. Pawn knight promotions that check the enemy king.                     //
-//   3. Pawn pushes that cause discovered check from a slider.                //
-//                                                                            //
-// The third scenario is the most tricky. Since we already have a bitboard    //
-// containing the pieces which could give a discovered check, all we need to  //
-// do is bitwise AND the source square with the discovered check bitboard.    //
-// If the result is not zero, then check to see if the pawn is moving         //
-// towards the enemy king. To do this, bitwise AND coplanar[src][dst] with    //
-// the location of the enemy king. If the result is zero then the pawn did    //
-// not move towards the enemy king and there was a discovered check.          //
-//                                                                            //
-// -------------------------------------------------------------------------- //
-    for (Square src : mState.getPieceList<pawn>(us))
-    {
-        if (src == no_sq)
-            break;
-
-        dst = src + dir;
-        if (dst & promo)
+        if (T == MoveType::Evasions)
         {
-            if (square_bb[dst] & Not_a_file && square_bb[dst+1] & mState.getOccupancyBB(them)
-              & mState.getAttackBB<knight>(mState.getKingSquare(them)))
-                push(makeMove(src, dst+1, knight));
-            if (square_bb[dst] & Not_h_file && square_bb[dst-1] & mState.getOccupancyBB(them)
-              & mState.getAttackBB<knight>(mState.getKingSquare(them)))
-                push(makeMove(src, dst-1, knight));
-            if (square_bb[dst] & mState.getEmptyBB() & mState.getAttackBB<knight>(mState.getKingSquare(them)))
-                push(makeMove(src, dst, knight));
-        }
-        else
-        {
-            if (square_bb[dst] & mState.getEmptyBB())
+            if (square_bb[dst+1] & mValid)
             {
-                if (square_bb[dst] & mState.getCheckSquaresBB(pawn))
-                    push(makeMove(src, dst));
-                else if (square_bb[src] & pDiscover 
-                      && !(coplanar[src][dst] & mState.getPieceBB<king>(them)))
-                    push(makeMove(src, dst));
-                if (pawn_dbl_push[us][src] & mState.getEmptyBB())
-                {
-                    if (square_bb[dst+dir] & mState.getCheckSquaresBB(pawn))
-                        push(makeMove(src, dst+dir));
-                    else if (square_bb[src] & pDiscover 
-                          && !(coplanar[src][dst+dir] & mState.getPieceBB<king>(them)))
-                        push(makeMove(src, dst+dir));
-                }
-            }
-        }
-    }
-}
-
-template<>
-void MoveList::pushQuietNonChecks<pawn>(U64 pDiscover)
-{
-    Square dst;
-    U64 promo, pawnChecks;
-    int dir;
-    Color us, them;
-
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Some initialization. Based on the color to move, store the colors of the   //
-// players, a mask of the promotion rank, and the direction of a pawn push.   //
-// This is only done to make the remaining code more readable.                //
-//                                                                            //
-// More importantly, we initialize discovered checks and pawn checks.         //
-// Discovered checks are pieces which are pinned to the enemy king by their   //
-// own slider. This means if they make a quiet move that is not directly      //
-// towards are away from the king (on the same diagonal/horizontal), then the //
-// move will give discovered check.                                           //
-//                                                                            //
-// Also initialize the bitboard for pawn checks - which is simply where a     //
-// pawn needs to be to give check. We can then attempt to push pawns AND      //
-// bitwise AND them with this bitboard to confirm whether or not they give    //
-// check.                                                                     //
-//                                                                            //
-// -------------------------------------------------------------------------- //    
-
-    if (mState.getOurColor() == white)
-    {
-        us = white;
-        them = black;
-        promo = Rank_8;
-        dir = 8;
-    }
-    else
-    {
-        us = black;
-        them = white;
-        promo = Rank_1;
-        dir = -8;
-    }
-
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Iterate through the pawn piece list. We're looking for three cases:        //
-//   1. Pawn pushes that attack the enemy king.                               //
-//   2. Pawn knight promotions that check the enemy king.                     //
-//   3. Pawn pushes that cause discovered check from a slider.                //
-//                                                                            //
-// The third scenario is the most tricky. Since we already have a bitboard    //
-// containing the pieces which could give a discovered check, all we need to  //
-// do is bitwise AND the source square with the discovered check bitboard.    //
-// If the result is not zero, then check to see if the pawn is moving         //
-// towards the enemy king. To do this, bitwise AND coplanar[src][dst] with    //
-// the location of the enemy king. If the result is zero then the pawn did    //
-// not move towards the enemy king and there was a discovered check.          //
-//                                                                            //
-// -------------------------------------------------------------------------- //
-    for (Square src : mState.getPieceList<pawn>(us))
-    {
-        if (src == no_sq)
-            break;
-
-        dst = src + dir;
-        if (dst & promo)
-        {
-            if (square_bb[dst] & Not_a_file && square_bb[dst+1] & mState.getOccupancyBB(them) & mValid)
-            {
-                push(makeMove(src, dst+1, knight));
-                push(makeMove(src, dst+1, rook));
-                push(makeMove(src, dst+1, bishop));
-            }
-            if (square_bb[dst] & Not_h_file && square_bb[dst-1] & mState.getOccupancyBB(them) & mValid)
-            {
-                push(makeMove(src, dst-1, knight));
-                push(makeMove(src, dst-1, rook));
-                push(makeMove(src, dst-1, bishop));
-            }
-            if (dst & mState.getEmptyBB() & mValid)
-            {
-                push(makeMove(src, dst, knight));
-                push(makeMove(src, dst, rook));
-                push(makeMove(src, dst, bishop));
-            }
-        }
-        else
-        {
-            if (square_bb[dst] & mState.getEmptyBB())
-            {
-                if (!(square_bb[src] & pDiscover 
-                      && !(coplanar[src][dst] & mState.getPieceBB<king>(them))) &&
-                    square_bb[dst] & ~mState.getCheckSquaresBB(pawn))
-                    push(makeMove(src, dst));
-                if (pawn_dbl_push[us][src] & square_bb[dst+dir] & mState.getEmptyBB())
-                {
-                    if (square_bb[dst+dir] & ~mState.getCheckSquaresBB(pawn) &&
-                        !(square_bb[src] & pDiscover 
-                          && !(coplanar[src][dst+dir] & mState.getPieceBB<king>(them))))
-                        push(makeMove(src, dst+dir));
-                }
-            }
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Push quiet king checks. This can only happen if the king causes a          //
-// discovered check, or the king makes a castling move that causes check.     //
-//                                                                            //
-// -------------------------------------------------------------------------- //
-template<>
-void MoveList::pushQuietChecks<king>(U64 pDiscover)
-{
-    Square src, dst;
-    U64 m;
-    Color c;
-
-    c = mState.getOurColor();
-    src = mState.getKingSquare(c);
-
-    if (mState.getPieceBB<king>(c) & pDiscover)
-    {
-        m = mState.getAttackBB<king>(src) & 
-            mState.getEmptyBB();
-
-        while (m)
-        {
-            dst = pop_lsb(m);
-            if (!(coplanar[src][dst] & mState.getPieceBB<king>(!c)))
-                push(makeMove(src, dst));
-        }
-    }
-
-    if (mState.canCastleKingside() &&
-        square_bb[src-1] & mState.getCheckSquaresBB(rook) &&
-        !(between_hor[src][src-3] & mState.getOccupancyBB()) &&
-        !mState.attacked(src-1) && 
-        !mState.attacked(src-2))
-        push(makeCastle(src, src-2));
-
-    if (mState.canCastleQueenside() &&
-        square_bb[src+1] & mState.getCheckSquaresBB(rook) &&
-        !(between_hor[src][src+4] & mState.getOccupancyBB())
-        && !mState.attacked(src+1)
-        && !mState.attacked(src+2))
-        push(makeCastle(src, src+2)); 
-}
-
-template<>
-void MoveList::pushQuietNonChecks<king>(U64 pDiscover)
-{
-    Square src, dst;
-    U64 m;
-    Color c;
-
-    c = mState.getOurColor();
-    src = mState.getKingSquare(c);
-
-    m = mState.getAttackBB<king>(src) & 
-        mState.getEmptyBB();
-
-    while (m)
-    {
-        dst = pop_lsb(m);
-        if (mState.getPieceBB<king>(c) & pDiscover) 
-        {
-            if(coplanar[src][dst] & mState.getPieceBB<king>(!c))
-            {
-                push(makeMove(src, dst));
-            }
-        }
-        else
-            push(makeMove(src, dst));
-    }
-
-    if (mState.canCastleKingside() &&
-        !(square_bb[src-1] & mState.getCheckSquaresBB(rook)) &&
-        !(between_hor[src][src-3] & mState.getOccupancyBB()) &&
-        !mState.attacked(src-1) && 
-        !mState.attacked(src-2))
-        push(makeCastle(src, src-2));
-
-    if (mState.canCastleQueenside() &&
-        !(square_bb[src+1] & mState.getCheckSquaresBB(rook)) &&
-        !(between_hor[src][src+4] & mState.getOccupancyBB())
-        && !mState.attacked(src+1)
-        && !mState.attacked(src+2))
-        push(makeCastle(src, src+2)); 
-}
-
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Add only captures to the move list. This function will cover captures      //
-// for:                                                                       //
-//                                                                            //
-//   Knights                                                                  //
-//   Bishop                                                                   //
-//   Rooks                                                                    //
-//   Queens                                                                   //
-//                                                                            //
-// Since king and pawn moves are trickier, they need their own                //
-// specialization.                                                            //
-//                                                                            //
-// -------------------------------------------------------------------------- //
-template <PieceType P>
-void MoveList::pushAttackMoves()
-{
-    U64 m;
-    for (Square src : mState.getPieceList<P>(mState.getOurColor()))
-    {
-        if (src == no_sq)
-            break;
-        m  = mState.getAttackBB<P>(src) & mValid & mState.getOccupancyBB(mState.getTheirColor());;
-        while (m)
-            push(makeMove(src, pop_lsb(m)));
-    }
-}
-
-
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Specialization to add only pawn capture moves. Moves that promote to a     //
-// queen are generated as well - even if they do not capture a piece.         //
-//                                                                            //
-// -------------------------------------------------------------------------- //
-template<>
-void MoveList::pushAttackMoves<pawn>()
-{
-    U64 promo, attack;
-    Square dst;
-    int dir;
-    Color us, them;
-
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Some initialization to make the code more readable. Store the colors of    //
-// the players, the promotion rank (as a mask), and the direction of a single //
-// pawn push.                                                                 //
-//                                                                            //
-// -------------------------------------------------------------------------- //
-    if (mState.getOurColor() == white)
-    {
-        us = white;
-        them = black;
-        promo = Rank_8;
-        dir = 8;
-    }
-    else
-    {
-        us = black;
-        them = white;
-        promo = Rank_1;
-        dir = -8;
-    }
-
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Iterate through the pawn move list. Since we are only generating captures  //
-// and queen promotions, there's only a few cases to cover:                   //
-//   1. Queen promotions that attack diagonally left, diagonally right, or    //
-//      push.                                                                 //
-//   2. Pawn attacks diagonally left, and right.                              //
-//   3. The trickiest - en-passant.                                           //
-//                                                                            //
-// -------------------------------------------------------------------------- //
-    for (Square src : mState.getPieceList<pawn>(us))
-    {
-        if (src == no_sq)
-            break;
-
-        dst = src + dir;
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Queen promotions:                                                          //
-// If the destination of a pawn push bitwise AND with the promotion mask,     //
-// check for queen promotions. First bitwise AND the destination square with  //
-// the notAFile or notHFile mask (depending on the direction). This mask will //
-// check the pawn can legally capture a direction without sliding off the     //
-// board. If this is true, bitwise AND the destination square (+/- one), the  //
-// occupancy of the opponent, and the bitboard of valid moves. If the         //
-// operation is successful, then the move is legal.                           //
-//                                                                            //
-// -------------------------------------------------------------------------- //
-        if (dst & promo)
-        {
-            if (square_bb[dst] & Not_a_file && square_bb[dst+1] & mState.getOccupancyBB(them) & mValid)
                 push(makeMove(src, dst+1, queen));
-            if (square_bb[dst] & Not_h_file && square_bb[dst-1] & mState.getOccupancyBB(them) & mValid)
-                push(makeMove(src, dst-1, queen));
-            if (dst & mState.getEmptyBB() & mValid)
-                push(makeMove(src, dst, queen));
-        }
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Pawn captures:                                                             //
-// If the move is not a promotion, then check for normal captures. First,     //
-// bitwise AND the destination square with the notAFile or notHFile mask      //
-// (depending on the direction). This mask will check the pawn can legally    //
-// capture a direction without sliding off the board. If this is true,        //
-// bitwise AND the destination square (+/- one), the occupancy of the         //
-// opponent, and the bitboard of valid moves. If the operation is successful, //
-// then the move is legal.                                                    //
-//                                                                            //
-// -------------------------------------------------------------------------- //
-        else
-        {
-            if (square_bb[dst] & Not_a_file && square_bb[dst+1] & mState.getOccupancyBB(them) & mValid)
-                push(makeMove(src, dst+1));
-            if (square_bb[dst] & Not_h_file && square_bb[dst-1] & mState.getOccupancyBB(them) & mValid)
-                push(makeMove(src, dst-1));
-        }
-    }
-
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// En-passant:                                                                //
-// This is the toughest case. First make sure the en-passant bitboard is not  //
-// zero. If so, make sure the pawn that we want to capture is a valid move    //
-// (for example, if we are in check, make sure capturing this pawn gets us    //
-// out of check).                                                             //
-// Find the possible attackers - since there are two. Bitwise AND this        //
-// bitboard with the bitboard of the side-to-move's pawns. There is a rare    //
-// edge case where both of these pawns are pinned to the enemy king - but     //
-// wouldn't show up in the bitboard of pinned pieces (since there are TWO     //
-// pawns being removed from the same rank).                                   //
-// The check(mask) function handles this case. It will simply remove the bits //
-// from the occupancy and see if it leaves the king in check. Since           //
-// en-passant is so rare I'm not worried about the overhead cost of this      //
-// check.                                                                     //
-//                                                                            //
-// -------------------------------------------------------------------------- //
-    if (mState.getEnPassantBB() && mValid & pawn_push[them][get_lsb(mState.getEnPassantBB())])
-    {
-        dst = get_lsb(mState.getEnPassantBB());
-        attack = pawn_attacks[them][dst] & mState.getPieceBB<pawn>(us);
-        while (attack)
-            push(makeMove(pop_lsb(attack), dst));
-    }
-}
-
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Specialization to add only king capture moves. Valid king moves are given  //
-// to the move generator on initialization - so simply bitwise AND this       //
-// bitboard with the opponent's pieces.                                       //
-//                                                                            //
-// -------------------------------------------------------------------------- //
-template<>
-void MoveList::pushAttackMoves<king>()
-{
-    U64 m;
-    Square k, dst;
-
-    k = mState.getKingSquare(mState.getOurColor());
-
-    m = mState.getAttackBB<king>(k) & mState.getOccupancyBB(mState.getTheirColor());
-
-    while (m) 
-        push(makeMove(k, pop_lsb(m)));
-}
-
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Add only quiet moves (non captures) to the move list. This function will   //
-// cover quiet moves for:                                                     //
-//                                                                            //
-//   Knights                                                                  //
-//   Bishop                                                                   //
-//   Rooks                                                                    //
-//   Queens                                                                   //
-//                                                                            //
-// Since king and pawn moves are trickier, they need their own                //
-// specialization.                                                            //
-//                                                                            //
-// -------------------------------------------------------------------------- //
-template <PieceType P>
-void MoveList::pushQuietMoves()
-{
-    U64 m;
-    for (Square src : mState.getPieceList<P>(mState.getOurColor()))
-    {
-        if (src == no_sq)
-            break;
-        m  = mState.getAttackBB<P>(src) & mValid & mState.getEmptyBB();
-        while (m)
-            push(makeMove(src, pop_lsb(m)));
-    }
-}
-
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Specialization to add only pawn quiet (non capture) moves. This also       //
-// includes under promotions, and underpromotions that capture a piece.       //
-//                                                                            //
-// -------------------------------------------------------------------------- //
-template<>
-void MoveList::pushQuietMoves<pawn>()
-{
-    U64 promo;
-    Square dst;
-    int dir;
-    Color us, them;
-
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Some initialization to make the code more readable. Store the colors of    //
-// the players, the promotion rank (as a mask), and the direction of a single //
-// pawn push.                                                                 //
-//                                                                            //
-// -------------------------------------------------------------------------- //
-    if (mState.getOurColor() == white)
-    {
-        us = white;
-        them = black;
-        promo = Rank_8;
-        dir = 8;
-    }
-    else
-    {
-        us = black;
-        them = white;
-        promo = Rank_1;
-        dir = -8;
-    }
-
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Iterate through the pawn move list. Since we are only generating quiets    //
-// and under promotions, there's only a few cases to cover:                   //
-//   1. Under promotions that attack diagonally left, diagonally right, or    //
-//      push.                                                                 //
-//   2. Single pawn pushes.                                                   //
-//   3. Double pawn pushes.                                                   //
-//                                                                            //
-// -------------------------------------------------------------------------- //
-    for (Square src : mState.getPieceList<pawn>(us))
-    {
-        if (src == no_sq)
-            break;
-
-        dst = src + dir;
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Under promotions:                                                          //
-// If the destination of a pawn push bitwise AND with the promotion mask,     //
-// check for under promotions. First bitwise AND the destination square with  //
-// the notAFile or notHFile mask (depending on the direction). This mask will //
-// check the pawn can legally capture a direction without sliding off the     //
-// board. If this is true, bitwise AND the destination square (+/- one), the  //
-// occupancy of the opponent, and the bitboard of valid moves. If the         //
-// operation is successful, then the move is legal.                           //
-//                                                                            //
-// -------------------------------------------------------------------------- //
-        if (dst & promo)
-        {
-            if (square_bb[dst] & Not_a_file && square_bb[dst+1] & mState.getOccupancyBB(them) & mValid)
-            {
                 push(makeMove(src, dst+1, knight));
                 push(makeMove(src, dst+1, rook));
                 push(makeMove(src, dst+1, bishop));
             }
-            if (square_bb[dst] & Not_h_file && square_bb[dst-1] & mState.getOccupancyBB(them) & mValid)
+        }
+
+        if (T == MoveType::QuietChecks)
+        {
+            if (mState.getCheckSquaresBB(knight) & square_bb[dst+1])
+                push(makeMove(src, dst+1, knight));
+        }
+        if (T == MoveType::QuietNonChecks)
+        {
+            if (!(mState.getCheckSquaresBB(knight) & square_bb[dst+1]))
+                push(makeMove(src, dst+1, knight));
+            push(makeMove(src, dst+1, rook));
+            push(makeMove(src, dst+1, bishop));
+        }
+    }
+
+    if (square_bb[dst] & Not_h_file && square_bb[dst-1] & mState.getOccupancyBB(!C))
+    {
+        if (T == MoveType::Attacks || T == MoveType::All)
+            push(makeMove(src, dst-1, queen));
+
+        if (T == MoveType::Quiets || T == MoveType::All)
+        {
+            push(makeMove(src, dst-1, knight));
+            push(makeMove(src, dst-1, rook));
+            push(makeMove(src, dst-1, bishop));
+        }
+
+        if (T == MoveType::Evasions)
+        {
+            if (square_bb[dst-1] & mValid)
             {
+                push(makeMove(src, dst-1, queen));
                 push(makeMove(src, dst-1, knight));
                 push(makeMove(src, dst-1, rook));
                 push(makeMove(src, dst-1, bishop));
             }
-            if (dst & mState.getEmptyBB() & mValid)
+        }
+
+        if (T == MoveType::QuietChecks)
+        {
+            if (mState.getCheckSquaresBB(knight) & square_bb[dst-1])
+                push(makeMove(src, dst-1, knight));
+        }
+        if (T == MoveType::QuietNonChecks)
+        {
+            if (!(mState.getCheckSquaresBB(knight) & square_bb[dst-1]))
+                push(makeMove(src, dst-1, knight));
+            push(makeMove(src, dst-1, rook));
+            push(makeMove(src, dst-1, bishop));
+        }
+    }
+
+    if (square_bb[dst] & mState.getEmptyBB())
+    {
+        if (T == MoveType::Attacks || T == MoveType::All)
+            push(makeMove(src, dst, queen));
+
+        if (T == MoveType::Quiets || T == MoveType::All)
+        {
+            push(makeMove(src, dst, knight));
+            push(makeMove(src, dst, rook));
+            push(makeMove(src, dst, bishop));
+        }
+
+        if (T == MoveType::Evasions)
+        {
+            if (square_bb[dst] & mValid)
             {
+                push(makeMove(src, dst, queen));
                 push(makeMove(src, dst, knight));
                 push(makeMove(src, dst, rook));
                 push(makeMove(src, dst, bishop));
             }
         }
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Pawn single and double push:                                               //
-// Confirm the square for a single pawn push is empty. This is a condition    //
-// for both a single and double push. If this square is also valid, a single  //
-// pawn push is generated.                                                    //
-// For double pushes, check the source square with the double push mask.      //
-// Bitwise AND This result with the empty squares and the bitboard of valid   //
-// moves. If these conditions are true, generate a pawn double push.          //
-//                                                                            //
-// -------------------------------------------------------------------------- //
-        else
+
+        if (T == MoveType::QuietChecks)
         {
-            if (square_bb[dst] & mState.getEmptyBB())
-            {
-                if (square_bb[dst] & mValid)
-                    push(makeMove(src, dst));
-                if (pawn_dbl_push[mState.getOurColor()][src] & mState.getEmptyBB() & mValid)
-                    push(makeMove(src, dst+dir));
-            }
+            if (mState.getCheckSquaresBB(knight) & square_bb[dst])
+                push(makeMove(src, dst, knight));
+        }
+        if (T == MoveType::QuietNonChecks)
+        {
+            if (!(mState.getCheckSquaresBB(knight) & square_bb[dst]))
+                push(makeMove(src, dst, knight));
+            push(makeMove(src, dst, rook));
+            push(makeMove(src, dst, bishop));
         }
     }
 }
 
-template<>
-void MoveList::pushQuietMoves<king>()
+template<MoveType T, PieceType P>
+void MoveList::pushMoves()
 {
     U64 m;
-    Square k, dst;
+    Square dst;
+    Color c = mState.getOurColor();
 
-    k = mState.getKingSquare(mState.getOurColor());
+    for (Square src : mState.getPieceList<P>(c))
+    {
+        if (src == no_sq)
+            break;
 
-    m = mState.getAttackBB<king>(k) & mState.getEmptyBB();
+        m = mState.getAttackBB<P>(src) & mValid;
 
-    while (m) 
-        push(makeMove(k, pop_lsb(m)));
+        if (T == MoveType::QuietChecks)
+        {
+            if (square_bb[src] & mDiscover)
+            {
+                if (P == king)
+                    m &= ~coplanar[src][mState.getKingSquare(!c)];
+            }
+            else
+                m &= mState.getCheckSquaresBB(P);
+        }
+        if (T == MoveType::QuietNonChecks)
+        {
+            if (square_bb[src] & mDiscover)
+            {
+                if (P == king)
+                    m &= coplanar[src][mState.getKingSquare(!c)];
+                else
+                    continue;
+            }
+            else
+                m &= ~mState.getCheckSquaresBB(P);
+        }
 
-    if (mState.getCheckersBB()) return;
+        while (m)
+            push(makeMove(src, pop_lsb(m)));
 
-    if (mState.canCastleKingside()
-        && !(between_hor[k][k-3] & mState.getOccupancyBB())
-        && !mState.attacked(k-1) 
-        && !mState.attacked(k-2))
-        push(makeCastle(k, k-2));
+        if (P == king && T != MoveType::Attacks && T != MoveType::Evasions)
+            pushCastle<T>();
+    }
+}
 
-    if (mState.canCastleQueenside()
-        && !(between_hor[k][k+4] & mState.getOccupancyBB())
-        && !mState.attacked(k+1)
-        && !mState.attacked(k+2))
-        push(makeCastle(k, k+2));    
+template<MoveType T, Color C>
+void MoveList::pushPawnMoves()
+{
+    constexpr int U = C == white ? 8 : -8;
+    constexpr int L = C == white ? 9 : -7;
+    constexpr int R = C == white ? 7 : -9;
+
+    U64 promo, pawns;
+    Square dst;
+
+    pawns = mState.getPieceBB<pawn>(C);
+
+    promo = (C == white ? pawns << 8 : pawns >> 8) & RankPromo;
+
+    while (promo)
+    {
+        dst = pop_lsb(promo);
+        pushPromotion<T>(dst - U, dst);
+    }
+
+    if (T == MoveType::Attacks || T == MoveType::Evasions || T == MoveType::All)
+    {
+        U64 occ = ((T == MoveType::Evasions ? mState.getOccupancyBB(!C) & mValid
+                                            : mState.getOccupancyBB(!C))
+                  | mState.getEnPassantBB()) & ~RankPromo;
+
+        U64 left  = C == white ? (pawns & Not_a_file) << 9 & occ 
+                               : (pawns & Not_a_file) >> 7 & occ;
+        U64 right = C == white ? (pawns & Not_h_file) << 7 & occ
+                               : (pawns & Not_h_file) >> 9 & occ;
+
+        while (left)
+        {
+            dst = pop_lsb(left);
+            push(makeMove(dst - L, dst));
+        }
+
+        while (right)
+        {
+            dst = pop_lsb(right);
+            push(makeMove(dst - R, dst));
+        }
+    }
+
+    if (T != MoveType::Attacks)
+    {
+        U64 empty = mState.getEmptyBB() & ~RankPromo;
+
+        U64 up  = (C == white ? pawns << 8 : pawns >> 8) & empty;
+        U64 dbl = (C == white ? (up & Rank_3) << 8 
+                              : (up & Rank_6) >> 8) & empty;
+
+        if (T == MoveType::Evasions)
+        {
+            up  &= mValid;
+            dbl &= mValid;
+        }
+
+        if (T == MoveType::QuietChecks)
+        {
+            U64 dis;
+
+            up  &= mState.getCheckSquaresBB(pawn);
+            dbl &= mState.getCheckSquaresBB(pawn);
+
+            dis = mDiscover & pawns & ~file_bb[mState.getKingSquare(!C)];
+            dis = (C == white ? dis << 8 : dis >> 8) & empty;
+            up  |= dis;
+            dbl |= (C == white ? (dis & Rank_3) << 8 
+                               : (dis & Rank_6) >> 8) & empty;
+        }
+
+        if (T == MoveType::QuietNonChecks)
+        {
+            U64 dis;
+
+            up  &= ~mState.getCheckSquaresBB(pawn);
+            dbl &= ~mState.getCheckSquaresBB(pawn);
+
+            dis = mDiscover & pawns & file_bb[mState.getKingSquare(!C)];
+            dis = (C == white ? dis << 8 : dis >> 8) & empty;
+            up  |= dis;
+            dbl |= (C == white ? (dis & Rank_3) << 8 
+                               : (dis & Rank_6) >> 8) & empty;
+        }
+
+        while (up)
+        {
+            dst = pop_lsb(up);
+            push(makeMove(dst - U, dst));
+        }
+
+        while (dbl)
+        {
+            dst = pop_lsb(dbl);
+            push(makeMove(dst - U - U, dst));
+        }
+    }
+}
+
+template<MoveType T>
+void MoveList::pushCastle()
+{
+    Square k = mState.getKingSquare(mState.getOurColor());
+
+    if (mState.canCastleKingside() &&
+        !(between_hor[k][k-3] & mState.getOccupancyBB()) &&
+        !mState.attacked(k-1) && 
+        !mState.attacked(k-2)) 
+    {
+        if (T == MoveType::QuietChecks)
+        {
+            if (square_bb[k-1] & mState.getCheckSquaresBB(rook))
+                push(makeCastle(k, k-2));
+        }
+        else if (T == MoveType::QuietNonChecks)
+        {
+            if (!(square_bb[k-1] & mState.getCheckSquaresBB(rook)))
+                push(makeCastle(k, k-2));
+        }
+        else
+            push(makeCastle(k, k-2));
+    }
+
+    if (mState.canCastleQueenside() && 
+        !(between_hor[k][k+4] & mState.getOccupancyBB()) && 
+        !mState.attacked(k+1) && 
+        !mState.attacked(k+2))
+    {
+        if (T == MoveType::QuietChecks)
+        {
+            if (square_bb[k+1] & mState.getCheckSquaresBB(rook))
+                push(makeCastle(k, k+2));
+        }
+        else if (T == MoveType::QuietNonChecks)
+        {
+            if (!(square_bb[k+1] & mState.getCheckSquaresBB(rook)))
+                push(makeCastle(k, k+2));
+        }
+        else
+            push(makeCastle(k, k+2));
+    }
 }
 
 // ---------------------------------------------------------------------------//
@@ -746,87 +373,70 @@ void MoveList::checkLegal()
     }
 }
 
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Push legal moves onto the moves list. If the king is in double check, then //
-// only generate king moves. Otherwise, generate all attack and quiet moves.  //
-// This function is only used for testing (such as PERFT testing).            //
-//                                                                            //
-// ---------------------------------------------------------------------------//
-void MoveList::generateAllMoves()
-{
-    if (mState.inDoubleCheck())
-    {
-        pushAttackMoves<king>();
-        pushQuietMoves<king>();
-    }
-    else
-    {
-        pushAttackMoves<pawn>();
-        pushAttackMoves<knight>();
-        pushAttackMoves<bishop>();
-        pushAttackMoves<rook>();
-        pushAttackMoves<queen>();
-        pushAttackMoves<king>();
-
-        pushQuietMoves<pawn>();
-        pushQuietMoves<knight>();
-        pushQuietMoves<bishop>();
-        pushQuietMoves<rook>();
-        pushQuietMoves<queen>();
-        pushQuietMoves<king>();
-    }
-
-    checkLegal();
-}
-
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Generate only quiet checks - used in Q-Search.                             //
-//                                                                            //
-// ---------------------------------------------------------------------------//
-void MoveList::generateQuietChecks()
+template<MoveType T>
+void MoveList::generateMoves()
 {
     assert(!mState.inCheck());
-    U64 discover = mState.getDiscoveredChecks(mState.getOurColor());
-    pushQuietChecks<pawn>(discover);
-    pushQuietChecks<knight>(discover);
-    pushQuietChecks<bishop>(discover);
-    pushQuietChecks<rook>(discover);
-    pushQuietChecks<king>(discover);
-    //checkLegal();
+
+    if (T == MoveType::QuietChecks)
+        mDiscover = mState.getDiscoveredChecks(mState.getOurColor());
+
+    mValid = T == MoveType::Attacks 
+                ? mState.getOccupancyBB(mState.getTheirColor())
+                : mState.getEmptyBB();
+
+    mState.getOurColor() == white ? pushPawnMoves<T, white>() 
+                                  : pushPawnMoves<T, black>();
+    pushMoves<T, knight>();
+    pushMoves<T, bishop>();
+    pushMoves<T, rook>();
+    pushMoves<T, queen>();
+    pushMoves<T, king>();
 }
 
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Generate all quiet moves.                                                  //
-//                                                                            //
-// ---------------------------------------------------------------------------//
-void MoveList::generateQuiets()
+template<>
+void MoveList::generateMoves<MoveType::Evasions>()
 {
-    pushQuietMoves<pawn>();
-    pushQuietMoves<knight>();
-    pushQuietMoves<bishop>();
-    pushQuietMoves<rook>();
-    pushQuietMoves<queen>();
-    pushQuietMoves<king>();
-    //checkLegal();
+    assert(mState.inCheck());
+
+    Square k, c;
+
+    mValid = mState.getOccupancyBB(mState.getTheirColor()) | mState.getEmptyBB();
+    pushMoves<MoveType::Evasions, king>();
+
+    if (mState.inDoubleCheck())
+        return;
+
+    k = mState.getKingSquare(mState.getOurColor());
+    c = get_lsb(mState.getCheckersBB());
+    mValid = between[k][c] | mState.getCheckersBB();
+
+    mState.getOurColor() == white ? pushPawnMoves<MoveType::Evasions, white>() 
+                                  : pushPawnMoves<MoveType::Evasions, black>();
+    pushMoves<MoveType::Evasions, knight>();
+    pushMoves<MoveType::Evasions, bishop>();
+    pushMoves<MoveType::Evasions, rook>();
+    pushMoves<MoveType::Evasions, queen>();
 }
 
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Generate all captures.                                                     //
-//                                                                            //
-// ---------------------------------------------------------------------------//
-void MoveList::generateAttacks()
+template<>
+void MoveList::generateMoves<MoveType::All>()
 {
-    pushAttackMoves<pawn>();
-    pushAttackMoves<knight>();
-    pushAttackMoves<bishop>();
-    pushAttackMoves<rook>();
-    pushAttackMoves<queen>();
-    pushAttackMoves<king>();
-    //checkLegal();
+    if (mState.inCheck())
+    {
+        generateMoves<MoveType::Evasions>();
+        return;
+    }
+
+    mValid = mState.getOccupancyBB(mState.getTheirColor()) | mState.getEmptyBB();
+
+    mState.getOurColor() == white ? pushPawnMoves<MoveType::All, white>() 
+                                  : pushPawnMoves<MoveType::All, black>();
+    pushMoves<MoveType::All, knight>();
+    pushMoves<MoveType::All, bishop>();
+    pushMoves<MoveType::All, rook>();
+    pushMoves<MoveType::All, queen>();
+    pushMoves<MoveType::All, king>();
 }
 
 // ---------------------------------------------------------------------------//
@@ -856,7 +466,7 @@ Move MoveList::getBestMove()
 // ---------------------------------------------------------------------------//
         case nBestMove:
             mStage++;
-            if (mState.isValid(mBest, mValid)
+            if (mState.isValid(mBest, Full)
                 && mState.isLegal(mBest))
                 return mBest;
 // ---------------------------------------------------------------------------//
@@ -872,7 +482,7 @@ Move MoveList::getBestMove()
 //                                                                            //
 // ---------------------------------------------------------------------------//
         case nAttacksGen:
-            generateAttacks();
+            generateMoves<MoveType::Attacks>();
             for (int i = 0; i < mSize; ++i)
             {
                 int see = mState.see(mList[i].move);
@@ -919,7 +529,7 @@ Move MoveList::getBestMove()
 // ---------------------------------------------------------------------------//
         case nKiller1:
             mStage++;
-            if ((mState.isValid(mKiller1, mValid)
+            if ((mState.isValid(mKiller1, Full)
                 && mState.isLegal(mKiller1)
                 && mState.isQuiet(mKiller1))
                 && mKiller1 != mBest)
@@ -934,7 +544,7 @@ Move MoveList::getBestMove()
 // ---------------------------------------------------------------------------//
         case nKiller2:
             mStage++;
-            if ((mState.isValid(mKiller2, mValid))
+            if ((mState.isValid(mKiller2, Full))
                 && mState.isLegal(mKiller2)
                 && mState.isQuiet(mKiller2)
                 && mKiller2 != mBest
@@ -964,7 +574,7 @@ Move MoveList::getBestMove()
 // ---------------------------------------------------------------------------//
         case nQuietsGen:
         {
-            generateQuiets();
+            generateMoves<MoveType::Quiets>();
             for (int i = 0; i < mSize; ++i)
                 mList[i].score = mHistory->getHistoryScore(mList[i].move);
             std::array<MoveEntry, maxSize>::iterator it2 = 
@@ -1020,7 +630,7 @@ Move MoveList::getBestMove()
 // ---------------------------------------------------------------------------//
         case qBestMove:
             mStage++;
-            if (mState.isValid(mBest, mValid)
+            if (mState.isValid(mBest, Full)
                 && mState.isLegal(mBest))
                 return mBest;
 // ---------------------------------------------------------------------------//
@@ -1034,20 +644,11 @@ Move MoveList::getBestMove()
 //                                                                            //
 // ---------------------------------------------------------------------------//
         case qAttacksGen:
-            generateAttacks();
+            generateMoves<MoveType::Attacks>();
             for (int i = 0; i < mSize; ++i)
             {
                 mList[i].score = mState.onSquare(getDst(mList[i].move))
                                - mState.onSquare(getSrc(mList[i].move));
-                                   /*
-                else
-                {
-                    mList[i].score = see;
-                    badCaptures.push_back(mList[i]);
-                    std::swap(mList[i], mList[mSize - 1]);
-                    pop();
-                }
-                */
             }
             mStage++;
 // ---------------------------------------------------------------------------//
@@ -1088,10 +689,11 @@ Move MoveList::getBestMove()
 //                                                                            //
 // ---------------------------------------------------------------------------//
         case qQuietChecksGen:
-            generateQuietChecks();
+        {
             for (int i = 0; i < mSize; ++i)
                 mList[i].score = mHistory->getHistoryScore(mList[i].move);
             mStage++;
+        }
 // ---------------------------------------------------------------------------//
 //                                                                            //
 // Q Search - quiet checks.                                                   //
@@ -1110,17 +712,17 @@ Move MoveList::getBestMove()
                 move = pop();
                 if (move != mBest
                     && mState.isLegal(move))
+                {
+                    if (!mState.givesCheck(move))
+                    {
+                        std::cout << mState;
+                        std::cout << toString(move);
+                        int z;
+                        std::cin >> z;
+                    }
                     return move;
+                }
             }
-            /*
-            while (!badCaptures.empty())
-            {
-                move = badCaptures.back().move;
-                badCaptures.pop_back();
-                if (move != mBest
-                    && mState.isLegal(move))
-                    return move;
-            }*/
             break;
 // ---------------------------------------------------------------------------//
 //                                                                            //
@@ -1130,10 +732,11 @@ Move MoveList::getBestMove()
 // a beta cutoff.                                                             //
 //                                                                            //
 // ---------------------------------------------------------------------------//
-        case qKingEvadeBestMove:
+        case nEvadeBestMove:
             mStage++;
             if (mState.isValid(mBest, mValid)
-                && mState.isLegal(mBest))
+                && mState.isLegal(mBest)
+                && !mState.inDoubleCheck())
                 return mBest;
 // ---------------------------------------------------------------------------//
 //                                                                            //
@@ -1141,54 +744,50 @@ Move MoveList::getBestMove()
 // Generate king captures only. No scoring or sorting is done.                //
 //                                                                            //
 // ---------------------------------------------------------------------------//
-        case qKingEvadeAttacksGen:
-            pushAttackMoves<king>();
+        case nEvadeMovesGen:
+        {
+            const int CaptureFlag = 0x40000000;
+            const int HistoryFlag = 0x20000000;
+            generateMoves<MoveType::Evasions>();
+            for (int i = 0; i < mSize; ++i)
+            {
+                if (mState.isCapture(mList[i].move))
+                {
+                    int see = mState.see(mList[i].move);
+                    if (see >= 0)
+                        mList[i].score = mState.onSquare(getDst(mList[i].move))
+                                       - mState.onSquare(getSrc(mList[i].move));
+                    else
+                        mList[i].score = see;
+                    mList[i].score |= CaptureFlag;
+                }
+                else
+                {
+                    int hist = mHistory->getHistoryScore(mList[i].move);
+                    if (hist > 0)
+                        mList[i].score = hist | HistoryFlag;
+                    else
+                    {
+                        Square src = getSrc(mList[i].move);
+                        Square dst = getDst(mList[i].move);
+                        PieceType piece = mState.onSquare(src);
+                        mList[i].score = PieceSquareTable::pst[piece][middle][mState.getOurColor()][dst]
+                                       - PieceSquareTable::pst[piece][middle][mState.getOurColor()][src]
+                                       + PieceSquareTable::pst[piece][late][mState.getOurColor()][dst]
+                                       - PieceSquareTable::pst[piece][late][mState.getOurColor()][src];
+                    }
+                }
+            }
+            std::stable_sort(mList.begin(), mList.begin() + mSize);
             mStage++;
+        }
 // ---------------------------------------------------------------------------//
 //                                                                            //
 // Q search (double check) - captures                                         //
 // As long as the capture is not the same as the best move, return it.        //
 //                                                                            //
 // ---------------------------------------------------------------------------//
-        case qKingEvadeAttacks:
-            while (mSize)
-            {
-                move = pop();
-                if (move != mBest
-                    && mState.isLegal(move))
-                    return move;
-            }
-            break;
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Normal search (double check) - best move                                   //
-// Before generating any moves, first check if the move given by the pv list  //
-// or the transposition table is valid. If so, return that move and pray for  //
-// a beta cutoff.                                                             //
-//                                                                            //
-// ---------------------------------------------------------------------------//
-        case nKingEvadeBestMove:
-            mStage++;
-            if (mState.isValid(mBest, mValid)
-                && mState.isLegal(mBest))
-                return mBest;
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Noraml search (double check) - generate evasions                           //
-// Generate king evasions only. No scoring or sorting is done.                //
-//                                                                            //
-// ---------------------------------------------------------------------------//
-        case nKingEvadeMovesGen:
-            pushQuietMoves<king>();
-            pushAttackMoves<king>();
-            mStage++;
-// ---------------------------------------------------------------------------//
-//                                                                            //
-// Normal search (double check) - evasions                                    //
-// As long as the capture is not the same as the best move, return it.        //
-//                                                                            //
-// ---------------------------------------------------------------------------//
-        case nKingEvadeMoves:
+        case nEvade:
             while (mSize)
             {
                 move = pop();
@@ -1210,6 +809,9 @@ Move MoveList::getBestMove()
                 move = pop();
                 return move;
             }
+            break;
+        default:
+            assert(false);
     }
     return nullMove;
 }
@@ -1218,70 +820,7 @@ MoveList::MoveList(const State& pState)
 : mState(pState), mValid(Full), mQSearch(false), mBest(nullMove)
 , mSize(0), mHistory(nullptr), mPly(0)
 {
-    if (pop_count(mState.getCheckersBB()) == 1)
-    {
-        Square checker = get_lsb(mState.getCheckersBB());
-        Square king = mState.getKingSquare(mState.getOurColor());
-        mValid = between_dia[king][checker] | between_hor[king][checker]
-               | mState.getCheckersBB();
-    }
-    /*
-    else
-    {
-        int num1, num2;
-        U64 discover = mState.getDiscoveredChecks(mState.getOurColor());
-        pushQuietChecks<pawn>(discover);
-        pushQuietChecks<knight>(discover);
-        pushQuietChecks<bishop>(discover);
-        pushQuietChecks<rook>(discover);
-        pushQuietChecks<queen>(discover);
-        pushQuietChecks<king>(discover);
-        pushQuietNonChecks<pawn>(discover);
-        pushQuietNonChecks<knight>(discover);
-        pushQuietNonChecks<bishop>(discover);
-        pushQuietNonChecks<rook>(discover);
-        pushQuietNonChecks<queen>(discover);
-        pushQuietNonChecks<king>(discover);
-        checkLegal();
-        num1 = mSize;
-        mSize = 0;
-        pushQuietMoves<pawn>();
-        pushQuietMoves<knight>();
-        pushQuietMoves<bishop>();
-        pushQuietMoves<rook>();
-        pushQuietMoves<queen>();
-        pushQuietMoves<king>();
-        checkLegal();
-        num2 = mSize;
-        mSize = 0;
-        if (num1 != num2)
-        {
-            std::cout << mState;
-            std::cout << num1 << " == " << num2 << '\n';
-            std::cout << "We have a problem.\n";
-            pushQuietChecks<pawn>(discover);
-        pushQuietChecks<knight>(discover);
-        pushQuietChecks<bishop>(discover);
-        pushQuietChecks<rook>(discover);
-        pushQuietChecks<queen>(discover);
-        pushQuietChecks<king>(discover);
-        pushQuietNonChecks<pawn>(discover);
-        pushQuietNonChecks<knight>(discover);
-        pushQuietNonChecks<bishop>(discover);
-        pushQuietNonChecks<rook>(discover);
-        pushQuietNonChecks<queen>(discover);
-        pushQuietNonChecks<king>(discover);
-        checkLegal();
-        for (int i = 0; i < mSize; ++i)
-        {
-            std::cout << toString(mList[i].move) << " ";
-        }
-        std::cout << std::endl;
-            int z;
-            std::cin >> z;
-        }
-    }
-    */
-    generateAllMoves();
+    generateMoves<MoveType::All>();
     mStage = allLegal;
+    checkLegal();
 }
