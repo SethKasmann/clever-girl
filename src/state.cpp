@@ -36,6 +36,7 @@ void State::operator=(const State & s)
     mPawnKey = s.mPawnKey;
     mCheckers = s.mCheckers;
     mEnPassant = s.mEnPassant;
+    mCheckSquares = s.mCheckSquares;
     mPinned = s.mPinned;
     mOccupancy = s.mOccupancy;
     mPieceIndex = s.mPieceIndex;
@@ -347,10 +348,7 @@ bool State::isValid(Move pMove, U64 pValidMoves) const
         {
             if ((square_bb[dst] & (Rank_8 | Rank_1)) && !getPiecePromo(pMove))
                 return false;
-            if (square_bb[dst] & mEnPassant)
-            {
-                return pawn_push[mThem][dst] & pValidMoves;
-            }
+            
             std::pair<Square, Square> advance = std::minmax(src, dst);
             switch (advance.second - advance.first)
             {
