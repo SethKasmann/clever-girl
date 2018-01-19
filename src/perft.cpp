@@ -1,3 +1,7 @@
+#include <thread>
+#include <vector>
+#include <condition_variable>
+#include <numeric>
 #include "perft.h"
 
 const int totalTests = 19;
@@ -72,6 +76,63 @@ int perft(State & s, int depth)
 	return nodes;
 }
 
+bool ready = false;
+std::condition_variable cv;
+std::mutex qMutex;
+std::mutex lock1;
+std::mutex lock2;
+std::vector<int> nodeCount;
+
+int test(State s, MoveList* mList, int depth, int id)
+{
+	{
+		std::unique_lock<std::mutex> lk(qMutex);
+		cv.wait(lk, [] { return ready; });
+	}
+
+	Move m;
+
+	{
+		std::lock_guard<std::mutex> lk(qMutex);
+		m = mList->getBestMove();
+	}
+
+	while (m != nullMove)
+	{
+		State c(s);
+		c.make_t(m);
+		int nodes = perft(c, depth - 1);
+		
+		{
+			std::lock_guard<std::mutex> lk(qMutex);
+			nodeCount.push_back(nodes);
+			m = mList->getBestMove();
+		} 
+	}
+}
+
+int MTperft(State& s, int depth)
+{
+	unsigned int nThreads = std::thread::hardware_concurrency();
+	std::vector<std::thread> threads;
+	nodeCount.clear();
+	MoveList mlist(s);
+
+	for (unsigned int i = 0; i < nThreads; ++i)
+		threads.push_back(std::thread(test, s, &mlist, depth, i));
+
+	{
+		std::lock_guard<std::mutex> lk(qMutex);
+		ready = true;
+		cv.notify_all();
+	}
+
+	for (std::thread& thread : threads)
+		thread.join();
+
+	return std::accumulate(nodeCount.begin(), nodeCount.end(), 0);
+}
+
 void printPerft(const std::string& fen, int maxDepth)
 {
 	int nodes;
@@ -86,11 +147,11 @@ void printPerft(const std::string& fen, int maxDepth)
 	          << std::endl;
     std::cout << "|" << std::setfill('-') << std::setw(53) << std::right << "|"
 	          << std::endl;
-	for (int depth = 1; depth <= maxDepth; ++depth)
+	for (int depth = 2; depth <= maxDepth; ++depth)
 	{
 		nodes = 0;
 		clock.set();
-		nodes = perft(s, depth);
+		nodes = MTperft(s, depth);
 		time = clock.elapsed<std::chrono::microseconds>() / static_cast<double>(1000000);
 		std::cout << "| " << std::setfill(' ') << std::setw(10) << std::left << depth
 		          << "| " << std::setw(12) << std::left << nodes
@@ -124,7 +185,7 @@ void perftTestDebug()
 		history.clear();
 		State s(perftFen[i]);
 		history.push(std::make_pair(nullMove, s.getKey()));
-		nodes = perft(s, perftDepth[i]);
+		nodes = MTperft(s, perftDepth[i]);
 		//std::cout << perftFen[i] << std::endl;
 		std::cout << (nodes == perftResults[i] ? "Success " : "Fail ")
 		          << nodes << " == " << perftResults[i] << std::endl;
