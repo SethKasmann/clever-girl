@@ -44,6 +44,7 @@ static const U64 Rank_6 = 0x0000FF0000000000ULL;
 static const U64 Rank_7 = 0x00FF000000000000ULL;
 static const U64 Rank_8 = 0xFF00000000000000ULL;
 static const U64 RankPromo = Rank_1 | Rank_8;
+static const U64 RankPawnStart = Rank_2 | Rank_7;
 
 static const U64 File_a = 0x8080808080808080ULL;
 static const U64 File_b = 0x4040404040404040ULL;
