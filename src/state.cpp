@@ -11,6 +11,7 @@ State::State(const State & s)
 , mThem(s.mThem)
 , mFiftyMoveRule(s.mFiftyMoveRule)
 , mCastleRights(s.mCastleRights)
+, mPhase(s.mPhase)
 , mKey(s.mKey)
 , mPawnKey(s.mPawnKey)
 , mCheckers(s.mCheckers)
@@ -32,6 +33,7 @@ void State::operator=(const State & s)
     mThem = s.mThem;
     mFiftyMoveRule = s.mFiftyMoveRule;
     mCastleRights = s.mCastleRights;
+    mPhase = s.mPhase;
     mKey = s.mKey;
     mPawnKey = s.mPawnKey;
     mCheckers = s.mCheckers;
@@ -139,6 +141,9 @@ State::State(const std::string & fen)
 
     // Initialize checkers.
     setCheckers();
+
+    // Initialize game phase.
+    setGamePhase();
 }
 
 void State::init()
@@ -263,6 +268,9 @@ bool State::isLegal(Move pMove) const
             return false;
     }
 
+    assert(dst != getKingSquare(mThem));
+    assert((square_bb[dst] & mOccupancy[mUs]) == 0);
+
     return true;
 }
 
@@ -325,6 +333,9 @@ bool State::isValid(Move pMove, U64 pValidMoves) const
         dst == getKingSquare(mThem))
         return false;
 
+    assert(dst != getKingSquare(mThem));
+    assert(dst != getKingSquare(mUs));
+
     switch (onSquare(src))
     {
 
@@ -346,7 +357,10 @@ bool State::isValid(Move pMove, U64 pValidMoves) const
 // -------------------------------------------------------------------------- //
         case pawn:
         {
-            if ((square_bb[dst] & (Rank_8 | Rank_1)) && !getPiecePromo(pMove))
+            if ((square_bb[dst] & RankPromo) && !getPiecePromo(pMove))
+                return false;
+
+            if (src < dst == mUs)
                 return false;
             
             std::pair<Square, Square> advance = std::minmax(src, dst);
@@ -356,7 +370,8 @@ bool State::isValid(Move pMove, U64 pValidMoves) const
                     return square_bb[dst] & getEmptyBB() & pValidMoves;
                 case 16:
                     return square_bb[dst] & getEmptyBB() & pValidMoves &&
-                           between_hor[src][dst] & getEmptyBB();
+                           between_hor[src][dst] & getEmptyBB() &&
+                           square_bb[src] & RankPawnStart;
                 case 7:
                 case 9:
                     return square_bb[dst] & getOccupancyBB(mThem) & pValidMoves;
@@ -573,6 +588,7 @@ void State::make_t(Move pMove)
     Square src, dst;
     PieceType moved, captured;
     bool epFlag = false;
+    bool gamePhase = false;
 
 
     src = getSrc(pMove);
@@ -580,6 +596,7 @@ void State::make_t(Move pMove)
     moved = onSquare(src);
     assert(moved != none);
     captured = onSquare(dst);
+    assert(captured != king);
 
     // Update the Fifty Move Rule
     mFiftyMoveRule++;
@@ -596,6 +613,7 @@ void State::make_t(Move pMove)
         removePiece(mThem, captured, dst);
         if (captured == pawn)
             mPawnKey ^= Zobrist::key(mThem, pawn, dst);
+        gamePhase = true;
     }
 
     if (isCastle(pMove))
@@ -635,17 +653,22 @@ void State::make_t(Move pMove)
             mPawnKey ^= Zobrist::key(mUs, pawn, dst);
             removePiece(mUs, pawn, dst);
             addPiece(mUs, getPiecePromo(pMove), dst);
+            gamePhase = true;
         }
         else if (mEnPassant & square_bb[dst])
         {
             Square epCapture = (mUs == white) ? dst - 8 : dst + 8;
             mPawnKey ^= Zobrist::key(mThem, pawn, epCapture);
             removePiece(mThem, pawn, epCapture);
+            gamePhase = true;
         }
     }
 
     if (!epFlag)
         mEnPassant = 0;
+
+    if (gamePhase)
+        setGamePhase();
 
     // Update castle rights.
     mCastleRights &= Castle_rights[src];
@@ -654,6 +677,7 @@ void State::make_t(Move pMove)
     mKey ^= Zobrist::key(mCastleRights);
 
     assert(!check());
+    assert((mEnPassant & getOccupancyBB()) == 0);
     swapTurn();
 
     setPins(white);
