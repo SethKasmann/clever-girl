@@ -9,6 +9,7 @@ namespace PieceSquareTable
 {
 
 inline int getScore(PieceType p, GameStage g, Color c, Square s);
+inline int iScore(float phase, PieceType p, Color c, Square s);
 
 const int pst[Types_size][gameStageSize][Player_size][Board_size]
 {
@@ -389,6 +390,12 @@ const int outpost[gameStageSize][Player_size][Board_size]
 inline int getScore(PieceType p, GameStage g, Color c, Square s)
 {
 	return pst[p][g][c][s];
+}
+
+inline int iScore(float phase, PieceType p, Color c, Square s)
+{
+	return ((pst[p][middle][c][s] * (256 - phase)) + pst[p][late][c][s] * 
+		   phase) / 256;
 }
 
 }
