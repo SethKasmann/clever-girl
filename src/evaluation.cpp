@@ -60,14 +60,7 @@ Evaluate::Evaluate(const State& pState)
 // weight on the mid-game, closer to 255 puts more weight on the endgame.     //
 //                                                                            //
 // -------------------------------------------------------------------------- //
-    float phase = totalPhase
-                - mState.getPieceCount<pawn>()   * pawnPhase
-                - mState.getPieceCount<knight>() * knightPhase
-                - mState.getPieceCount<bishop>() * bishopPhase
-                - mState.getPieceCount<rook>()   * rookPhase
-                - mState.getPieceCount<queen>()  * queenPhase;
-
-    mGamePhase = (phase * 256 + (totalPhase / 2)) / totalPhase;
+    mGamePhase = mState.getGamePhase();
 
     evalPieces(white);
     evalPieces(black);
