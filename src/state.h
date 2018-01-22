@@ -17,6 +17,16 @@
 #include "move.h"
 #include "zobrist.h"
 
+enum Phase
+{
+    pawnPhase   = 0,
+    knightPhase = 1,
+    bishopPhase = 1,
+    rookPhase   = 2,
+    queenPhase  = 4,
+    totalPhase  = 24
+};
+
 class State
 {
 public:
@@ -37,6 +47,8 @@ public:
     PieceType onSquare(const Square s) const;
     Square getKingSquare(Color c) const;
     int getPstScore(GameStage g) const;
+    float getGamePhase() const;
+    void setGamePhase();
 
     // Access piece bitboards.
     template<PieceType P> const std::array<Square, Piece_max>& getPieceList(Color pColor) const;
@@ -103,6 +115,7 @@ private:
     Color mThem;
     int mFiftyMoveRule;
     int mCastleRights;
+    float mPhase;
     U64 mKey;
     U64 mPawnKey;
     U64 mCheckers;
@@ -156,6 +169,23 @@ inline int State::getCastleRights() const
 inline U64 State::getPinsBB(Color c) const
 {
     return mPinned[c];
+}
+
+inline float State::getGamePhase() const
+{
+    return mPhase;
+}
+
+inline void State::setGamePhase()
+{
+    float phase = totalPhase
+                - getPieceCount<pawn>()   * pawnPhase
+                - getPieceCount<knight>() * knightPhase
+                - getPieceCount<bishop>() * bishopPhase
+                - getPieceCount<rook>()   * rookPhase
+                - getPieceCount<queen>()  * queenPhase;
+
+    mPhase = (phase * 256 + (totalPhase / 2)) / totalPhase;
 }
 
 inline bool State::isCapture(Move pMove) const
