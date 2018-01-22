@@ -586,10 +586,14 @@ Move MoveList::getBestMove()
                 Square src = getSrc(it1->move);
                 Square dst = getDst(it1->move);
                 PieceType toMove = mState.onSquare(src);
-                it1->score = PieceSquareTable::pst[toMove][middle][mState.getOurColor()][dst]
-                           - PieceSquareTable::pst[toMove][middle][mState.getOurColor()][src]
-                           + PieceSquareTable::pst[toMove][late][mState.getOurColor()][dst]
-                           - PieceSquareTable::pst[toMove][late][mState.getOurColor()][src];
+                it1->score = PieceSquareTable::iScore(mState.getGamePhase(), 
+                                                      toMove,
+                                                      mState.getOurColor(), 
+                                                      dst) -
+                             PieceSquareTable::iScore(mState.getGamePhase(), 
+                                                      toMove,
+                                                      mState.getOurColor(), 
+                                                      src);
             }
             std::stable_sort(mList.begin(), it2);
             mStage++;
@@ -712,16 +716,7 @@ Move MoveList::getBestMove()
                 move = pop();
                 if (move != mBest
                     && mState.isLegal(move))
-                {
-                    if (!mState.givesCheck(move))
-                    {
-                        std::cout << mState;
-                        std::cout << toString(move);
-                        int z;
-                        std::cin >> z;
-                    }
                     return move;
-                }
             }
             break;
 // ---------------------------------------------------------------------------//
@@ -771,10 +766,14 @@ Move MoveList::getBestMove()
                         Square src = getSrc(mList[i].move);
                         Square dst = getDst(mList[i].move);
                         PieceType piece = mState.onSquare(src);
-                        mList[i].score = PieceSquareTable::pst[piece][middle][mState.getOurColor()][dst]
-                                       - PieceSquareTable::pst[piece][middle][mState.getOurColor()][src]
-                                       + PieceSquareTable::pst[piece][late][mState.getOurColor()][dst]
-                                       - PieceSquareTable::pst[piece][late][mState.getOurColor()][src];
+                        mList[i].score = PieceSquareTable::iScore(mState.getGamePhase(),
+                                                                  piece,
+                                                                  mState.getOurColor(),
+                                                                  dst) -
+                                         PieceSquareTable::iScore(mState.getGamePhase(),
+                                                                  piece,
+                                                                  mState.getOurColor(),
+                                                                  src);
                     }
                 }
             }
