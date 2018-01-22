@@ -8,16 +8,6 @@
 #include "state.h"
 #include "pst.h"
 
-enum Phase
-{
-    pawnPhase   = 0,
-    knightPhase = 1,
-    bishopPhase = 1,
-    rookPhase   = 2,
-    queenPhase  = 4,
-    totalPhase  = 24
-};
-
 static const int tempo = 15;
 
 static const int Knight_th = 2;
