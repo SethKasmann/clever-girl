@@ -8,7 +8,7 @@ LineManager::LineManager()
 void LineManager::pushToPv(Move pMove, U64 pKey, int pPly, int pScore)
 {
     // Check if this is a mating line.
-    mMatingLine = std::abs(pScore) + pPly >= Checkmate ? true : false;
+    mMatingLine = std::abs(pScore) + Max_ply >= Checkmate ? true : false;
 
     // Find the indicies using the triangular forumla.
     int copyTo = triangularIndex(pPly);
