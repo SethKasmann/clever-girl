@@ -6,12 +6,12 @@
 #include <iostream>
 #include <string>
 #include <sstream>
-#include "search.h"
-#include "test.h"
-#include "perft.h"
-#include "zobrist.h"
-#include "evaluation.h"
-#include "uci.h"
+#include "src/search.h"
+#include "src/test.h"
+#include "src/perft.h"
+#include "src/zobrist.h"
+#include "src/evaluation.h"
+#include "src/uci.h"
 
 int main(int argc, char* argv[])
 {

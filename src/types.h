@@ -6,7 +6,7 @@
 #include <string>
 #include <assert.h>
 
-#if defined(MSC_VER)
+#if defined(_MSC_VER)
     #define NOMINMAX
     #include <intrin.h>
     #include <windows.h>
