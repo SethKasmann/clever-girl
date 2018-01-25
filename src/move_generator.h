@@ -41,7 +41,6 @@ enum class MoveType
     Quiets,
     Evasions,
     QuietChecks,
-    QuietNonChecks,
     All
 };
 

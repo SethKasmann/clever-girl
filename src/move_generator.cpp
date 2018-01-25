@@ -84,13 +84,6 @@ void MoveList::pushPromotion(Square src, Square dst)
             if (mState.getCheckSquaresBB(knight) & square_bb[dst+1])
                 push(makeMove(src, dst+1, knight));
         }
-        if (T == MoveType::QuietNonChecks)
-        {
-            if (!(mState.getCheckSquaresBB(knight) & square_bb[dst+1]))
-                push(makeMove(src, dst+1, knight));
-            push(makeMove(src, dst+1, rook));
-            push(makeMove(src, dst+1, bishop));
-        }
     }
 
     if (square_bb[dst] & Not_h_file && square_bb[dst-1] & mState.getOccupancyBB(!C))
@@ -120,13 +113,6 @@ void MoveList::pushPromotion(Square src, Square dst)
         {
             if (mState.getCheckSquaresBB(knight) & square_bb[dst-1])
                 push(makeMove(src, dst-1, knight));
-        }
-        if (T == MoveType::QuietNonChecks)
-        {
-            if (!(mState.getCheckSquaresBB(knight) & square_bb[dst-1]))
-                push(makeMove(src, dst-1, knight));
-            push(makeMove(src, dst-1, rook));
-            push(makeMove(src, dst-1, bishop));
         }
     }
 
@@ -158,13 +144,6 @@ void MoveList::pushPromotion(Square src, Square dst)
             if (mState.getCheckSquaresBB(knight) & square_bb[dst])
                 push(makeMove(src, dst, knight));
         }
-        if (T == MoveType::QuietNonChecks)
-        {
-            if (!(mState.getCheckSquaresBB(knight) & square_bb[dst]))
-                push(makeMove(src, dst, knight));
-            push(makeMove(src, dst, rook));
-            push(makeMove(src, dst, bishop));
-        }
     }
 }
 
@@ -191,18 +170,6 @@ void MoveList::pushMoves()
             }
             else
                 m &= mState.getCheckSquaresBB(P);
-        }
-        if (T == MoveType::QuietNonChecks)
-        {
-            if (square_bb[src] & mDiscover)
-            {
-                if (P == king)
-                    m &= coplanar[src][mState.getKingSquare(!c)];
-                else
-                    continue;
-            }
-            else
-                m &= ~mState.getCheckSquaresBB(P);
         }
 
         while (m)
@@ -285,20 +252,6 @@ void MoveList::pushPawnMoves()
                                : (dis & Rank_6) >> 8) & empty;
         }
 
-        if (T == MoveType::QuietNonChecks)
-        {
-            U64 dis;
-
-            up  &= ~mState.getCheckSquaresBB(pawn);
-            dbl &= ~mState.getCheckSquaresBB(pawn);
-
-            dis = mDiscover & pawns & file_bb[mState.getKingSquare(!C)];
-            dis = (C == white ? dis << 8 : dis >> 8) & empty;
-            up  |= dis;
-            dbl |= (C == white ? (dis & Rank_3) << 8 
-                               : (dis & Rank_6) >> 8) & empty;
-        }
-
         while (up)
         {
             dst = pop_lsb(up);
@@ -328,11 +281,6 @@ void MoveList::pushCastle()
             if (square_bb[k-1] & mState.getCheckSquaresBB(rook))
                 push(makeCastle(k, k-2));
         }
-        else if (T == MoveType::QuietNonChecks)
-        {
-            if (!(square_bb[k-1] & mState.getCheckSquaresBB(rook)))
-                push(makeCastle(k, k-2));
-        }
         else
             push(makeCastle(k, k-2));
     }
@@ -345,11 +293,6 @@ void MoveList::pushCastle()
         if (T == MoveType::QuietChecks)
         {
             if (square_bb[k+1] & mState.getCheckSquaresBB(rook))
-                push(makeCastle(k, k+2));
-        }
-        else if (T == MoveType::QuietNonChecks)
-        {
-            if (!(square_bb[k+1] & mState.getCheckSquaresBB(rook)))
                 push(makeCastle(k, k+2));
         }
         else
@@ -577,11 +520,11 @@ Move MoveList::getBestMove()
             generateMoves<MoveType::Quiets>();
             for (int i = 0; i < mSize; ++i)
                 mList[i].score = mHistory->getHistoryScore(mList[i].move);
-            std::array<MoveEntry, maxSize>::iterator it2 = 
+            auto it2 = 
                 std::partition(mList.begin(), mList.begin() + mSize, noScore);
             std::stable_sort(it2, mList.begin() + mSize);
-            std::array<MoveEntry, maxSize>::iterator it1 = mList.begin();
-            for (std::array<MoveEntry, maxSize>::iterator it1 = mList.begin(); it1 != it2; ++it1)
+            auto it1 = mList.begin();
+            for (auto it1 = mList.begin(); it1 != it2; ++it1)
             {
                 Square src = getSrc(it1->move);
                 Square dst = getDst(it1->move);
