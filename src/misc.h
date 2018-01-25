@@ -3,15 +3,12 @@
 
 #include <string>
 #include <sstream>
-
-// It's not clear why I need this to compile.
-#include <sys/time.h>
+#include "types.h"
 
 // Credit to Oliver Brausch
 inline int input_waiting()
 {
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-	#include <windows.h>
 	static int init = 0, pipe;
 	static HANDLE inh;
 	DWORD dw;
@@ -39,7 +36,6 @@ inline int input_waiting()
 		return dw <= 1 ? 0 : dw;
 	}
 #else
-	#include <sys/time.h>
 	fd_set readfds;
 	timeval tv;
 	FD_ZERO(&readfds);

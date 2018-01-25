@@ -62,7 +62,6 @@ static const U64 Rightside = 0x0F0F0F0F0F0F0F0F;
 static const U64 Leftside = 0xF0F0F0F0F0F0F0F0;
 
 void bb_init();
-//unsigned int pop_count(U64);
 
 inline U64 operator&(Square s, U64 u)
 {
@@ -82,20 +81,11 @@ inline U64 operator^(Square s, U64 u)
 // Returns the number of 1-bits.
 inline int pop_count(U64 bb)
 {
-// Check for Visual Studio.
-#if defined(_MSC_VER)
-   #if defined(__INTEL_COMPILER)
-      // Intel's instruction.
-      return _mm_popcnt_u64(bb);
-   #else
-      // AMD's instruction.
-      return static_cast<int>__popcnt64(bb);
-   #endif
-// Check for GCC
+#if defined(_MSC_VER) && defined(_WIN64)
+   return _mm_popcnt_u64(bb);
 #elif defined(__GNUC__)
    return __builtin_popcountll(bb);
 #else
-   // Standard algorithm.
    static const U64 m1 = 0x5555555555555555ull;
    static const U64 m2 = 0x3333333333333333ull;
    static const U64 m4 = 0x0f0f0f0f0f0f0f0full;
@@ -110,33 +100,21 @@ inline int pop_count(U64 bb)
 // Returns the index of the LSB.
 inline Square get_lsb(U64 bb)
 {
-   // The 64-bit integer must not be 0 or the return is undefined.
    assert(bb);
-// Check for Visual Studio.
 #if defined(_MSC_VER)
-   #include <intrin.h>
-   unsigned int index;
-   // For 64-bit windows, we can use _BitScanForward64.
-   #if defined(_M_AMD64) || defined(__x86_64__)
-      // Scan from LSB to MSB for the first bit set.
+   unsigned long index;
+   #if defined(_M_AMD64) || defined(__WIN64)
       _BitScanForward64(&index, bb);
       return static_cast<Square>(index);
-   // For 32-bit windows, _BitScanForward64 is not avaliable, but can be
-   // emulated it with _BitScanForward.
    #else
-      // Scan the first 32 bit word.
       if (_BitScanForward(&index, bb))
          return static_cast<Square>(index)
-      // Scan the second 32 bit word.
       _BitScanForward(&index, bb >> 32);
       return static_cast<Square>(index);
    #endif
-// Check for GCC.
 #elif defined(__GNUC__)
-      // Count the trailing zeroes.
       return static_cast<Square>(__builtin_ctzll(bb));
 #else
-      // DeBrujin Method
       static const U64 DeBrujin = 0x03f79d71b4cb0a89;
       static const int DeBrujin_table[64] =
       {

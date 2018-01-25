@@ -1,10 +1,18 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-#include <string>
-
 #define NDEBUG
+
+#include <string>
 #include <assert.h>
+
+#if defined(MSC_VER)
+    #define NOMINMAX
+    #include <intrin.h>
+    #include <windows.h>
+#else
+    #include <sys/time.h>
+#endif
 
 // ----------------------------------------------------------------------------
 // Bitboard Typedef
