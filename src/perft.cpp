@@ -83,7 +83,7 @@ std::mutex lock1;
 std::mutex lock2;
 std::vector<int> nodeCount;
 
-int test(State s, MoveList* mList, int depth, int id)
+void test(State s, MoveList* mList, int depth, int id)
 {
 	{
 		std::unique_lock<std::mutex> lk(qMutex);
